@@ -10,12 +10,13 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - staging_postgres_data:/var/lib/postgresql/data
+      - staging_postgres_data:/var/lib/postgresql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-construction_staging}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}" ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     networks:
       - staging-network
 

@@ -97,6 +97,8 @@ jobs:
       - name: Start Staging with Docker Compose
         run: |
           docker compose -f docker-compose.staging.yml up -d
+          echo "Waiting 10s for containers to initialize..."
+          sleep 10
           docker compose -f docker-compose.staging.yml ps
 
       - name: Verify Staging System Accessibility
