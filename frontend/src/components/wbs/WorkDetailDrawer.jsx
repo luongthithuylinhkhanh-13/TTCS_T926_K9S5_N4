@@ -1,3 +1,4 @@
+import TaskDependencySection from './TaskDependencySection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -20,7 +21,8 @@ const WorkDetailDrawer = ({
   parentName,
   onAddChild,
   onEditNode,
-  onDeleteNode
+  onDeleteNode,
+  allTasks = []
 }) => {
   if (!node) return null;
 
@@ -228,6 +230,16 @@ const WorkDetailDrawer = ({
             />
           </div>
         )}
+        {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
+        <TaskDependencySection
+          taskId={node?.id || node?.key}
+          allTasks={allTasks}
+        />
+        {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
+        <TaskDependencySection
+          taskId={node?.id || node?.key}
+          allTasks={allTasks}
+        />
       </div>
 
       {/* Sticky Footer */}
