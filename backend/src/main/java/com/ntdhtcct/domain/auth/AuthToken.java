@@ -12,7 +12,7 @@ public class AuthToken {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "token", nullable = false, unique = true, length = 255)
+    @Column(name = "token", nullable = false, unique = true, length = 512)
     private String token;
 
     @Column(name = "user_id", nullable = false)

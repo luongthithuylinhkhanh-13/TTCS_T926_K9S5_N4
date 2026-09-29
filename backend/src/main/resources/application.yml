@@ -30,6 +30,11 @@ spring:
 server:
   port: ${APP_PORT:8080}
 
+app:
+  auth:
+    jwt-secret: ${JWT_SECRET:local-only-constructflow-jwt-secret-change-before-deploy}
+    token-expiration-hours: ${AUTH_TOKEN_EXPIRATION_HOURS:168}
+
 logging:
   level:
     root: INFO

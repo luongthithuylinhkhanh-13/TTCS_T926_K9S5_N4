@@ -38,6 +38,19 @@ const WorkDetailDrawer = ({
     }
   };
 
+  const renderPriorityTag = (priority) => {
+    const normalized = (priority || 'Medium').toLowerCase();
+    const mapping = {
+      low: { color: 'green', label: 'Low' },
+      medium: { color: 'orange', label: 'Medium' },
+      high: { color: 'red', label: 'High' },
+      critical: { color: 'magenta', label: 'Critical' }
+    };
+
+    const config = mapping[normalized] || mapping.medium;
+    return <Tag color={config.color} style={{ borderRadius: 6, fontWeight: 600 }}>{config.label}</Tag>;
+  };
+
   const getDurationDays = () => {
     if (!node.startDate || !node.endDate) return '--';
     const start = dayjs(node.startDate);
@@ -111,13 +124,20 @@ const WorkDetailDrawer = ({
           </div>
         </div>
 
-        {/* === INFO SECTION === */}
+        {/* === KEY DETAILS SECTION === */}
         <div className="drawer-section">
           <div className="drawer-section-title">
             <FileTextOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            THÔNG TIN CHUNG
+            KEY DETAILS
           </div>
           <div className="drawer-info-grid">
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">Priority</span>
+              <div style={{ marginTop: 4 }}>
+                {renderPriorityTag(node.priority || 'Medium')}
+              </div>
+            </div>
+
             <div className="drawer-info-item">
               <span className="drawer-info-label">Người phụ trách</span>
               {node.assignee ? (
@@ -162,11 +182,64 @@ const WorkDetailDrawer = ({
         <div className="drawer-section">
           <div className="drawer-section-title">
             <FileTextOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            MÔ TẢ CÔNG VIỆC
+            DESCRIPTION
           </div>
           <div className="drawer-description">
             {node.description || <span className="drawer-info-empty">Chưa có mô tả</span>}
           </div>
+        </div>
+
+        {/* === SUBTASKS SECTION === */}
+        <div className="drawer-section">
+          <div className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>
+              <ApartmentOutlined style={{ marginRight: 6, color: '#2563EB' }} />
+              SUBTASKS
+            </span>
+            <span style={{ color: '#64748B', fontSize: 12, fontWeight: 600 }}>
+              {Array.isArray(node.children) ? node.children.length : 0} items
+            </span>
+          </div>
+
+          {Array.isArray(node.children) && node.children.length > 0 ? (
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 0.9fr 1fr', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: '#475569', fontSize: 12 }}>
+                <div style={{ padding: '10px 12px' }}>Work</div>
+                <div style={{ padding: '10px 12px' }}>Pri...</div>
+                <div style={{ padding: '10px 12px' }}>Ass...</div>
+                <div style={{ padding: '10px 12px' }}>Status</div>
+              </div>
+
+              {node.children.map((child) => (
+                <div key={child.id || child.wbsCode} style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 0.9fr 1fr', borderBottom: '1px solid #F1F5F9', background: '#fff' }}>
+                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: '#2563EB', fontSize: 12 }}>◫</span>
+                    <span style={{ fontWeight: 600, color: '#1F2937' }}>{child.wbsCode}</span>
+                    <span style={{ color: '#334155' }}>{child.name}</span>
+                  </div>
+                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center' }}>
+                    {renderPriorityTag(child.priority || node.priority || 'Medium')}
+                  </div>
+                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center' }}>
+                    {child.assignee ? (
+                      <Avatar size={24} style={{ backgroundColor: '#E2E8F0', color: '#334155', fontSize: 10 }}>
+                        {getInitials(child.assignee.name)}
+                      </Avatar>
+                    ) : (
+                      <span style={{ color: '#94A3B8' }}>--</span>
+                    )}
+                  </div>
+                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center' }}>
+                    {renderStatusTag(child.status || node.status || 'not_started')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="drawer-empty-images">
+              <span>Chưa có công việc con</span>
+            </div>
+          )}
         </div>
 
         {/* === IMAGES SECTION === */}

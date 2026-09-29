@@ -1,16 +1,23 @@
 package com.ntdhtcct.domain.wbs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -57,6 +64,35 @@ public class WbsItem {
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    @Column(name = "duration")
+    private Integer duration;
+
+    @Column(name = "es")
+    private Integer es;
+
+    @Column(name = "ef")
+    private Integer ef;
+
+    @Column(name = "ls")
+    private Integer ls;
+
+    @Column(name = "lf")
+    private Integer lf;
+
+    @Column(name = "slack")
+    private Integer slack;
+
+    @Column(name = "is_critical", nullable = false)
+    private boolean critical;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "task_dependencies",
+            joinColumns = @JoinColumn(name = "successor_id")
+    )
+        @Column(name = "predecessor_id", nullable = false)
+    private Set<UUID> predecessorIds = new HashSet<>();
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
@@ -183,6 +219,73 @@ public class WbsItem {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Integer duration) {
+        this.duration = duration;
+    }
+
+    public Integer getEs() {
+        return es;
+    }
+
+    public void setEs(Integer es) {
+        this.es = es;
+    }
+
+    public Integer getEf() {
+        return ef;
+    }
+
+    public void setEf(Integer ef) {
+        this.ef = ef;
+    }
+
+    public Integer getLs() {
+        return ls;
+    }
+
+    public void setLs(Integer ls) {
+        this.ls = ls;
+    }
+
+    public Integer getLf() {
+        return lf;
+    }
+
+    public void setLf(Integer lf) {
+        this.lf = lf;
+    }
+
+    public Integer getSlack() {
+        return slack;
+    }
+
+    public void setSlack(Integer slack) {
+        this.slack = slack;
+    }
+
+    @JsonProperty("isCritical")
+    public boolean isCritical() {
+        return critical;
+    }
+
+    public void setCritical(boolean critical) {
+        this.critical = critical;
+    }
+
+    public Set<UUID> getPredecessorIds() {
+        return predecessorIds;
+    }
+
+    public void setPredecessorIds(Set<UUID> predecessorIds) {
+        this.predecessorIds = predecessorIds == null
+                ? new HashSet<>()
+                : new HashSet<>(predecessorIds);
     }
 
     public String getDescription() {

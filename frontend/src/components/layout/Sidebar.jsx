@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BuildOutlined,
   DashboardOutlined,
@@ -11,14 +11,21 @@ import {
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { logoutUser, getAuthUser } from '../../utils/auth';
+import { logout } from '../../services/wbsApi';
 
 
 
 const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getAuthUser();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
+    }
     logoutUser();
     message.info('Đã đăng xuất tài khoản');
     navigate('/login');
@@ -67,14 +74,18 @@ const Sidebar = ({ collapsed }) => {
         </div>
 
         {/* ACTIVE ITEM */}
-        <div className="sidebar-item active" title={collapsed ? 'Cơ cấu công việc' : ''}>
+        <div
+          className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
+          onClick={() => navigate('/')}
+          title={collapsed ? 'Cơ cấu công việc' : ''}
+        >
           <NodeIndexOutlined />
           {!collapsed && <span>Cơ cấu công việc</span>}
         </div>
 
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick('Tiến độ')}
+          className={`sidebar-item ${location.pathname === '/progress' ? 'active' : ''}`}
+          onClick={() => navigate('/progress')}
           title={collapsed ? 'Tiến độ' : ''}
         >
           <HistoryOutlined />
