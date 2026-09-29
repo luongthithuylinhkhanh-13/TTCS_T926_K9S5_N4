@@ -16,6 +16,8 @@
     <!-- T-03.1: Bảng Users -->
     <include file="db/migration/v2/V2_0__create_users_table.xml"
              relativeToChangelogFile="false"/>
+    <include file="db/migration/v1/V1_2__schedule_and_task_dependencies.xml"
+             relativeToChangelogFile="false"/>
 
     <include file="db/migration/v3/V3_0__add_login_security_fields.xml"
              relativeToChangelogFile="false"/>

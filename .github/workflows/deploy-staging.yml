@@ -97,17 +97,32 @@ jobs:
       - name: Start Staging with Docker Compose
         run: |
           docker compose -f docker-compose.staging.yml up -d
-          sleep 20
+          echo "Waiting 10s for containers to initialize..."
+          sleep 10
           docker compose -f docker-compose.staging.yml ps
 
       - name: Verify Staging System Accessibility
         run: |
-          echo "Checking HTTP connection to Staging Backend..."
-          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
-          echo "Response code received: $RESPONSE_CODE"
-          if [ "$RESPONSE_CODE" -eq "000" ]; then
-            echo "Failed to connect to Staging!"
+          echo "Waiting for Staging Backend to be ready..."
+          SUCCESS=false
+          for i in {1..20}; do
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
+            echo "Attempt $i: Response code received: $RESPONSE_CODE"
+            if [ "$RESPONSE_CODE" != "000" ]; then
+              echo "Staging backend is accessible with status $RESPONSE_CODE!"
+              SUCCESS=true
+              break
+            fi
+            sleep 4
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "Failed to connect to Staging after timeout!"
+            echo "=== Docker Compose Status ==="
+            docker compose -f docker-compose.staging.yml ps
+            echo "=== Backend Container Logs ==="
+            docker compose -f docker-compose.staging.yml logs backend
+            echo "=== Postgres Container Logs ==="
+            docker compose -f docker-compose.staging.yml logs postgres
             exit 1
-          else
-            echo "Staging backend is accessible with status $RESPONSE_CODE!"
           fi
