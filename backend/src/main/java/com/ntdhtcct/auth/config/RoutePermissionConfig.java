@@ -38,6 +38,20 @@ public class RoutePermissionConfig {
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*",
                 new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER" });
+
+        // Epic E-04 / S-08 (NTDHTCT-143): Quản lý công việc và tiến độ
+        addRule(HttpMethod.POST, "/api/projects/*/tasks",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER" });
+        addRule(HttpMethod.GET, "/api/projects/*/tasks",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER" });
+        addRule(HttpMethod.POST, "/api/projects/*/dependencies",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER" });
+        addRule(HttpMethod.GET, "/api/projects/*/dependencies",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER" });
+        addRule(HttpMethod.POST, "/api/projects/*/schedule/forward-pass",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER" });
+        addRule(HttpMethod.GET, "/api/projects/*/schedule/forward-pass",
+                new String[] { "ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER" });
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

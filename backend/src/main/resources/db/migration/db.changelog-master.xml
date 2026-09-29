@@ -13,5 +13,7 @@
              relativeToChangelogFile="false"/>
     <include file="db/migration/v1/V1_1__auth_and_project_rbac.xml"
              relativeToChangelogFile="false"/>
+    <include file="db/migration/v1/V1_2__schedule_and_task_dependencies.xml"
+             relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

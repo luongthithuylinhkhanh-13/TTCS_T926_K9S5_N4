@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ========================================================================= -->
+    <!-- Epic E-04: Tiến độ và đường găng                                          -->
+    <!-- Story S-08: Tính thời điểm khởi sớm và kết thúc sớm (NTDHTCT-143)         -->
+    <!-- Subtask T-19: Bảng tasks (Lưu thông tin công việc, thời lượng, ES, EF)    -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.2-01-create-tasks-table" author="NTDHTCT-145">
+        <comment>Tạo bảng tasks lưu trữ công việc dự án, thời lượng và thông số tiến độ ES/EF</comment>
+        <createTable tableName="tasks" remarks="Bảng công việc dự án thi công">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_tasks"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_tasks_project" references="projects(id)" deleteCascade="true"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="duration" type="DOUBLE PRECISION" defaultValueNumeric="0.0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="early_start" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="early_finish" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="late_start" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="late_finish" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="total_float" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="free_float" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="is_critical" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)" defaultValue="TODO">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="tasks"
+            columnNames="project_id, code"
+            constraintName="uk_tasks_project_code"/>
+
+        <createIndex tableName="tasks" indexName="idx_tasks_project_id">
+            <column name="project_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="tasks"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ========================================================================= -->
+    <!-- Subtask T-18: Bảng task_dependencies (Bốn loại quan hệ: FS, SS, FF, SF)   -->
+    <!-- Mã task: NTDHTCT-144                                                      -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.2-02-create-task-dependencies-table" author="NTDHTCT-144">
+        <comment>Tạo bảng task_dependencies lưu quan hệ phụ thuộc giữa các công việc (FS, SS, FF, SF, lag)</comment>
+        <createTable tableName="task_dependencies" remarks="Bảng quan hệ phụ thuộc công việc trong tiến độ">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_task_dependencies"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_dependencies_project" references="projects(id)" deleteCascade="true"/>
+            </column>
+            <column name="predecessor_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_dependencies_pred_task" references="tasks(id)" deleteCascade="true"/>
+            </column>
+            <column name="successor_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_dependencies_succ_task" references="tasks(id)" deleteCascade="true"/>
+            </column>
+            <column name="type" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lag" type="DOUBLE PRECISION" defaultValueNumeric="0.0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="task_dependencies"
+            columnNames="predecessor_id, successor_id"
+            constraintName="uk_task_dependencies_pred_succ"/>
+
+        <createIndex tableName="task_dependencies" indexName="idx_dependencies_project_id">
+            <column name="project_id"/>
+        </createIndex>
+        <createIndex tableName="task_dependencies" indexName="idx_dependencies_predecessor_id">
+            <column name="predecessor_id"/>
+        </createIndex>
+        <createIndex tableName="task_dependencies" indexName="idx_dependencies_successor_id">
+            <column name="successor_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="task_dependencies"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
