@@ -30,5 +30,7 @@
     <!-- T-06: Project & WBS -->
     <include file="db/migration/v7/V7_0__create_projects_wbs_tables.xml"
              relativeToChangelogFile="false"/>
+    <include file="db/migration/v1/V1_1__create_task_dependencies_table.xml" 
+             relativeToChangelogFile="false"/>         
 
 </databaseChangeLog>
