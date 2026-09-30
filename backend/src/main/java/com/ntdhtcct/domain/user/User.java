@@ -48,6 +48,12 @@ public class User {
     @Column(name = "role_id")
     private UUID roleId;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private OffsetDateTime lockedUntil;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -57,9 +63,21 @@ public class User {
     /**
      * Constructor mặc định (yêu cầu bởi JPA).
      */
+
     protected User() {
     }
 
+    @jakarta.persistence.PrePersist
+    protected void onCreate() {
+    OffsetDateTime now = OffsetDateTime.now();
+    this.createdAt = now;
+    this.updatedAt = now;
+    }
+
+    @jakarta.persistence.PreUpdate
+    protected void onUpdate() {
+    this.updatedAt = OffsetDateTime.now();
+    }
     // --- Getters ---
 
     public UUID getId() {
@@ -94,6 +112,14 @@ public class User {
         return updatedAt;
     }
 
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public OffsetDateTime getLockedUntil() {
+        return lockedUntil;
+    }
+
     // --- Setters ---
 
     public void setEmail(String email) {
@@ -118,5 +144,13 @@ public class User {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public void setLockedUntil(OffsetDateTime lockedUntil) {
+        this.lockedUntil = lockedUntil;
     }
 }

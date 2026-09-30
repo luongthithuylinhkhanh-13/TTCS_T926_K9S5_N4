@@ -16,4 +16,16 @@
     <include file="db/migration/v2/V2_0__create_users_table.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v3/V3_0__add_login_security_fields.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v4/V4_0__create_roles_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v5/V5_0__add_users_roles_fk.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v6/V6_0__create_auth_tokens_table.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

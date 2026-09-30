@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V3.0-create-roles-table" author="T-03.2">
+
+        <comment>
+            Tạo bảng roles phục vụ phân quyền người dùng.
+        </comment>
+
+        <createTable tableName="roles"
+                     remarks="Bảng vai trò người dùng">
+
+            <column name="id"
+                    type="UUID"
+                    defaultValueComputed="gen_random_uuid()">
+
+                <constraints
+                        primaryKey="true"
+                        nullable="false"/>
+            </column>
+
+            <column name="name"
+                    type="VARCHAR(50)">
+
+                <constraints
+                        nullable="false"
+                        unique="true"
+                        uniqueConstraintName="uq_roles_name"/>
+            </column>
+
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="roles"/>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

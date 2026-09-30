@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V5.0-add-users-roles-fk" author="T-03.2">
+
+        <comment>
+            Thêm khóa ngoại từ users.role_id đến roles.id.
+        </comment>
+
+        <addForeignKeyConstraint
+                baseTableName="users"
+                baseColumnNames="role_id"
+                referencedTableName="roles"
+                referencedColumnNames="id"
+                constraintName="fk_users_role_id_roles"/>
+
+        <rollback>
+            <dropForeignKeyConstraint
+                    baseTableName="users"
+                    constraintName="fk_users_role_id_roles"/>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

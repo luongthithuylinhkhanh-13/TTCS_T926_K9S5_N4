@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V6.0-create-auth-tokens-table" author="T-03">
+
+        <comment>
+            Tạo bảng auth_tokens để quản lý session/token đăng nhập.
+        </comment>
+
+        <createTable tableName="auth_tokens"
+                     remarks="Bảng quản lý token đăng nhập">
+
+            <column name="id" type="UUID">
+                <constraints
+                    primaryKey="true"
+                    nullable="false"/>
+            </column>
+
+            <column name="token" type="VARCHAR(255)">
+                <constraints
+                    nullable="false"
+                    unique="true"
+                    uniqueConstraintName="uq_auth_tokens_token"/>
+            </column>
+
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="revoked" type="BOOLEAN"
+                    defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="auth_tokens"
+            baseColumnNames="user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_auth_tokens_user"/>
+
+        <rollback>
+            <dropTable tableName="auth_tokens"/>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

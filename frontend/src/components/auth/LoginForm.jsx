@@ -1,41 +1,76 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Checkbox, Alert } from 'antd';
-import { MailOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined, LoginOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { setAuthUser } from '../../utils/auth';
 
 const LoginForm = () => {
+  const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
   const handleFinish = async (values) => {
-    const { email, password, remember } = values;
-
     setLoginError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
-      // TODO(T03): Replace mock authentication with Authentication API when T03 is available.
-      // Expected API call:
-      //   const response = await loginAPI({ email, password });
-      //
-      // Expected response handling:
-      //   - Success: response.user object -> setAuthUser(response.user, remember) -> navigate('/wbs')
-      //   - Invalid credentials: setLoginError('Email hoặc mật khẩu không chính xác.')
-      //   - Account locked: setLoginError('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.')
-      //   - Other errors: setLoginError('Đã xảy ra lỗi. Vui lòng thử lại sau.')
+      const registering = mode === 'register';
+      const response = await fetch(`/api/auth/${registering ? 'register' : 'login'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registering
+          ? {
+              fullName: values.fullName.trim(),
+              email: values.email.trim(),
+              password: values.password,
+              confirmPassword: values.confirmPassword,
+            }
+          : {
+              email: values.email.trim(),
+              password: values.password,
+            }),
+      });
+      const data = await response.json();
 
-      // Placeholder: do nothing until T03 Authentication API is ready.
-      // Remove this line and uncomment the API call above when T03 is complete.
-      setLoginError('Hệ thống đăng nhập chưa sẵn sàng. Vui lòng chờ tích hợp Authentication API (T03).');
+      if (!response.ok || !data.success) {
+        setLoginError(data.message || (registering
+          ? 'Đăng ký không thành công.'
+          : 'Đăng nhập không thành công.'));
+        return;
+      }
+
+      if (registering) {
+        setSuccessMessage(data.message || 'Đăng ký thành công. Bạn có thể đăng nhập.');
+        setMode('login');
+        form.resetFields();
+        form.setFieldsValue({ email: data.email || values.email });
+        return;
+      }
+
+      setAuthUser({
+        userId: data.userId,
+        email: data.email,
+        roleId: data.roleId,
+        token: data.token,
+        expiresAt: data.expiresAt,
+      }, values.remember);
+      navigate('/wbs');
     } catch (error) {
       console.error('Login error:', error);
-      setLoginError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      setLoginError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setLoginError(null);
+    setSuccessMessage(null);
   };
 
   return (
@@ -44,9 +79,26 @@ const LoginForm = () => {
         <div className="login-mobile-logo">
           <span className="login-mobile-logo-text">CONSTRUCTFLOW</span>
         </div>
-        <h2 className="login-title">Chào mừng trở lại</h2>
-        <p className="login-subtitle">Đăng nhập để tiếp tục quản lý công trình</p>
+        <h2 className="login-title">
+          {mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản'}
+        </h2>
+        <p className="login-subtitle">
+          {mode === 'login'
+            ? 'Đăng nhập để tiếp tục quản lý công trình'
+            : 'Đăng ký để bắt đầu quản lý công trình'}
+        </p>
       </div>
+
+      {successMessage && (
+        <Alert
+          message={successMessage}
+          type="success"
+          showIcon
+          closable
+          onClose={() => setSuccessMessage(null)}
+          style={{ marginBottom: 20 }}
+        />
+      )}
 
       {loginError && (
         <Alert
@@ -67,6 +119,22 @@ const LoginForm = () => {
         className="login-form"
         requiredMark={false}
       >
+        {mode === 'register' && (
+          <Form.Item
+            label="HỌ VÀ TÊN"
+            name="fullName"
+            rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập họ và tên' }]}
+          >
+            <Input
+              prefix={<UserOutlined style={{ color: '#94A3B8' }} />}
+              placeholder="Nhập họ và tên"
+              size="large"
+              autoComplete="name"
+              disabled={loading}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item
           label="EMAIL"
           name="email"
@@ -80,6 +148,7 @@ const LoginForm = () => {
             placeholder="Nhập email"
             size="large"
             autoComplete="email"
+            disabled={loading}
           />
         </Form.Item>
 
@@ -87,32 +156,56 @@ const LoginForm = () => {
           label="MẬT KHẨU"
           name="password"
           rules={[
-            { required: true, message: 'Vui lòng nhập mật khẩu' }
+            { required: true, message: 'Vui lòng nhập mật khẩu' },
+            ...(mode === 'register'
+              ? [{ min: 8, message: 'Mật khẩu cần ít nhất 8 ký tự' }]
+              : [])
           ]}
         >
           <Input.Password
             prefix={<LockOutlined style={{ color: '#94A3B8' }} />}
             placeholder="Nhập mật khẩu"
             size="large"
-            autoComplete="current-password"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            disabled={loading}
           />
         </Form.Item>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Form.Item name="remember" valuePropName="checked" noStyle initialValue={true}>
-            <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-          </Form.Item>
-          <a
-            href="#forgot"
-            onClick={(e) => {
-              e.preventDefault();
-              // TODO(T03): Implement forgot password flow when T03 is available.
-            }}
-            style={{ color: '#2563EB', fontSize: 13, fontWeight: 500 }}
+        {mode === 'register' ? (
+          <Form.Item
+            label="XÁC NHẬN MẬT KHẨU"
+            name="confirmPassword"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
+                },
+              }),
+            ]}
           >
-            Quên mật khẩu?
-          </a>
-        </div>
+            <Input.Password
+              prefix={<LockOutlined style={{ color: '#94A3B8' }} />}
+              placeholder="Nhập lại mật khẩu"
+              size="large"
+              autoComplete="new-password"
+              disabled={loading}
+            />
+          </Form.Item>
+        ) : (
+          <div className="login-options">
+            <Form.Item name="remember" valuePropName="checked" noStyle initialValue={true}>
+              <Checkbox>Ghi nhớ đăng nhập</Checkbox>
+            </Form.Item>
+            <a href="#forgot" onClick={(event) => event.preventDefault()} className="login-link">
+              Quên mật khẩu?
+            </a>
+          </div>
+        )}
 
         <Form.Item style={{ marginBottom: 0 }}>
           <Button
@@ -121,13 +214,24 @@ const LoginForm = () => {
             loading={loading}
             disabled={loading}
             block
-            icon={<LoginOutlined />}
+            icon={mode === 'login' ? <LoginOutlined /> : <UserOutlined />}
             className="login-btn"
           >
-            ĐĂNG NHẬP
+            {mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}
           </Button>
         </Form.Item>
       </Form>
+
+      <div className="auth-mode-switch">
+        <span>{mode === 'login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}</span>
+        <Button
+          type="link"
+          disabled={loading}
+          onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+        >
+          {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
+        </Button>
+      </div>
     </div>
   );
 };
