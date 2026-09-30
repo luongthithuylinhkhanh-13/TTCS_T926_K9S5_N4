@@ -39,6 +39,3 @@ logging:
     liquibase: INFO
     org.springframework.jdbc: DEBUG
 
-spring:
-  main:
-    allow-bean-definition-overriding: true
