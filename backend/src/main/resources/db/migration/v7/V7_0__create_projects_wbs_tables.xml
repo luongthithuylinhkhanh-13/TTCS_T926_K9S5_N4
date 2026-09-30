@@ -6,7 +6,7 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="V7.0-create-projects" author="NTDHTCT-20">
-        <createTable tableName="projects">
+        <createTable tableName="wbs_projects">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -91,7 +91,7 @@
         <addForeignKeyConstraint
             baseTableName="wbs_items"
             baseColumnNames="project_id"
-            referencedTableName="projects"
+            referencedTableName="wbs_projects"
             referencedColumnNames="id"
             constraintName="fk_wbs_project"
             onDelete="CASCADE"/>
