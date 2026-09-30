@@ -1,7 +1,7 @@
 package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
-import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.domain.project.DomainProjectRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -11,14 +11,14 @@ import java.util.UUID;
 @Component
 public class ProjectWbsSeeder implements CommandLineRunner {
 
-    private final ProjectRepository projectRepository;
+    private final DomainProjectRepository DomainProjectRepository;
     private final WbsItemRepository wbsItemRepository;
 
     public ProjectWbsSeeder(
-            ProjectRepository projectRepository,
+            DomainProjectRepository DomainProjectRepository,
             WbsItemRepository wbsItemRepository
     ) {
-        this.projectRepository = projectRepository;
+        this.DomainProjectRepository = DomainProjectRepository;
         this.wbsItemRepository = wbsItemRepository;
     }
 
@@ -35,7 +35,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
     private void seedProjects() {
 
         // DA-001
-        Project da001 = projectRepository.findByCode("DA-001")
+        Project da001 = DomainProjectRepository.findByCode("DA-001")
                 .orElseGet(() -> new Project(
                         "DA-001",
                         "Xây dựng Chung cư Green Tower"
@@ -50,10 +50,10 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "Dự án xây dựng chung cư Green Tower"
         );
 
-        projectRepository.save(da001);
+        DomainProjectRepository.save(da001);
 
         // DA-002
-        Project da002 = projectRepository.findByCode("DA-002")
+        Project da002 = DomainProjectRepository.findByCode("DA-002")
                 .orElseGet(() -> new Project(
                         "DA-002",
                         "Khu đô thị Green City"
@@ -68,10 +68,10 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "Dự án khu đô thị sinh thái cao cấp."
         );
 
-        projectRepository.save(da002);
+        DomainProjectRepository.save(da002);
 
         // DA-003
-        Project da003 = projectRepository.findByCode("DA-003")
+        Project da003 = DomainProjectRepository.findByCode("DA-003")
                 .orElseGet(() -> new Project(
                         "DA-003",
                         "Dự án DA-003"
@@ -83,7 +83,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
         da003.setStartDate(null);
         da003.setEndDate(null);
 
-        projectRepository.save(da003);
+        DomainProjectRepository.save(da003);
     }
 
     // =========================================================
@@ -91,7 +91,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
     // =========================================================
     private void seedWbsDa001() {
 
-        Project project = projectRepository.findByCode("DA-001")
+        Project project = DomainProjectRepository.findByCode("DA-001")
                 .orElseThrow(() ->
                         new RuntimeException("Không tìm thấy DA-001")
                 );
@@ -357,7 +357,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
     // =========================================================
     private void seedWbsDa002() {
 
-        Project project = projectRepository.findByCode("DA-002")
+        Project project = DomainProjectRepository.findByCode("DA-002")
                 .orElseThrow(() ->
                         new RuntimeException("Không tìm thấy DA-002")
                 );
