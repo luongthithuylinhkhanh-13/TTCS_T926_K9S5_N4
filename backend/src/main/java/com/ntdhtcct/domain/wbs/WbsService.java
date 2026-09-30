@@ -1,7 +1,7 @@
 package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
-import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.domain.project.DomainProjectRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,18 +12,18 @@ import java.util.UUID;
 public class WbsService {
 
     private final WbsItemRepository wbsItemRepository;
-    private final ProjectRepository projectRepository;
+    private final DomainProjectRepository DomainProjectRepository;
 
     public WbsService(
             WbsItemRepository wbsItemRepository,
-            ProjectRepository projectRepository
+            DomainProjectRepository DomainProjectRepository
     ) {
         this.wbsItemRepository = wbsItemRepository;
-        this.projectRepository = projectRepository;
+        this.DomainProjectRepository = DomainProjectRepository;
     }
 
     public List<Project> getProjects() {
-        return projectRepository.findAll();
+        return DomainProjectRepository.findAll();
     }
 
     public List<WbsItem> getWbsByProject(UUID projectId) {
@@ -124,7 +124,7 @@ public class WbsService {
     }
 
     private Project requireProject(UUID projectId) {
-        return projectRepository.findById(projectId)
+        return DomainProjectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Dự án không tồn tại"));
     }
 
