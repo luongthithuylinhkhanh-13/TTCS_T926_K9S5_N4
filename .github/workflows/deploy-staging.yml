@@ -102,12 +102,21 @@ jobs:
 
       - name: Verify Staging System Accessibility
         run: |
-          echo "Checking HTTP connection to Staging Backend..."
-          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
-          echo "Response code received: $RESPONSE_CODE"
-          if [ "$RESPONSE_CODE" -eq "000" ]; then
-            echo "Failed to connect to Staging!"
+          echo "Waiting for Staging Backend to become accessible..."
+          READY=false
+          for i in $(seq 1 30); do
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
+            echo "Attempt $i: Response code received: $RESPONSE_CODE"
+            if [ "$RESPONSE_CODE" != "000" ] && [ "$RESPONSE_CODE" != "000000" ]; then
+              READY=true
+              echo "Staging backend is accessible with status $RESPONSE_CODE!"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$READY" != "true" ]; then
+            echo "Failed to connect to Staging! Showing container logs:"
+            docker compose logs
             exit 1
-          else
-            echo "Staging backend is accessible with status $RESPONSE_CODE!"
           fi
