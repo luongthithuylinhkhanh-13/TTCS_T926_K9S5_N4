@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ================================================================ -->
+    <!-- V7.0-01: Bảng Projects                                          -->
+    <!-- ================================================================ -->
+    <changeSet id="V7.0-01-create-projects-table" author="T-04.3">
+
+        <comment>
+            Tạo bảng projects quản lý thông tin các công trình.
+        </comment>
+
+        <createTable
+                tableName="projects"
+                remarks="Bảng danh mục công trình">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints
+                        primaryKey="true"
+                        nullable="false"
+                        primaryKeyName="pk_projects"/>
+            </column>
+
+            <column name="code" type="VARCHAR(50)">
+                <constraints
+                        nullable="false"
+                        unique="true"
+                        uniqueConstraintName="uk_projects_code"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status" type="VARCHAR(30)"
+                    defaultValue="IN_PROGRESS">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="created_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="projects"/>
+        </rollback>
+
+    </changeSet>
+
+
+    <!-- ================================================================ -->
+    <!-- V7.0-02: Bảng Project Members                                   -->
+    <!-- ================================================================ -->
+    <changeSet id="V7.0-02-create-project-members-table" author="T-04.2">
+
+        <comment>
+            Tạo bảng project_members liên kết User với Project và Role.
+        </comment>
+
+        <createTable
+                tableName="project_members"
+                remarks="Bảng thành viên công trình và vai trò">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints
+                        primaryKey="true"
+                        nullable="false"
+                        primaryKeyName="pk_project_members"/>
+            </column>
+
+            <!-- projects.id vẫn dùng BIGINT -->
+            <column name="project_id" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        foreignKeyName="fk_project_members_project"
+                        references="projects(id)"
+                        deleteCascade="true"/>
+            </column>
+
+            <!-- users.id hiện tại dùng UUID -->
+            <column name="user_id" type="UUID">
+                <constraints
+                        nullable="false"
+                        foreignKeyName="fk_project_members_user"
+                        references="users(id)"
+                        deleteCascade="true"/>
+            </column>
+
+            <!-- roles.id hiện tại dùng UUID -->
+            <column name="role_id" type="UUID">
+                <constraints
+                        nullable="false"
+                        foreignKeyName="fk_project_members_role"
+                        references="roles(id)"/>
+            </column>
+
+            <column name="status"
+                    type="VARCHAR(20)"
+                    defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="joined_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <!-- Một user chỉ có một vai trò trong một project -->
+        <addUniqueConstraint
+                tableName="project_members"
+                columnNames="project_id, user_id"
+                constraintName="uk_project_member_project_user"/>
+
+        <createIndex
+                tableName="project_members"
+                indexName="idx_project_members_project_id">
+
+            <column name="project_id"/>
+
+        </createIndex>
+
+        <createIndex
+                tableName="project_members"
+                indexName="idx_project_members_user_id">
+
+            <column name="user_id"/>
+
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="project_members"/>
+        </rollback>
+
+    </changeSet>
+
+
+    <!-- ================================================================ -->
+    <!-- V7.0-03: Seed các Role phục vụ Project/RBAC                     -->
+    <!-- ================================================================ -->
+    <changeSet id="V7.0-03-seed-project-roles" author="T-04.1">
+
+        <comment>
+            Khởi tạo các vai trò phục vụ quản lý công trình và RBAC.
+        </comment>
+
+        <sql>
+            INSERT INTO roles (name)
+            VALUES
+                ('ADMIN'),
+                ('PROJECT_MANAGER'),
+                ('SITE_ENGINEER'),
+                ('WORKER'),
+                ('VIEWER')
+            ON CONFLICT (name) DO NOTHING;
+        </sql>
+
+        <rollback>
+            <sql>
+                DELETE FROM roles
+                WHERE name IN (
+                    'ADMIN',
+                    'PROJECT_MANAGER',
+                    'SITE_ENGINEER',
+                    'WORKER',
+                    'VIEWER'
+                );
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

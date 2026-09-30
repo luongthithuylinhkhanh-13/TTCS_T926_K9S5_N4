@@ -1,12 +1,12 @@
 package com.ntdhtcct.domain.user;
 
-import com.ntdhtcct.domain.role.Role;
-import com.ntdhtcct.domain.role.RoleRepository;
+import com.ntdhtcct.entity.Role;
+import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.RoleRepository;
+import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
-import java.time.OffsetDateTime;
 
 @Component
 public class UserSeeder implements CommandLineRunner {
@@ -28,31 +28,25 @@ public class UserSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
+        // Nếu đã có tài khoản test thì không tạo lại
         if (userRepository.existsByEmail("test@test.com")) {
             return;
         }
 
-           Role role = roleRepository.findByName("CUSTOMER")
-           .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
-            User user = new User();
+        // Lấy role CUSTOMER, nếu chưa có thì tạo
+        Role role = roleRepository.findByName("CUSTOMER")
+                .orElseGet(() ->
+                        roleRepository.save(new Role("CUSTOMER"))
+                );
+
+        // Tạo user test
+        User user = new User();
 
         user.setEmail("test@test.com");
-
-        // Password: 12345678
-        // Được mã hóa bằng Argon2 trước khi lưu database
-        user.setPassword(
-                passwordEncoder.encode("12345678")
-        );
-
+        user.setPassword(passwordEncoder.encode("12345678"));
         user.setFullName("Test User");
-        user.setRoleId(role.getId());
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
+        user.setRole(role);
 
-        OffsetDateTime now = OffsetDateTime.now();
-        user.setUpdatedAt(now);
-
-        // created_at không có setter nên JPA sẽ cần xử lý giá trị này
         userRepository.save(user);
     }
 }
