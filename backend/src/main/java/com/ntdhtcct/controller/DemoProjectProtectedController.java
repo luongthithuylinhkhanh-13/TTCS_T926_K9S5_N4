@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Controller minh họa kiểm thử cơ chế phân quyền chi tiết (RBAC) và Default Deny:
@@ -23,7 +24,7 @@ public class DemoProjectProtectedController {
      */
     @GetMapping("/engineering-diary")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
-    public ResponseEntity<ApiResponse<Map<String, String>>> getEngineeringDiary(@PathVariable Long projectId) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> getEngineeringDiary(@PathVariable UUID projectId) {
         return ResponseEntity.ok(ApiResponse.ok("Truy cập thành công nhật ký công trường",
                 Map.of("projectId", String.valueOf(projectId), "feature", "Nhật ký công trường")));
     }
@@ -34,7 +35,7 @@ public class DemoProjectProtectedController {
      * Cơ chế Default Deny sẽ tự động CHẶN TOÀN BỘ và trả về 403 Forbidden!
      */
     @GetMapping("/unconfigured-secure-endpoint")
-    public ResponseEntity<ApiResponse<String>> unconfiguredEndpoint(@PathVariable Long projectId) {
+    public ResponseEntity<ApiResponse<String>> unconfiguredEndpoint(@PathVariable UUID projectId) {
         return ResponseEntity.ok(ApiResponse.ok("Nếu bạn thấy chuỗi này, Default Deny đã thất bại!"));
     }
 }

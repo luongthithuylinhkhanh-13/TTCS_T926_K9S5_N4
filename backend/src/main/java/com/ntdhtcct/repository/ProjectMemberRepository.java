@@ -14,28 +14,28 @@ import java.util.UUID;
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
     Optional<ProjectMember> findByProjectIdAndUserId(
-            Long projectId,
+            UUID projectId,
             UUID userId
     );
 
     Optional<ProjectMember> findByProjectIdAndUserIdAndStatus(
-            Long projectId,
+            UUID projectId,
             UUID userId,
             String status
     );
 
-    List<ProjectMember> findByProjectId(Long projectId);
+    List<ProjectMember> findByProjectId(UUID projectId);
 
     List<ProjectMember> findByUserId(UUID userId);
 
     boolean existsByProjectIdAndUserIdAndStatus(
-            Long projectId,
+            UUID projectId,
             UUID userId,
             String status
     );
 
     void deleteByProjectIdAndUserId(
-            Long projectId,
+            UUID projectId,
             UUID userId
     );
 
@@ -47,7 +47,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
           AND pm.status = 'ACTIVE'
     """)
     Optional<String> findActiveRoleNameByProjectAndUser(
-            @Param("projectId") Long projectId,
+            @Param("projectId") UUID projectId,
             @Param("userId") UUID userId
     );
 }

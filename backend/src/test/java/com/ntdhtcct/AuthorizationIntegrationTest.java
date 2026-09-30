@@ -8,7 +8,7 @@ import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.ProjectMemberRepository;
-import com.ntdhtcct.repository.ProjectRepository;
+import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;

@@ -5,12 +5,12 @@ import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.dto.AddMemberRequest;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
-import com.ntdhtcct.entity.Project;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.ProjectMemberRepository;
-import com.ntdhtcct.repository.ProjectRepository;
+import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import com.ntdhtcct.service.ProjectMemberService;
@@ -55,7 +55,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public ProjectMemberResponse addMemberToProject(
-            Long projectId,
+            UUID projectId,
             AddMemberRequest request
     ) {
         log.info(
@@ -135,7 +135,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public ProjectMemberResponse updateMemberRole(
-            Long projectId,
+            UUID projectId,
             UUID userId,
             UpdateMemberRoleRequest request
     ) {
@@ -184,7 +184,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public void removeMemberFromProject(
-            Long projectId,
+            UUID projectId,
             UUID userId
     ) {
         log.info(
@@ -212,7 +212,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Override
     @Transactional(readOnly = true)
     public List<ProjectMemberResponse> getProjectMembers(
-            Long projectId
+            UUID projectId
     ) {
         if (!projectRepository.existsById(projectId)) {
             throw new ResourceNotFoundException(
@@ -234,7 +234,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Override
     @Transactional(readOnly = true)
     public ProjectMemberResponse getProjectMember(
-            Long projectId,
+            UUID projectId,
             UUID userId
     ) {
         ProjectMember member =

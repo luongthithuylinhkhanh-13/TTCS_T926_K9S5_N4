@@ -31,7 +31,7 @@ public class ProjectMemberController {
     @PostMapping
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> addMember(
-            @PathVariable Long projectId,
+            @PathVariable UUID projectId,
             @Valid @RequestBody AddMemberRequest request) {
 
         ProjectMemberResponse response =
@@ -57,7 +57,7 @@ public class ProjectMemberController {
     @PutMapping("/{userId}/role")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> updateMemberRole(
-            @PathVariable Long projectId,
+            @PathVariable UUID projectId,
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
 
@@ -83,7 +83,7 @@ public class ProjectMemberController {
     @DeleteMapping("/{userId}")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<Void>> removeMember(
-            @PathVariable Long projectId,
+            @PathVariable UUID projectId,
             @PathVariable UUID userId) {
 
         projectMemberService.removeMemberFromProject(
@@ -110,7 +110,7 @@ public class ProjectMemberController {
             "VIEWER"
     })
     public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getProjectMembers(
-            @PathVariable Long projectId) {
+            @PathVariable UUID projectId) {
 
         List<ProjectMemberResponse> members =
                 projectMemberService.getProjectMembers(projectId);
@@ -131,7 +131,7 @@ public class ProjectMemberController {
             "VIEWER"
     })
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> getProjectMember(
-            @PathVariable Long projectId,
+            @PathVariable UUID projectId,
             @PathVariable UUID userId) {
 
         ProjectMemberResponse member =
