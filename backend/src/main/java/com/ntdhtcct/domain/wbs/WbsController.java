@@ -1,7 +1,7 @@
 package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.auth.AuthTokenService;
-import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.entity.Project;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

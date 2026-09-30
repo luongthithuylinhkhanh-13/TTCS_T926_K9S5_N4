@@ -86,7 +86,8 @@ jobs:
     name: Deploy to Staging & Verify
     needs: build-docker
     runs-on: ubuntu-latest
-
+    env:
+        DB_PASSWORD: testpassword
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

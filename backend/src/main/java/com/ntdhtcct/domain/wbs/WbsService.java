@@ -1,6 +1,6 @@
 package com.ntdhtcct.domain.wbs;
 
-import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.entity.Project;
 import com.ntdhtcct.domain.project.DomainProjectRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

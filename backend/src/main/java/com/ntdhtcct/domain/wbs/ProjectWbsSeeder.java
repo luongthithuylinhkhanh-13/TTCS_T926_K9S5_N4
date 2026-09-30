@@ -1,6 +1,6 @@
 package com.ntdhtcct.domain.wbs;
 
-import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.entity.Project;
 import com.ntdhtcct.domain.project.DomainProjectRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
