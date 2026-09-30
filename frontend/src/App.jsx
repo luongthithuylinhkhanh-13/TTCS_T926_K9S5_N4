@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import ProgressPage from './pages/ProgressPage';
 import WBSPage from './pages/WBSPage';
 import { isAuthenticated } from './utils/auth';
 import './styles/wbs.css';
@@ -27,6 +28,7 @@ function App() {
       >
         <Route index element={<Navigate to="/wbs" replace />} />
         <Route path="wbs" element={<WBSPage />} />
+        <Route path="progress" element={<ProgressPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

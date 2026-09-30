@@ -1,4 +1,4 @@
-export const INITIAL_WBS_DATA = {
+﻿export const INITIAL_WBS_DATA = {
   'DA-001': [
     {
       id: 'proj-1',
@@ -41,7 +41,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-01',
               endDate: '2026-09-03',
               description: 'Dọn dẹp và chuẩn bị mặt bằng phục vụ thi công.',
-              children: []
+              children: [],
+              images: ['site_preparation.png'],
             },
             {
               id: 'task-1-1-2',
@@ -56,7 +57,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-01',
               endDate: '2026-09-04',
               description: 'Xác định tọa độ và mốc móng công trình.',
-              children: []
+              children: [],
+              images: ['site_location.png'],
             },
             {
               id: 'task-1-1-3',
@@ -71,7 +73,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-02',
               endDate: '2026-09-07',
               description: 'Vận chuyển cát, đá, xi măng, cốp pha về công trường.',
-              children: []
+              children: [],
+              images: ['material_delivery.png'],
             }
           ]
         },
@@ -102,7 +105,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-08',
               endDate: '2026-09-12',
               description: 'Đào hố móng bằng máy đào theo bản vẽ kỹ thuật.',
-              children: []
+              children: [],
+              images: ['excavation.png'],
             },
             {
               id: 'task-1-2-2',
@@ -117,7 +121,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-13',
               endDate: '2026-09-25',
               description: 'Gia công và lắp đặt cốt thép phần móng theo hồ sơ thiết kế được phê duyệt.',
-              children: []
+              children: [],
+              images: ['rebar.png'],
             },
             {
               id: 'task-1-2-3',
@@ -132,7 +137,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-18',
               endDate: '2026-09-27',
               description: 'Lắp đặt cốp pha phủ phim định hình khung móng.',
-              children: []
+              children: [],
+              images: ['formwork.png'],
             },
             {
               id: 'task-1-2-4',
@@ -147,7 +153,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-09-28',
               endDate: '2026-10-02',
               description: 'Đổ bê tông tươi thương phẩm mác 300 cho móng.',
-              children: []
+              children: [],
+              images: ['concrete_pour.png'],
             }
           ]
         },
@@ -178,7 +185,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-10-03',
               endDate: '2026-10-08',
               description: 'Gia công lắp dựng thép và cốp pha cột tầng 1.',
-              children: []
+              children: [],
+              images: ['column_construction.png'],
             },
             {
               id: 'task-1-3-2',
@@ -193,7 +201,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-10-09',
               endDate: '2026-10-14',
               description: 'Gia công cốt thép và cốp pha dầm tầng 1.',
-              children: []
+              children: [],
+              images: ['beam_construction.png'],
             },
             {
               id: 'task-1-3-3',
@@ -208,7 +217,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-10-15',
               endDate: '2026-10-20',
               description: 'Lắp dựng thép sàn và đổ bê tông sàn tầng 1.',
-              children: []
+              children: [],
+              images: ['floor_construction.png'],
             },
             {
               id: 'task-1-3-4',
@@ -223,7 +233,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-10-21',
               endDate: '2026-10-28',
               description: 'Xây bao che và tường ngăn tầng 1.',
-              children: []
+              children: [],
+              images: ['wall_construction.png'],
             }
           ]
         },
@@ -254,7 +265,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-10-29',
               endDate: '2026-11-05',
               description: 'Trát tường trong và ngoài nhà.',
-              children: []
+              children: [],
+              images: ['plastering.png'],
             },
             {
               id: 'task-1-4-2',
@@ -269,7 +281,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-11-06',
               endDate: '2026-11-15',
               description: 'Sơn lót và 2 lớp sơn phủ hoàn thiện.',
-              children: []
+              children: [],
+              images: ['painting.png'],
             },
             {
               id: 'task-1-4-3',
@@ -284,7 +297,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-11-16',
               endDate: '2026-11-25',
               description: 'Lắp đặt khung nhôm kính và cửa gỗ.',
-              children: []
+              children: [],
+              images: ['door_installation.png'],
             },
             {
               id: 'task-1-4-4',
@@ -299,7 +313,8 @@ export const INITIAL_WBS_DATA = {
               startDate: '2026-11-26',
               endDate: '2026-12-10',
               description: 'Lắp thiết bị điện, vệ sinh và chạy thử nghiệm.',
-              children: []
+              children: [],
+              images: ['mep_installation.png'],
             }
           ]
         }

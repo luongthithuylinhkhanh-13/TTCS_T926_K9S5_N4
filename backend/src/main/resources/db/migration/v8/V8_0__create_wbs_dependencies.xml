@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V8.0-create-wbs-dependencies" author="NTDHTCT-21">
+        <createTable tableName="wbs_item_dependencies">
+            <column name="wbs_item_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="predecessor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+            tableName="wbs_item_dependencies"
+            columnNames="wbs_item_id,predecessor_id"
+            constraintName="pk_wbs_item_dependencies"/>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_item_dependencies"
+            baseColumnNames="wbs_item_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_dependency_item"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_item_dependencies"
+            baseColumnNames="predecessor_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_dependency_predecessor"
+            onDelete="CASCADE"/>
+
+        <rollback>
+            <dropTable tableName="wbs_item_dependencies"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

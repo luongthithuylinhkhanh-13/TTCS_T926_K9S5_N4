@@ -1,22 +1,31 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  BuildOutlined, 
-  DashboardOutlined, 
-  ProjectOutlined, 
-  NodeIndexOutlined, 
-  HistoryOutlined, 
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  BuildOutlined,
+  DashboardOutlined,
+  ProjectOutlined,
+  NodeIndexOutlined,
+  HistoryOutlined,
   CheckSquareOutlined,
-  LogoutOutlined
+  LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { logoutUser, getAuthUser } from '../../utils/auth';
+import { logout } from '../../services/wbsApi';
+
+
 
 const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getAuthUser();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
+    }
     logoutUser();
     message.info('Đã đăng xuất tài khoản');
     navigate('/login');
@@ -27,7 +36,10 @@ const Sidebar = ({ collapsed }) => {
   };
 
   return (
-    <aside className="app-sidebar" style={{ width: collapsed ? 80 : 250 }}>
+    <aside
+      className="app-sidebar"
+      style={{ width: collapsed ? 80 : 250, background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
+    >
       {/* Brand Header */}
       <div className="sidebar-brand">
         <BuildOutlined className="sidebar-logo-icon" />
@@ -42,8 +54,8 @@ const Sidebar = ({ collapsed }) => {
       {/* Navigation Menu */}
       <div className="sidebar-menu">
         {!collapsed && <div className="sidebar-section-label">TỔNG QUAN</div>}
-        <div 
-          className="sidebar-item" 
+        <div
+          className="sidebar-item"
           onClick={() => handleNonWbsClick('Dashboard')}
           title={collapsed ? 'Dashboard' : ''}
         >
@@ -52,8 +64,8 @@ const Sidebar = ({ collapsed }) => {
         </div>
 
         {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>DỰ ÁN</div>}
-        <div 
-          className="sidebar-item" 
+        <div
+          className="sidebar-item"
           onClick={() => handleNonWbsClick('Dự án')}
           title={collapsed ? 'Dự án' : ''}
         >
@@ -62,31 +74,52 @@ const Sidebar = ({ collapsed }) => {
         </div>
 
         {/* ACTIVE ITEM */}
-        <div 
-          className="sidebar-item active" 
+        <div
+          className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
+          onClick={() => navigate('/')}
           title={collapsed ? 'Cơ cấu công việc' : ''}
         >
           <NodeIndexOutlined />
           {!collapsed && <span>Cơ cấu công việc</span>}
         </div>
 
-        <div 
-          className="sidebar-item" 
-          onClick={() => handleNonWbsClick('Tiến độ')}
+        <div
+          className={`sidebar-item ${location.pathname === '/progress' ? 'active' : ''}`}
+          onClick={() => navigate('/progress')}
           title={collapsed ? 'Tiến độ' : ''}
         >
           <HistoryOutlined />
           {!collapsed && <span>Tiến độ</span>}
         </div>
 
-        <div 
-          className="sidebar-item" 
+        <div
+          className="sidebar-item"
           onClick={() => handleNonWbsClick('Công việc')}
           title={collapsed ? 'Công việc' : ''}
         >
           <CheckSquareOutlined />
           {!collapsed && <span>Công việc</span>}
         </div>
+      </div>
+
+      {/* Bottom Gradient placeholder */}
+      <div
+        className="sidebar-bottom-image"
+        style={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'flex-end',
+          padding: '12px',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '80px',
+            background: 'linear-gradient(135deg, #3c6382, #0a3d62)',
+            borderRadius: '4px',
+          }}
+        />
       </div>
 
       {/* Bottom User Section */}
