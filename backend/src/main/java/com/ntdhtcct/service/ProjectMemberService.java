@@ -14,27 +14,27 @@ import java.util.UUID;
 public interface ProjectMemberService {
 
     ProjectMemberResponse addMemberToProject(
-            Long projectId,
+            UUID projectId,
             AddMemberRequest request
     );
 
     ProjectMemberResponse updateMemberRole(
-            Long projectId,
+            UUID projectId,
             UUID userId,
             UpdateMemberRoleRequest request
     );
 
     void removeMemberFromProject(
-            Long projectId,
+            UUID projectId,
             UUID userId
     );
 
     List<ProjectMemberResponse> getProjectMembers(
-            Long projectId
+            UUID projectId
     );
 
     ProjectMemberResponse getProjectMember(
-            Long projectId,
+            UUID projectId,
             UUID userId
     );
 }

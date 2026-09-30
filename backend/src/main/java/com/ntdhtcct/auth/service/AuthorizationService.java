@@ -4,7 +4,7 @@ import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.common.exception.UnauthorizedException;
 import com.ntdhtcct.repository.ProjectMemberRepository;
-import com.ntdhtcct.repository.ProjectRepository;
+import com.ntdhtcct.domain.project.ProjectRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class AuthorizationService {
     }
 
     public String checkProjectAccess(
-            Long projectId,
+            UUID projectId,
             UUID userId,
             String[] requiredRoles) {
 

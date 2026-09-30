@@ -3,6 +3,7 @@ package com.ntdhtcct.entity;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import com.ntdhtcct.domain.project.Project;
 
 /**
  * T-04.2 & T-04.3: Entity ánh xạ bảng `project_members`.
