@@ -47,7 +47,7 @@ public class User {
 
     @Column(name = "role_id")
     private UUID roleId;
-    
+
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts = 0;
 
@@ -63,7 +63,7 @@ public class User {
     /**
      * Constructor mặc định (yêu cầu bởi JPA).
      */
-    
+
     protected User() {
     }
 
@@ -111,7 +111,7 @@ public class User {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
-    
+
     public int getFailedLoginAttempts() {
         return failedLoginAttempts;
     }

@@ -12,6 +12,7 @@ const WorkFormModal = ({
   onSubmit,
   initialValues,
   parentOptions = [],
+  taskOptions = [],
   isEdit = false
 }) => {
   const [form] = Form.useForm();
@@ -22,11 +23,13 @@ const WorkFormModal = ({
         form.setFieldsValue({
           wbsCode: initialValues.wbsCode || '',
           name: initialValues.name || '',
+          duration: initialValues.duration ?? undefined,
           parentId: initialValues.parentId || null,
           assigneeId: initialValues.assignee?.id || undefined,
           status: initialValues.status || 'not_started',
           startDate: initialValues.startDate ? dayjs(initialValues.startDate) : null,
           endDate: initialValues.endDate ? dayjs(initialValues.endDate) : null,
+          predecessorIds: initialValues.predecessorIds || [],
           progress: initialValues.progress || 0,
           description: initialValues.description || ''
         });
@@ -34,7 +37,9 @@ const WorkFormModal = ({
         form.resetFields();
         form.setFieldsValue({
           status: 'not_started',
-          progress: 0
+          duration: undefined,
+          progress: 0,
+          predecessorIds: []
         });
       }
     }
@@ -55,7 +60,8 @@ const WorkFormModal = ({
       ...initialValues,
       wbsCode: values.wbsCode,
       name: values.name,
-      type: isEdit ? initialValues.type : (values.parentId ? 'task' : 'phase'),
+      duration: values.duration,
+      type: isEdit ? initialValues.type : 'task',
       parentId: values.parentId || null,
       assignee: assigneeObj,
       status: values.status,
@@ -118,6 +124,18 @@ const WorkFormModal = ({
           </Col>
         </Row>
 
+        {(!isEdit || initialValues?.type === 'task') && (
+          <Form.Item
+            label="Thời lượng thực hiện (ngày)"
+            name="duration"
+            rules={[
+              { required: true, type: 'number', min: 1, message: 'Thời lượng phải lớn hơn 0' }
+            ]}
+          >
+            <InputNumber min={1} precision={0} changeOnBlur={false} style={{ width: '100%' }} placeholder="Nhập số ngày" />
+          </Form.Item>
+        )}
+
         {/* ROW 2: Parent Task */}
         <Form.Item
           label="Công việc / Hạng mục cha"
@@ -134,6 +152,35 @@ const WorkFormModal = ({
               </Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item noStyle shouldUpdate={(previous, current) => previous.parentId !== current.parentId}>
+          {({ getFieldValue }) => {
+            const isTask = isEdit
+              ? initialValues?.type === 'task'
+              : Boolean(getFieldValue('parentId'));
+
+            return isTask ? (
+              <Form.Item
+                label="Công việc tiền nhiệm"
+                name="predecessorIds"
+                extra="Các công việc phải hoàn thành trước công việc này (quan hệ kết thúc-bắt đầu)."
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  options={taskOptions
+                    .filter(task => task.id !== initialValues?.id)
+                    .map(task => ({
+                      value: task.id,
+                      label: `${task.wbsCode} - ${task.name}`
+                    }))}
+                  placeholder="Chọn công việc tiền nhiệm"
+                  optionFilterProp="label"
+                />
+              </Form.Item>
+            ) : null;
+          }}
         </Form.Item>
 
         {/* ROW 3: Assignee & Status */}

@@ -8,14 +8,22 @@ import {
 } from '@ant-design/icons';
 import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { logout } from '../../services/wbsApi';
 
 const TopHeader = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getAuthUser();
+  const currentSection = location.pathname === '/progress' ? 'Tiến độ' : 'Cơ cấu công việc';
 
-  const handleDropdownClick = ({ key }) => {
+  const handleDropdownClick = async ({ key }) => {
     if (key === 'logout') {
+      try {
+        await logout();
+      } catch (error) {
+        message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
+      }
       logoutUser();
       message.info('Đã đăng xuất tài khoản');
       navigate('/login');
@@ -46,7 +54,7 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
           items={[
             { title: 'Trang chủ' },
             { title: 'Dự án' },
-            { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Cơ cấu công việc</span> },
+            { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{currentSection}</span> },
           ]}
         />
       </div>

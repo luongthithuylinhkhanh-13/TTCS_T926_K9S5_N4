@@ -31,4 +31,19 @@
     <include file="db/migration/v7/V7_0__create_projects_wbs_tables.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v8/V8_0__create_wbs_dependencies.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v9/V9_0__persist_cpm_schedule.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v10/V10_0__normalize_task_dependencies.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v11/V11_0__enforce_positive_wbs_duration.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

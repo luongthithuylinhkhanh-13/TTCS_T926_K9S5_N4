@@ -5,13 +5,14 @@ WORKDIR /app
 COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
+COPY mvnw.cmd .
 
-RUN sed -i 's/\r$//' mvnw
 RUN chmod +x mvnw
 
 COPY src src
 
 RUN ./mvnw clean package -DskipTests
+
 
 FROM eclipse-temurin:21-jre
 

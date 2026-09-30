@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V9.0-rename-task-dependencies" author="NTDHTCT-26">
+        <renameTable
+            oldTableName="wbs_item_dependencies"
+            newTableName="task_dependencies"/>
+        <renameColumn
+            tableName="task_dependencies"
+            oldColumnName="wbs_item_id"
+            newColumnName="task_id"
+            columnDataType="UUID"/>
+        <renameColumn
+            tableName="task_dependencies"
+            oldColumnName="predecessor_id"
+            newColumnName="predecessor_task_id"
+            columnDataType="UUID"/>
+
+        <rollback>
+            <renameColumn tableName="task_dependencies" oldColumnName="predecessor_task_id" newColumnName="predecessor_id" columnDataType="UUID"/>
+            <renameColumn tableName="task_dependencies" oldColumnName="task_id" newColumnName="wbs_item_id" columnDataType="UUID"/>
+            <renameTable oldTableName="task_dependencies" newTableName="wbs_item_dependencies"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="V9.1-add-cpm-columns" author="NTDHTCT-26">
+        <addColumn tableName="wbs_items">
+            <column name="duration" type="INT"/>
+            <column name="es" type="INT"/>
+            <column name="ef" type="INT"/>
+            <column name="ls" type="INT"/>
+            <column name="lf" type="INT"/>
+            <column name="slack" type="INT"/>
+            <column name="is_critical" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="wbs_items" columnName="is_critical"/>
+            <dropColumn tableName="wbs_items" columnName="slack"/>
+            <dropColumn tableName="wbs_items" columnName="lf"/>
+            <dropColumn tableName="wbs_items" columnName="ls"/>
+            <dropColumn tableName="wbs_items" columnName="ef"/>
+            <dropColumn tableName="wbs_items" columnName="es"/>
+            <dropColumn tableName="wbs_items" columnName="duration"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="V9.2-expand-auth-token" author="NTDHTCT-27">
+        <modifyDataType tableName="auth_tokens" columnName="token" newDataType="VARCHAR(512)"/>
+        <rollback>
+            <modifyDataType tableName="auth_tokens" columnName="token" newDataType="VARCHAR(255)"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="V9.3-case-insensitive-user-email" author="NTDHTCT-27" dbms="postgresql">
+        <sql>CREATE UNIQUE INDEX uq_users_email_lower ON users (lower(email));</sql>
+        <rollback>
+            <sql>DROP INDEX uq_users_email_lower;</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

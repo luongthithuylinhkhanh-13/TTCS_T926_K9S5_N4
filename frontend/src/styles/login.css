@@ -23,6 +23,7 @@
   z-index: 1;
 }
 
+
 /* Left Hero Section */
 .login-hero {
   display: none;
@@ -199,7 +200,7 @@
 /* Right Login Section */
 .login-panel {
   position: relative;
-z-index: 2;
+  z-index: 2;
   flex: 1 1 0%;
   min-width: 0;
   max-width: 44%;
@@ -281,7 +282,7 @@ z-index: 2;
 }
 
 .login-header {
-  text-align: left;
+  text-align: center;
   margin-bottom: 32px;
 }
 
@@ -327,6 +328,31 @@ z-index: 2;
   font-weight: 600 !important;
   border-radius: var(--radius-sm) !important;
   margin-top: 8px;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.login-link,
+.auth-mode-switch .ant-btn-link {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-mode-switch {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  margin-top: 20px;
+  color: #475569;
+  font-size: 14px;
 }
 
 

@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -13,13 +17,16 @@ public class WbsService {
 
     private final WbsItemRepository wbsItemRepository;
     private final ProjectRepository projectRepository;
+    private final CpmEngine cpmEngine;
 
     public WbsService(
             WbsItemRepository wbsItemRepository,
-            ProjectRepository projectRepository
+            ProjectRepository projectRepository,
+            CpmEngine cpmEngine
     ) {
         this.wbsItemRepository = wbsItemRepository;
         this.projectRepository = projectRepository;
+        this.cpmEngine = cpmEngine;
     }
 
     public List<Project> getProjects() {
@@ -29,6 +36,67 @@ public class WbsService {
     public List<WbsItem> getWbsByProject(UUID projectId) {
         requireProject(projectId);
         return wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+    }
+
+    @Transactional
+    public ProjectScheduleResponse getSchedule(UUID projectId) {
+        requireProject(projectId);
+        List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+        CpmEngine.Result result = cpmEngine.calculate(items);
+        wbsItemRepository.saveAll(items);
+
+        Set<UUID> parentIds = new HashSet<>();
+        items.stream()
+            .map(WbsItem::getParentId)
+            .filter(id -> id != null)
+            .forEach(parentIds::add);
+        List<WbsItem> tasks = items.stream()
+            .filter(item -> "task".equalsIgnoreCase(item.getType()))
+            .filter(item -> !parentIds.contains(item.getId()))
+            .toList();
+        int criticalTasksCount = (int) tasks.stream()
+            .filter(WbsItem::isCritical)
+            .count();
+
+        return new ProjectScheduleResponse(
+            true,
+            new ProjectScheduleResponse.Summary(
+                tasks.size(),
+                criticalTasksCount,
+                result.durationDays(),
+                result.criticalPathCount(),
+                result.complete(),
+                result.unscheduledTaskCount()
+            ),
+            tasks
+        );
+    }
+
+    @Transactional
+    public CriticalPathResponse getCriticalPathProgress(UUID projectId) {
+        requireProject(projectId);
+        List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+        CpmEngine.Result result = cpmEngine.calculate(items);
+        wbsItemRepository.saveAll(items);
+
+        List<WbsItem> criticalTasks = items.stream()
+                .filter(WbsItem::isCritical)
+                .toList();
+
+        return new CriticalPathResponse(
+                projectId,
+                result.durationDays(),
+                result.criticalPathCount(),
+                result.complete(),
+                result.unscheduledTaskCount(),
+                criticalTasks
+        );
+    }
+
+    @Transactional
+    public WbsItem createTask(UUID projectId, WbsItem item) {
+        item.setType("task");
+        return create(projectId, item);
     }
 
     @Transactional
@@ -68,17 +136,26 @@ public class WbsService {
             }
         }
 
+        validatePredecessors(projectId, null, item.getPredecessorIds());
+
         item.setProjectId(projectId);
 
         if (item.getType() == null || item.getType().isBlank()) {
             item.setType(item.getParentId() == null ? "phase" : "task");
         }
 
+        if ("task".equalsIgnoreCase(item.getType())
+                && (item.getDuration() == null || item.getDuration() <= 0)) {
+            throw new IllegalArgumentException("Thời lượng thực hiện phải lớn hơn 0");
+        }
+
         if (item.getStatus() == null || item.getStatus().isBlank()) {
             item.setStatus("not_started");
         }
 
-        return wbsItemRepository.save(item);
+        WbsItem saved = wbsItemRepository.save(item);
+        recalculateCpm(projectId);
+        return saved;
     }
 
     @Transactional
@@ -86,6 +163,11 @@ public class WbsService {
         requireProject(projectId);
 
         WbsItem item = requireItem(projectId, itemId);
+
+        if ("task".equalsIgnoreCase(request.getType())
+                && (request.getDuration() == null || request.getDuration() <= 0)) {
+            throw new IllegalArgumentException("Thời lượng thực hiện phải lớn hơn 0");
+        }
 
         if (request.getName() == null || request.getName().isBlank()) {
             throw new RuntimeException("Tên công việc không được để trống");
@@ -101,6 +183,8 @@ public class WbsService {
             throw new RuntimeException("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
         }
 
+        validatePredecessors(projectId, itemId, request.getPredecessorIds());
+
         item.setName(request.getName());
         item.setType(request.getType());
         item.setAssigneeId(request.getAssigneeId());
@@ -110,10 +194,14 @@ public class WbsService {
         item.setProgress(request.getProgress());
         item.setStartDate(request.getStartDate());
         item.setEndDate(request.getEndDate());
+        item.setDuration(request.getDuration());
+        item.setPredecessorIds(request.getPredecessorIds());
         item.setDescription(request.getDescription());
         item.setImage(request.getImage());
 
-        return wbsItemRepository.save(item);
+        WbsItem saved = wbsItemRepository.save(item);
+        recalculateCpm(projectId);
+        return saved;
     }
 
     @Transactional
@@ -121,6 +209,7 @@ public class WbsService {
         requireProject(projectId);
         WbsItem item = requireItem(projectId, itemId);
         wbsItemRepository.delete(item);
+        recalculateCpm(projectId);
     }
 
     private Project requireProject(UUID projectId) {
@@ -137,5 +226,76 @@ public class WbsService {
         }
 
         return item;
+    }
+
+    private void validatePredecessors(
+            UUID projectId,
+            UUID itemId,
+            Set<UUID> requestedPredecessors
+    ) {
+        Set<UUID> predecessors = requestedPredecessors == null
+                ? Set.of()
+                : requestedPredecessors;
+
+        List<WbsItem> projectItems = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+        Set<UUID> parentIds = new HashSet<>();
+        projectItems.stream()
+            .map(WbsItem::getParentId)
+            .filter(id -> id != null)
+            .forEach(parentIds::add);
+
+        for (UUID predecessorId : predecessors) {
+            if (predecessorId.equals(itemId)) {
+                throw new RuntimeException("Công việc không thể phụ thuộc vào chính nó");
+            }
+            WbsItem predecessor = requireItem(projectId, predecessorId);
+            if (!"task".equalsIgnoreCase(predecessor.getType()) || parentIds.contains(predecessorId)) {
+                throw new RuntimeException("Công việc tiền nhiệm phải là một task cấp cuối");
+            }
+        }
+
+        if (itemId == null) {
+            return;
+        }
+
+        Map<UUID, Set<UUID>> dependencyGraph = new HashMap<>();
+        for (WbsItem existing : projectItems) {
+            dependencyGraph.put(existing.getId(), existing.getPredecessorIds());
+        }
+        dependencyGraph.put(itemId, predecessors);
+
+        if (hasDependencyCycle(itemId, dependencyGraph, new HashSet<>(), new HashSet<>())) {
+            throw new RuntimeException("Quan hệ phụ thuộc tạo thành vòng lặp");
+        }
+    }
+
+    private boolean hasDependencyCycle(
+            UUID itemId,
+            Map<UUID, Set<UUID>> dependencyGraph,
+            Set<UUID> visiting,
+            Set<UUID> visited
+    ) {
+        if (visiting.contains(itemId)) {
+            return true;
+        }
+        if (visited.contains(itemId)) {
+            return false;
+        }
+
+        visiting.add(itemId);
+        for (UUID predecessorId : dependencyGraph.getOrDefault(itemId, Set.of())) {
+            if (hasDependencyCycle(predecessorId, dependencyGraph, visiting, visited)) {
+                return true;
+            }
+        }
+        visiting.remove(itemId);
+        visited.add(itemId);
+        return false;
+    }
+
+    private void recalculateCpm(UUID projectId) {
+        List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+        cpmEngine.calculate(items);
+        wbsItemRepository.saveAll(items);
     }
 }

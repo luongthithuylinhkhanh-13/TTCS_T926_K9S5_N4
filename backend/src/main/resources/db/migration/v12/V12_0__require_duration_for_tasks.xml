@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V12.0-require-duration-for-tasks" author="NTDHTCT-26">
+        <sql>ALTER TABLE wbs_items DROP CONSTRAINT chk_duration_positive</sql>
+        <sql>ALTER TABLE wbs_items ADD CONSTRAINT chk_duration_positive CHECK ((type &lt;&gt; 'task' OR (duration IS NOT NULL AND duration &gt; 0)) AND (duration IS NULL OR duration &gt; 0))</sql>
+        <rollback>
+            <sql>ALTER TABLE wbs_items DROP CONSTRAINT chk_duration_positive</sql>
+            <sql>ALTER TABLE wbs_items ADD CONSTRAINT chk_duration_positive CHECK (duration IS NULL OR duration &gt; 0)</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
