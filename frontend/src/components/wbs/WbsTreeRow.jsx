@@ -1,11 +1,11 @@
 import React from 'react';
-import { Tag, Progress, Dropdown, Button } from 'antd';
-import { 
-  RightOutlined, 
-  DownOutlined, 
-  BankOutlined, 
-  FolderOpenOutlined, 
-  FileTextOutlined, 
+import { Tag, Progress, Dropdown, Button, Image } from 'antd';
+import {
+  RightOutlined,
+  DownOutlined,
+  BankOutlined,
+  FolderOpenOutlined,
+  FileTextOutlined,
   MoreOutlined,
   EyeOutlined,
   PlusOutlined,
@@ -14,12 +14,12 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-const WbsTreeRow = ({ 
-  node, 
-  level = 0, 
-  isExpanded, 
-  onToggleExpand, 
-  isSelected, 
+const WbsTreeRow = ({
+  node,
+  level = 0,
+  isExpanded,
+  onToggleExpand,
+  isSelected,
   onSelectNode,
   onViewDetails,
   onAddChild,
@@ -99,12 +99,12 @@ const WbsTreeRow = ({
     <tr className={getRowClass()} onClick={handleRowClick}>
       {/* CÔNG VIỆC COLUMN (With Indentation & Chevron) */}
       <td className="tree-cell">
-        <div 
-          className="task-cell-content" 
+        <div
+          className="task-cell-content"
           style={{ paddingLeft: level * 24 }}
         >
           {hasChildren ? (
-            <span 
+            <span
               className="expand-toggle"
               onClick={(e) => {
                 e.stopPropagation();
@@ -162,9 +162,9 @@ const WbsTreeRow = ({
       {/* TIẾN ĐỘ COLUMN */}
       <td className="tree-cell" style={{ width: 140 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Progress 
-            percent={node.progress || 0} 
-            size="small" 
+          <Progress
+            percent={node.progress || 0}
+            size="small"
             showInfo={false}
             strokeColor={node.progress === 100 ? '#16A34A' : '#2563EB'}
           />
@@ -172,6 +172,47 @@ const WbsTreeRow = ({
             {node.progress || 0}%
           </span>
         </div>
+      </td>
+
+      {/* HÌNH ẢNH COLUMN */}
+      <td className="tree-cell" style={{ width: 60, textAlign: 'center' }}>
+        {node.images && node.images.length > 0 ? (
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <Image
+              src={
+                typeof node.images[0] === 'string'
+                  ? `/images/construction/${node.images[0]}`
+                  : node.images[0]?.url
+              }
+              width={44}
+              height={34}
+              style={{ objectFit: 'cover', borderRadius: 4 }}
+              preview={false}
+            />
+            {node.images.length > 1 && (
+              <span style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: '#FFF',
+                fontSize: 10,
+                padding: '2px 4px',
+                borderRadius: '0 4px 0 4px'
+              }}>
+                +{node.images.length - 1}
+              </span>
+            )}
+          </div>
+        ) : (
+          <Image
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AARwMD/UUAKQAAAABJRU5ErkJggg=="
+            width={44}
+            height={34}
+            style={{ objectFit: 'cover', borderRadius: 4 }}
+            preview={false}
+          />
+        )}
       </td>
 
       {/* THAO TÁC COLUMN */}

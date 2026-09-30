@@ -12,10 +12,10 @@ const WbsStats = ({ stats }) => {
   return (
     <div className="stats-grid">
       {/* CARD 1 */}
-      <div className="stat-card">
+      <div className="stat-card total">
         <div className="stat-info">
           <span className="stat-label">Tổng công việc</span>
-          <span className="stat-value">{totalTasks}</span>
+          <span className="stat-value" style={{ fontSize: '1.5rem', fontWeight: 600 }}>{totalTasks}</span>
           <span style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Toàn bộ WBS</span>
         </div>
         <div className="stat-icon-wrapper blue">
@@ -24,7 +24,7 @@ const WbsStats = ({ stats }) => {
       </div>
 
       {/* CARD 2 */}
-      <div className="stat-card">
+      <div className="stat-card inprogress">
         <div className="stat-info">
           <span className="stat-label">Đang thực hiện</span>
           <span className="stat-value" style={{ color: '#2563EB' }}>{inProgress}</span>
@@ -36,7 +36,7 @@ const WbsStats = ({ stats }) => {
       </div>
 
       {/* CARD 3 */}
-      <div className="stat-card">
+      <div className="stat-card completed">
         <div className="stat-info">
           <span className="stat-label">Hoàn thành</span>
           <span className="stat-value" style={{ color: '#16A34A' }}>{completed}</span>
@@ -48,7 +48,7 @@ const WbsStats = ({ stats }) => {
       </div>
 
       {/* CARD 4 */}
-      <div className="stat-card">
+      <div className="stat-card notstarted">
         <div className="stat-info">
           <span className="stat-label">Chưa bắt đầu</span>
           <span className="stat-value" style={{ color: '#64748B' }}>{notStarted}</span>

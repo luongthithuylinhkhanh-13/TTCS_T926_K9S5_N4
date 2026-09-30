@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V7.0-create-projects" author="NTDHTCT-20">
+        <createTable tableName="projects">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status" type="VARCHAR(50)"/>
+
+            <column name="progress" type="INT" defaultValueNumeric="0"/>
+
+            <column name="start_date" type="DATE"/>
+
+            <column name="end_date" type="DATE"/>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="image" type="VARCHAR(500)"/>
+
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="V7.0-create-wbs-items" author="NTDHTCT-20">
+        <createTable tableName="wbs_items">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="parent_id" type="UUID"/>
+
+            <column name="wbs_code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="type" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="assignee_id" type="VARCHAR(100)"/>
+
+            <column name="assignee_name" type="VARCHAR(255)"/>
+
+            <column name="assignee_initials" type="VARCHAR(20)"/>
+
+            <column name="status" type="VARCHAR(50)"/>
+
+            <column name="progress" type="INT" defaultValueNumeric="0"/>
+
+            <column name="start_date" type="DATE"/>
+
+            <column name="end_date" type="DATE"/>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="image" type="VARCHAR(500)"/>
+
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_items"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_project"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_items"
+            baseColumnNames="parent_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_parent"
+            onDelete="CASCADE"/>
+
+        <addUniqueConstraint
+            tableName="wbs_items"
+            columnNames="project_id,wbs_code"
+            constraintName="uk_wbs_project_code"/>
+    </changeSet>
+
+</databaseChangeLog>

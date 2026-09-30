@@ -28,10 +28,7 @@ const LoginPage = () => {
 
       {/* Centered Login Card */}
       <div className="login-panel">
-        <div className="login-card-header">
-          <h1 className="title">Chào mừng trở lại</h1>
-          <p className="subtitle">Quản lý thi công công trình một cách trực quan</p>
-        </div>
+        
         <LoginForm />
       </div>
 

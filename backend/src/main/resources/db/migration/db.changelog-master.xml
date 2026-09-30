@@ -28,6 +28,11 @@
 
     <include file="db/migration/v6/V6_0__create_auth_tokens_table.xml"
              relativeToChangelogFile="false"/>
+    <!-- T-06: Project & WBS -->
+    <include file="db/migration/v7/V7_0__create_projects_wbs_tables.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v1/V1_1__create_task_dependencies_table.xml" 
+             relativeToChangelogFile="false"/>         
 
     <include file="db/migration/v7/V7_0__create_project_rbac_tables.xml"
              relativeToChangelogFile="false"/>
