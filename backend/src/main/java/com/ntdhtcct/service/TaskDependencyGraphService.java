@@ -1,6 +1,8 @@
 package com.ntdhtcct.service;
 
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
+import com.ntdhtcct.domain.CycleDetectionResult;
+import com.ntdhtcct.domain.CycleDetector;
 import com.ntdhtcct.domain.TaskDependency;
 import com.ntdhtcct.domain.TaskDependencyGraph;
 import com.ntdhtcct.domain.project.ProjectRepository;
@@ -56,5 +58,11 @@ public class TaskDependencyGraphService {
                         .findByPredecessorIdInAndSuccessorIdIn(taskIds, taskIds);
 
         return new TaskDependencyGraph(wbsItems, dependencies);
+    }
+
+    @Transactional(readOnly = true)
+    public CycleDetectionResult detectCycles(UUID projectId) {
+        TaskDependencyGraph graph = getProjectGraph(projectId);
+        return CycleDetector.detect(graph);
     }
 }

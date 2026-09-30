@@ -1,6 +1,7 @@
 package com.ntdhtcct.service;
 
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
+import com.ntdhtcct.domain.CycleDetectionResult;
 import com.ntdhtcct.domain.DependencyType;
 import com.ntdhtcct.domain.TaskDependency;
 import com.ntdhtcct.domain.TaskDependencyGraph;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -112,6 +114,33 @@ class TaskDependencyGraphServiceTest {
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any()
                 );
+    }
+
+    @Test
+    void shouldDetectCyclesViaService() {
+        UUID projectId = UUID.randomUUID();
+        UUID nodeA = UUID.randomUUID();
+        UUID nodeB = UUID.randomUUID();
+        WbsItem itemA = wbsItem(nodeA);
+        WbsItem itemB = wbsItem(nodeB);
+        TaskDependency edgeAtoB = new TaskDependency(nodeA, nodeB, DependencyType.FS, 0);
+        TaskDependency edgeBtoA = new TaskDependency(nodeB, nodeA, DependencyType.FS, 0);
+        Set<UUID> taskIds = Set.of(nodeA, nodeB);
+
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId))
+                .thenReturn(List.of(itemA, itemB));
+        when(taskDependencyRepository.findByPredecessorIdInAndSuccessorIdIn(
+                eq(taskIds), eq(taskIds)))
+                .thenReturn(List.of(edgeAtoB, edgeBtoA));
+
+        CycleDetectionResult result = graphService.detectCycles(projectId);
+
+        assertTrue(result.hasCycle());
+        Set<UUID> cycleIds = result.cycleNodes().stream()
+                .map(WbsItem::getId)
+                .collect(Collectors.toSet());
+        assertEquals(Set.of(nodeA, nodeB), cycleIds);
     }
 
     private WbsItem wbsItem(UUID id) {
