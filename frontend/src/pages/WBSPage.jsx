@@ -1070,6 +1070,7 @@ const WBSPage = () => {
       {/* DETAIL DRAWER */}
       <WorkDetailDrawer
         visible={drawerVisible}
+        allTasks={flatTaskList}
 
         onClose={() =>
           setDrawerVisible(false)

@@ -9,6 +9,7 @@
         Master changelog: danh sách các migration file theo thứ tự.
         Thêm file mới vào cuối danh sách, không thay đổi thứ tự file cũ.
     -->
+
     <include file="db/migration/v1/V1_0__init_infrastructure_check.xml"
              relativeToChangelogFile="false"/>
 
@@ -29,6 +30,10 @@
              relativeToChangelogFile="false"/>
     <!-- T-06: Project & WBS -->
     <include file="db/migration/v7/V7_0__create_projects_wbs_tables.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v7/V7_0__create_project_rbac_tables.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v1/V1_1__create_task_dependencies_table.xml"
              relativeToChangelogFile="false"/>
 
     <include file="db/migration/v8/V8_0__create_wbs_dependencies.xml"

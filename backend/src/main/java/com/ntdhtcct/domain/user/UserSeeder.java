@@ -1,7 +1,9 @@
 package com.ntdhtcct.domain.user;
 
-import com.ntdhtcct.domain.role.Role;
-import com.ntdhtcct.domain.role.RoleRepository;
+import com.ntdhtcct.entity.Role;
+import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.RoleRepository;
+import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -30,13 +32,14 @@ public class UserSeeder implements CommandLineRunner {
         }
 
         Role role = roleRepository.findByName("CUSTOMER")
-                .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
+            .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
 
-        User user = new User();
-        user.setEmail("test@test.com");
-        user.setPassword(passwordEncoder.encode("12345678"));
-        user.setFullName("Test User");
-        user.setRoleId(role.getId());
+        User user = new User(
+            "test@test.com",
+            passwordEncoder.encode("12345678"),
+            "Test User"
+        );
+        user.setRole(role);
 
         userRepository.save(user);
     }

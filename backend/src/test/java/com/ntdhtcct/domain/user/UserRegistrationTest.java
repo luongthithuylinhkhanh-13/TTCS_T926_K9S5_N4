@@ -1,7 +1,9 @@
 package com.ntdhtcct.domain.user;
 
-import com.ntdhtcct.domain.role.Role;
-import com.ntdhtcct.domain.role.RoleRepository;
+import com.ntdhtcct.entity.Role;
+import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.RoleRepository;
+import com.ntdhtcct.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
