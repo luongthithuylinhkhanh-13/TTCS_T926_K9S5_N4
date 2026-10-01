@@ -37,4 +37,5 @@
     <include file="db/migration/v7/V7_0__create_project_rbac_tables.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v8/V8_0__create_task_dependencies_table.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>
