@@ -11,7 +11,7 @@ import java.util.UUID;
 public class ProjectMemberResponse {
 
     private Long id;
-    private Long projectId;
+    private UUID projectId;
     private String projectCode;
     private String projectName;
 
@@ -74,11 +74,11 @@ public class ProjectMemberResponse {
         this.id = id;
     }
 
-    public Long getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(Long projectId) {
+    public void setProjectId(UUID projectId) {
         this.projectId = projectId;
     }
 

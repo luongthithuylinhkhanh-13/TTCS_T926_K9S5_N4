@@ -1,33 +1,32 @@
 import React from 'react';
 import { Select, Input, Button, Space, Tooltip } from 'antd';
-import { 
-  SearchOutlined, 
-  FilterOutlined, 
-  ExpandOutlined, 
-  CompressOutlined, 
-  CloseCircleOutlined 
+import {
+  SearchOutlined,
+  FilterOutlined,
+  ExpandOutlined,
+  CompressOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
-import { PROJECTS } from '../../data/projects';
 
 const { Option } = Select;
 
-const WbsToolbar = ({ 
-  selectedProjectId, 
-  onSelectProject, 
-  searchText, 
-  onSearchChange, 
-  statusFilter, 
-  onStatusFilterChange, 
-  onExpandAll, 
+const WbsToolbar = ({
+  projects = [],
+  selectedProjectId,
+  onSelectProject,
+  searchText,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  onExpandAll,
   onCollapseAll,
-  onClearFilters 
+  onClearFilters
 }) => {
-
-  const isFiltered = !!searchText || (statusFilter && statusFilter !== 'ALL');
+  const isFiltered =
+    !!searchText || (statusFilter && statusFilter !== 'ALL');
 
   return (
     <div className="wbs-toolbar">
-      {/* Project Selector */}
       <div className="toolbar-project-select">
         <Select
           value={selectedProjectId}
@@ -36,15 +35,14 @@ const WbsToolbar = ({
           size="middle"
           placeholder="Chọn dự án"
         >
-          {PROJECTS.map(proj => (
-            <Option key={proj.id} value={proj.id}>
-              <strong>{proj.code}</strong> - {proj.name}
+          {projects.map(project => (
+            <Option key={project.id} value={project.id}>
+              <strong>{project.code}</strong> - {project.name}
             </Option>
           ))}
         </Select>
       </div>
 
-      {/* Search Input */}
       <div className="toolbar-search">
         <Input
           placeholder="Tìm kiếm theo tên hoặc mã WBS..."
@@ -55,7 +53,6 @@ const WbsToolbar = ({
         />
       </div>
 
-      {/* Status Filter */}
       <div className="toolbar-status-select">
         <Select
           value={statusFilter}
@@ -71,11 +68,10 @@ const WbsToolbar = ({
         </Select>
       </div>
 
-      {/* Clear Filter Button */}
       {isFiltered && (
-        <Button 
-          type="dashed" 
-          icon={<CloseCircleOutlined />} 
+        <Button
+          type="dashed"
+          icon={<CloseCircleOutlined />}
           onClick={onClearFilters}
           style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
         >
@@ -83,13 +79,13 @@ const WbsToolbar = ({
         </Button>
       )}
 
-      {/* Expand / Collapse All Controls */}
       <Space style={{ marginLeft: 'auto' }}>
         <Tooltip title="Mở rộng tất cả cây WBS">
           <Button icon={<ExpandOutlined />} onClick={onExpandAll}>
             Mở rộng tất cả
           </Button>
         </Tooltip>
+
         <Tooltip title="Thu gọn tất cả cây WBS">
           <Button icon={<CompressOutlined />} onClick={onCollapseAll}>
             Thu gọn tất cả

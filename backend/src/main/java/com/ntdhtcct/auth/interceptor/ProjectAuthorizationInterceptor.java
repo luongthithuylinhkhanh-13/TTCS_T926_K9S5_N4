@@ -48,7 +48,7 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        Long projectId = extractProjectId(request);
+        UUID projectId = extractProjectId(request);
 
         if (projectId == null
                 && !request.getRequestURI().startsWith("/api/projects")) {
@@ -102,7 +102,7 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
     }
 
     @SuppressWarnings("unchecked")
-    private Long extractProjectId(HttpServletRequest request) {
+    private UUID extractProjectId(HttpServletRequest request) {
 
         Object uriTemplateVarsObj =
                 request.getAttribute(
@@ -115,8 +115,8 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
 
             if (projectIdVal != null) {
                 try {
-                    return Long.parseLong(projectIdVal.toString());
-                } catch (NumberFormatException ignored) {
+                    return UUID.fromString(projectIdVal.toString());
+                } catch (IllegalArgumentException ignored) {
                 }
             }
         }
@@ -128,8 +128,8 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
                 && !headerProjectId.isBlank()) {
 
             try {
-                return Long.parseLong(headerProjectId.trim());
-            } catch (NumberFormatException ignored) {
+                return UUID.fromString(headerProjectId.trim());
+            } catch (IllegalArgumentException ignored) {
             }
         }
 
@@ -140,8 +140,8 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
                 && !paramProjectId.isBlank()) {
 
             try {
-                return Long.parseLong(paramProjectId.trim());
-            } catch (NumberFormatException ignored) {
+                return UUID.fromString(paramProjectId.trim());
+            } catch (IllegalArgumentException ignored) {
             }
         }
 

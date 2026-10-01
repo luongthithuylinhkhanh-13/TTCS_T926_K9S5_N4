@@ -5,66 +5,6 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <!-- ================================================================ -->
-    <!-- V7.0-01: Bảng Projects                                          -->
-    <!-- ================================================================ -->
-    <changeSet id="V7.0-01-create-projects-table" author="T-04.3">
-
-        <comment>
-            Tạo bảng projects quản lý thông tin các công trình.
-        </comment>
-
-        <createTable
-                tableName="projects"
-                remarks="Bảng danh mục công trình">
-
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints
-                        primaryKey="true"
-                        nullable="false"
-                        primaryKeyName="pk_projects"/>
-            </column>
-
-            <column name="code" type="VARCHAR(50)">
-                <constraints
-                        nullable="false"
-                        unique="true"
-                        uniqueConstraintName="uk_projects_code"/>
-            </column>
-
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-
-            <column name="status" type="VARCHAR(30)"
-                    defaultValue="IN_PROGRESS">
-                <constraints nullable="false"/>
-            </column>
-
-            <column name="description" type="TEXT">
-                <constraints nullable="true"/>
-            </column>
-
-            <column name="created_at"
-                    type="TIMESTAMP WITH TIME ZONE"
-                    defaultValueComputed="NOW()">
-                <constraints nullable="false"/>
-            </column>
-
-            <column name="updated_at"
-                    type="TIMESTAMP WITH TIME ZONE"
-                    defaultValueComputed="NOW()">
-                <constraints nullable="false"/>
-            </column>
-
-        </createTable>
-
-        <rollback>
-            <dropTable tableName="projects"/>
-        </rollback>
-
-    </changeSet>
-
 
     <!-- ================================================================ -->
     <!-- V7.0-02: Bảng Project Members                                   -->
@@ -86,8 +26,8 @@
                         primaryKeyName="pk_project_members"/>
             </column>
 
-            <!-- projects.id vẫn dùng BIGINT -->
-            <column name="project_id" type="BIGINT">
+            <!-- projects.id sử dụng UUID -->
+            <column name="project_id" type="UUID">
                 <constraints
                         nullable="false"
                         foreignKeyName="fk_project_members_project"

@@ -11,32 +11,49 @@ const LoginForm = () => {
   const [form] = Form.useForm();
 
   const handleFinish = async (values) => {
-    const { email, password, remember } = values;
+  const { email, password, remember } = values;
 
-    setLoginError(null);
-    setLoading(true);
+  setLoginError(null);
+  setLoading(true);
 
-    try {
-      // TODO(T03): Replace mock authentication with Authentication API when T03 is available.
-      // Expected API call:
-      //   const response = await loginAPI({ email, password });
-      //
-      // Expected response handling:
-      //   - Success: response.user object -> setAuthUser(response.user, remember) -> navigate('/wbs')
-      //   - Invalid credentials: setLoginError('Email hoặc mật khẩu không chính xác.')
-      //   - Account locked: setLoginError('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.')
-      //   - Other errors: setLoginError('Đã xảy ra lỗi. Vui lòng thử lại sau.')
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+      }),
+    });
 
-      // Placeholder: do nothing until T03 Authentication API is ready.
-      // Remove this line and uncomment the API call above when T03 is complete.
-      setLoginError('Hệ thống đăng nhập chưa sẵn sàng. Vui lòng chờ tích hợp Authentication API (T03).');
-    } catch (error) {
-      console.error('Login error:', error);
-      setLoginError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      setLoginError(data.message || 'Đăng nhập không thành công.');
+      return;
     }
-  };
+
+    setAuthUser(
+      {
+        userId: data.userId,
+        email: data.email,
+        roleId: data.roleId,
+        token: data.token,
+        expiresAt: data.expiresAt,
+      },
+      remember
+    );
+
+    navigate('/');
+  } catch (error) {
+    console.error('Login error:', error);
+    setLoginError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="login-form-container">
