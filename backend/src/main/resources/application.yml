@@ -3,10 +3,10 @@ spring:
     name: construction-platform
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:construction_management}
-    username: ${DB_USERNAME:postgres}
+    url: ${DB_URL:jdbc:h2:mem:construction_platform;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.h2.Driver}
     hikari:
       connection-timeout: 20000
       maximum-pool-size: 10
@@ -15,8 +15,9 @@ spring:
 
   jpa:
     open-in-view: false
+    database-platform: ${JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${DDL_AUTO:create-drop}
     show-sql: false
     properties:
       hibernate:
@@ -25,7 +26,7 @@ spring:
 
   liquibase:
     change-log: classpath:db/migration/db.changelog-master.xml
-    enabled: true
+    enabled: ${LIQUIBASE_ENABLED:false}
 
 server:
   port: ${APP_PORT:8080}
