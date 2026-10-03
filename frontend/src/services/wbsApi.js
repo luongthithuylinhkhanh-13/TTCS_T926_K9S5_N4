@@ -1,68 +1,41 @@
-import { getAuthUser } from '../utils/auth';
-
-const getToken = () => {
-  const auth = getAuthUser();
-
-  if (!auth?.token) {
-    throw new Error('Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn');
-  }
-
-  return auth.token;
-};
-
-const request = async (url, options = {}) => {
-  const token = getToken();
-
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {})
-    }
-  });
-
-  let data = null;
-
-  try {
-    data = await response.json();
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data?.message || `Yêu cầu thất bại (${response.status})`
-    );
-  }
-
-  return data;
-};
+import apiClient from './apiClient';
 
 export const getProjects = () => {
-  return request('/api/projects');
+  return apiClient.get('/api/projects').then(response => response.data);
 };
 
 export const getProjectWbs = (projectId) => {
-  return request(`/api/projects/${projectId}/wbs`);
+  return apiClient.get(`/api/projects/${projectId}/wbs`).then(response => response.data);
+};
+
+export const getProjectSchedule = projectId => {
+  return apiClient.get(`/api/projects/${projectId}/schedule`).then(response => response.data);
+};
+
+export const getCriticalPathProgress = projectId => {
+  return apiClient.get(`/api/projects/${projectId}/critical-path`).then(response => response.data);
+};
+
+export const login = credentials => {
+  return apiClient.post('/api/auth/login', credentials).then(response => response.data);
+};
+
+export const register = registration => {
+  return apiClient.post('/api/auth/register', registration).then(response => response.data);
+};
+
+export const logout = () => {
+  return apiClient.post('/api/auth/logout').then(response => response.data);
 };
 
 export const createWbsItem = (projectId, item) => {
-  return request(`/api/projects/${projectId}/wbs`, {
-    method: 'POST',
-    body: JSON.stringify(item)
-  });
+  return apiClient.post(`/api/projects/${projectId}/tasks`, item).then(response => response.data);
 };
 
 export const updateWbsItem = (projectId, itemId, item) => {
-  return request(`/api/projects/${projectId}/wbs/${itemId}`, {
-    method: 'PUT',
-    body: JSON.stringify(item)
-  });
+  return apiClient.put(`/api/projects/${projectId}/tasks/${itemId}`, item).then(response => response.data);
 };
 
 export const deleteWbsItem = (projectId, itemId) => {
-  return request(`/api/projects/${projectId}/wbs/${itemId}`, {
-    method: 'DELETE'
-  });
+  return apiClient.delete(`/api/projects/${projectId}/wbs/${itemId}`).then(response => response.data);
 };

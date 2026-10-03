@@ -3,11 +3,11 @@ package com.ntdhtcct;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ntdhtcct.dto.AddMemberRequest;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
-import com.ntdhtcct.entity.Project;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.ProjectMemberRepository;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
@@ -84,11 +84,11 @@ public class AuthorizationIntegrationTest {
         roleRepository.deleteAll();
 
         // 1. T-04.1: Khởi tạo các Roles
-        roleAdmin = roleRepository.save(new Role("ADMIN", "Quản trị viên", "Toàn quyền hệ thống"));
-        roleManager = roleRepository.save(new Role("PROJECT_MANAGER", "Chỉ huy trưởng", "Quản lý dự án"));
-        roleEngineer = roleRepository.save(new Role("SITE_ENGINEER", "Kỹ sư", "Giám sát kỹ thuật"));
-        roleWorker = roleRepository.save(new Role("WORKER", "Đội thi công", "Công nhân hiện trường"));
-        roleViewer = roleRepository.save(new Role("VIEWER", "Người xem", "Chỉ xem thông tin"));
+        roleAdmin = roleRepository.save(new Role("ADMIN"));
+        roleManager = roleRepository.save(new Role("PROJECT_MANAGER"));
+        roleEngineer = roleRepository.save(new Role("SITE_ENGINEER"));
+        roleWorker = roleRepository.save(new Role("WORKER"));
+        roleViewer = roleRepository.save(new Role("VIEWER"));
 
         // 2. T-04.3: Tạo Users
         managerUser = userRepository.save(new User("manager_tran", "manager@congtrinh.vn", "Trần Quản Lý"));
@@ -97,8 +97,8 @@ public class AuthorizationIntegrationTest {
         outsiderUser = userRepository.save(new User("outsider_nguyen", "outsider@ngoai.vn", "Nguyễn Người Ngoài"));
 
         // 3. T-04.3: Tạo Projects
-        projectA = projectRepository.save(new Project("DA-001", "Dự án Cầu Vàm Cống Mới", "Thi công cầu đường"));
-        projectB = projectRepository.save(new Project("DA-002", "Dự án Tòa Nhà Landmark", "Xây dựng dân dụng"));
+        projectA = projectRepository.save(new Project("DA-001", "Dự án Cầu Vàm Cống Mới"));
+        projectB = projectRepository.save(new Project("DA-002", "Dự án Tòa Nhà Landmark"));
 
         // 4. T-04.2 & T-04.4: Gán thành viên vào Project A
         projectMemberRepository.save(new ProjectMember(projectA, managerUser, roleManager));
@@ -117,7 +117,7 @@ public class AuthorizationIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.userId", is(outsiderUser.getId().intValue())))
+                .andExpect(jsonPath("$.data.userId", is(outsiderUser.getId().toString())))
                 .andExpect(jsonPath("$.data.roleCode", is("VIEWER")));
     }
 

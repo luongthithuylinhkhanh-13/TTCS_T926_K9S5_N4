@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Component
@@ -506,6 +507,14 @@ public class ProjectWbsSeeder implements CommandLineRunner {
             item.setEndDate(
                     LocalDate.parse(endDate)
             );
+        }
+
+        if ("task".equalsIgnoreCase(type)
+                && item.getStartDate() != null
+                && item.getEndDate() != null) {
+            item.setDuration((int) ChronoUnit.DAYS.between(
+                    item.getStartDate(), item.getEndDate()
+            ) + 1);
         }
 
         item.setDescription(description);

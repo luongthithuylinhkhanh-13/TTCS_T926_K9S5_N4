@@ -16,14 +16,12 @@ public class RoleSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-
         createRoleIfNotExists("ADMIN");
         createRoleIfNotExists("STAFF");
         createRoleIfNotExists("CUSTOMER");
     }
 
     private void createRoleIfNotExists(String roleName) {
-
         if (!roleRepository.existsByName(roleName)) {
             roleRepository.save(new Role(roleName));
         }

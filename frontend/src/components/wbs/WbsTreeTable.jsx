@@ -58,10 +58,10 @@ const WbsTreeTable = ({
         <thead className="tree-table-header">
           <tr>
             <th style={{ width: '40%' }}>CÔNG VIỆC</th>
-            <th style={{ width: '18%' }}>NGƯỜI PHỤ TRÁCH</th>
-            <th style={{ width: '16%' }}>THỜI GIAN</th>
-            <th style={{ width: '12%' }}>TRẠNG THÁI</th>
-            <th style={{ width: '10%' }}>TIẾN ĐỘ</th>
+            <th>NGƯỜI PHỤ TRÁCH</th>
+            <th>THỜI GIAN</th>
+            <th>TRẠNG THÁI</th>
+            <th>TIẾN ĐỘ</th>
             <th style={{ width: '8%', textAlign: 'center' }}>HÌNH ẢNH</th>
             <th style={{ width: '4%', textAlign: 'center' }}>THAO TÁC</th>
           </tr>

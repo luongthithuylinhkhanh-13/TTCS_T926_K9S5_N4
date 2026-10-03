@@ -1,14 +1,13 @@
 package com.ntdhtcct.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Entity ánh xạ bảng users.
- * Dùng chung cho Authentication và Project/RBAC.
- */
 @Entity
 @Table(name = "users")
 public class User {
@@ -19,9 +18,14 @@ public class User {
     private UUID id;
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không đúng định dạng")
+    @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
     private String email;
 
     @Column(name = "password", nullable = false, length = 255)
+    @NotBlank(message = "Password không được để trống")
+    @Size(min = 8, message = "Password phải có ít nhất 8 ký tự")
     private String password;
 
     @Column(name = "full_name", length = 255)
@@ -46,7 +50,7 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public User() {
+    protected User() {
     }
 
     public User(String email, String password, String fullName) {
@@ -107,6 +111,17 @@ public class User {
         this.phoneNumber = phoneNumber;
     }
 
+    public UUID getRoleId() {
+        return role != null ? role.getId() : null;
+    }
+
+    public void setRoleId(UUID roleId) {
+        if (role == null) {
+            role = new Role();
+        }
+        role.setId(roleId);
+    }
+
     public Role getRole() {
         return role;
     }
@@ -133,6 +148,10 @@ public class User {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public OffsetDateTime getUpdatedAt() {

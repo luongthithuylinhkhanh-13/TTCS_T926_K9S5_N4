@@ -5,10 +5,15 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="V3.0-create-roles-table" author="T-03.2">
+    <changeSet id="V4.0-create-roles-table" author="T-03.2">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="roles"/>
+            </not>
+        </preConditions>
 
         <comment>
-            Tạo bảng roles phục vụ phân quyền người dùng.
+            Tạo bảng roles phục vụ quản lý vai trò người dùng.
         </comment>
 
         <createTable tableName="roles"
@@ -17,7 +22,6 @@
             <column name="id"
                     type="UUID"
                     defaultValueComputed="gen_random_uuid()">
-
                 <constraints
                         primaryKey="true"
                         nullable="false"/>
@@ -25,7 +29,6 @@
 
             <column name="name"
                     type="VARCHAR(50)">
-
                 <constraints
                         nullable="false"
                         unique="true"

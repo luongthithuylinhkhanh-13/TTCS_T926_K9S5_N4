@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -102,18 +103,14 @@ const buildWbsTree = (items = []) => {
   return roots;
 };
 
-/*
- * Chuẩn hóa dữ liệu từ WorkFormModal
- * trước khi gửi Spring Boot API.
- */
-const normalizeFormData = formData => {
-  const assignee = formData.assignee || null;
+const normalizeFormData = (formData) => {
+  const assignee = formData.assignee || {};
 
   return {
     wbsCode: formData.wbsCode,
     name: formData.name,
     type: formData.type,
-
+    duration: formData.duration == null ? null : Number(formData.duration),
     parentId: formData.parentId || null,
 
     assigneeId:
@@ -137,6 +134,7 @@ const normalizeFormData = formData => {
 
     startDate: formData.startDate || null,
     endDate: formData.endDate || null,
+    predecessorIds: formData.predecessorIds || [],
 
     description: formData.description || '',
 
@@ -148,6 +146,7 @@ const normalizeFormData = formData => {
 };
 
 const WBSPage = () => {
+  const navigate = useNavigate();
   // =========================================================
   // PROJECT / WBS DATA
   // =========================================================
@@ -310,11 +309,10 @@ const WBSPage = () => {
     setPageError('');
 
     try {
-      const data =
-        await getProjectWbs(projectId);
+      const wbsItems = await getProjectWbs(projectId);
 
       const tree = buildWbsTree(
-        Array.isArray(data) ? data : []
+        Array.isArray(wbsItems) ? wbsItems : []
       );
 
       setRawTreeNodes(tree);
@@ -811,6 +809,21 @@ const WBSPage = () => {
       return options;
     }, [rawTreeNodes]);
 
+  const taskOptions = useMemo(() => {
+    const options = [];
+    const traverse = items => {
+      items.forEach(item => {
+        if (item.type === 'task' && !(item.children || []).length) {
+          options.push({ id: item.id, name: item.name, wbsCode: item.wbsCode });
+        } else if (item.children?.length) {
+          traverse(item.children);
+        }
+      });
+    };
+    traverse(rawTreeNodes);
+    return options;
+  }, [rawTreeNodes]);
+
   // =========================================================
   // SELECTED NODE
   // =========================================================
@@ -935,6 +948,8 @@ const WBSPage = () => {
       {/* PROJECT HERO */}
       <ProjectHeroCard
         project={currentProject}
+        onShowCriticalPath={() => navigate('/progress')}
+        criticalPathDisabled={!currentProject || taskOptions.length === 0}
       />
 
       {/* STATISTICS */}
@@ -958,6 +973,7 @@ const WBSPage = () => {
             </span>
 
           </div>
+
         </div>
 
         {/* TOOLBAR */}
@@ -1109,6 +1125,10 @@ const WBSPage = () => {
 
         parentOptions={
           parentOptions
+        }
+
+        taskOptions={
+          taskOptions
         }
 
         isEdit={

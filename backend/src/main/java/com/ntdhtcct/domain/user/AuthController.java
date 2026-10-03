@@ -6,6 +6,7 @@ import com.ntdhtcct.entity.User;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,12 +74,42 @@ public class AuthController {
         }
     }
 
-    /**
-     * =========================
-     * LOGOUT
-     * POST /api/auth/logout
-     * =========================
-     */
+    @PostMapping("/register")
+    public ResponseEntity<?> register(
+            @Valid @RequestBody RegistrationRequest request
+    ) {
+        if (!request.password().equals(request.confirmPassword())) {
+            return ResponseEntity.badRequest().body(
+                    new ErrorResponse(false, "Mật khẩu xác nhận không khớp.")
+            );
+        }
+
+        try {
+            User user = userService.register(
+                    request.fullName(),
+                    request.email(),
+                    request.password()
+            );
+            return ResponseEntity.status(201).body(
+                    new RegistrationResponse(
+                            true,
+                            "Đăng ký thành công. Bạn có thể đăng nhập.",
+                            user.getEmail()
+                    )
+            );
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(
+                    new ErrorResponse(false, e.getMessage())
+            );
+        }
+    }
+
+        /**
+         * =========================
+         * LOGOUT
+         * POST /api/auth/logout
+         * =========================
+         */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(
             @RequestHeader(
@@ -243,6 +274,25 @@ public class AuthController {
     ) {
     }
 
+    public record RegistrationRequest(
+            @NotBlank(message = "Họ và tên không được để trống")
+            @Size(max = 255, message = "Họ và tên không được vượt quá 255 ký tự")
+            String fullName,
+
+            @NotBlank(message = "Email không được để trống")
+            @Email(message = "Email không đúng định dạng")
+            @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
+            String email,
+
+            @NotBlank(message = "Mật khẩu không được để trống")
+            @Size(min = 8, max = 128, message = "Mật khẩu phải có từ 8 đến 128 ký tự")
+            String password,
+
+            @NotBlank(message = "Vui lòng xác nhận mật khẩu")
+            String confirmPassword
+    ) {
+    }
+
     public record LoginResponse(
             boolean success,
             String message,
@@ -260,6 +310,13 @@ public class AuthController {
             UUID userId,
             String email,
             UUID roleId
+    ) {
+    }
+
+    public record RegistrationResponse(
+            boolean success,
+            String message,
+            String email
     ) {
     }
 

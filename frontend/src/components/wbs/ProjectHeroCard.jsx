@@ -1,7 +1,7 @@
 import React from 'react';
-import { Card, Tag, Progress, Avatar, Image } from 'antd';
+import { Button, Card, Tag, Progress, Avatar, Image } from 'antd';
 import dayjs from 'dayjs';
-import { UserOutlined } from '@ant-design/icons';
+import { BranchesOutlined, UserOutlined } from '@ant-design/icons';
 
 /*
  * Hiển thị trạng thái dự án theo dữ liệu backend.
@@ -43,7 +43,7 @@ const formatDate = (date) => {
   return parsedDate.format('DD/MM/YYYY');
 };
 
-const ProjectHeroCard = ({ project }) => {
+const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) => {
   if (!project) {
     return null;
   }
@@ -143,6 +143,15 @@ const ProjectHeroCard = ({ project }) => {
               }
             />
           </div>
+
+          <Button
+            className="project-hero-critical-path"
+            icon={<BranchesOutlined />}
+            onClick={onShowCriticalPath}
+            disabled={criticalPathDisabled}
+          >
+            Xem đường găng
+          </Button>
         </div>
 
       </div>

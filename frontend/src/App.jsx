@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import ProgressPage from './pages/ProgressPage';
 import WBSPage from './pages/WBSPage';
 import { isAuthenticated } from './utils/auth';
 import './styles/wbs.css';
@@ -17,7 +18,6 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-
       <Route
         path="/"
         element={
@@ -26,9 +26,10 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<WBSPage />} />
+        <Route index element={<Navigate to="/wbs" replace />} />
+        <Route path="wbs" element={<WBSPage />} />
+        <Route path="progress" element={<ProgressPage />} />
       </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

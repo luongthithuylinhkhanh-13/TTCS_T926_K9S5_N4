@@ -1,11 +1,15 @@
 package com.ntdhtcct.domain.user;
 
+import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -18,22 +22,47 @@ public class UserService {
     private static final long LOCK_DURATION_MINUTES = 15;
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
+            RoleRepository roleRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Đăng nhập
-     */
-    public User login(String email, String password) {
+    @Transactional
+        public User register(String fullName, String email, String password) {
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new IllegalStateException("Email này đã được đăng ký.");
+        }
 
-        User user = userRepository.findByEmail(email)
+        Role customerRole = roleRepository.findByName("CUSTOMER")
+                .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
+
+        User user = new User(
+                        normalizedEmail,
+                        passwordEncoder.encode(password),
+                        fullName.trim()
+                );
+        user.setRole(customerRole);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+
+        return userRepository.save(user);
+    }
+
+        /**
+         * Đăng nhập
+         */
+        public User login(String email, String password) {
+
+                User user = userRepository.findByEmailIgnoreCase(email.trim())
                 .orElseThrow(() ->
                         new RuntimeException(
                                 "Email hoặc password không chính xác"
@@ -104,7 +133,7 @@ public class UserService {
      *
      * Dùng cho API /api/auth/me
      */
-    public User findById(UUID userId) {
+        public User findById(UUID userId) {
 
         return userRepository.findById(userId)
                 .orElseThrow(() ->

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V10.0-normalize-task-dependencies" author="NTDHTCT-26">
+        <dropPrimaryKey
+            tableName="task_dependencies"
+            constraintName="pk_wbs_item_dependencies"/>
+
+        <renameColumn
+            tableName="task_dependencies"
+            oldColumnName="task_id"
+            newColumnName="successor_id"
+            columnDataType="UUID"/>
+        <renameColumn
+            tableName="task_dependencies"
+            oldColumnName="predecessor_task_id"
+            newColumnName="predecessor_id"
+            columnDataType="UUID"/>
+
+        <addColumn tableName="task_dependencies">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addPrimaryKey
+            tableName="task_dependencies"
+            columnNames="id"
+            constraintName="pk_task_dependencies"/>
+
+        <rollback>
+            <dropPrimaryKey tableName="task_dependencies" constraintName="pk_task_dependencies"/>
+            <dropColumn tableName="task_dependencies" columnName="id"/>
+            <renameColumn tableName="task_dependencies" oldColumnName="predecessor_id" newColumnName="predecessor_task_id" columnDataType="UUID"/>
+            <renameColumn tableName="task_dependencies" oldColumnName="successor_id" newColumnName="task_id" columnDataType="UUID"/>
+            <addPrimaryKey tableName="task_dependencies" columnNames="task_id,predecessor_task_id" constraintName="pk_wbs_item_dependencies"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

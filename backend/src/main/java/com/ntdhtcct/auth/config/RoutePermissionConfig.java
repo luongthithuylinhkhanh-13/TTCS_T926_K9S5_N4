@@ -27,7 +27,7 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
-        
+
         // Xem danh sách thành viên dự án: Mọi thành viên có vai trò trong dự án
         addRule(HttpMethod.GET, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});

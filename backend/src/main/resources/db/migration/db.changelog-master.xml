@@ -34,6 +34,27 @@
 
     <include file="db/migration/v7/V7_0__create_project_rbac_tables.xml"
              relativeToChangelogFile="false"/>
+    <include file="db/migration/v7/V7_1__preserve_s06_dependencies.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v8/V8_0__create_wbs_dependencies.xml"
+             relativeToChangelogFile="false"/>
 
-    <include file="db/migration/v8/V8_0__create_task_dependencies_table.xml" relativeToChangelogFile="false"/>
+    <include file="db/migration/v9/V9_0__persist_cpm_schedule.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v10/V10_0__normalize_task_dependencies.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v11/V11_0__enforce_positive_wbs_duration.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v11/V11_1__backfill_task_durations.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

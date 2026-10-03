@@ -27,24 +27,18 @@ public class UserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-
-        // Nếu đã có tài khoản test thì không tạo lại
-        if (userRepository.existsByEmail("test@test.com")) {
+        if (userRepository.existsByEmailIgnoreCase("test@test.com")) {
             return;
         }
 
-        // Lấy role CUSTOMER, nếu chưa có thì tạo
         Role role = roleRepository.findByName("CUSTOMER")
-                .orElseGet(() ->
-                        roleRepository.save(new Role("CUSTOMER"))
-                );
+            .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
 
-        // Tạo user test
-        User user = new User();
-
-        user.setEmail("test@test.com");
-        user.setPassword(passwordEncoder.encode("12345678"));
-        user.setFullName("Test User");
+        User user = new User(
+            "test@test.com",
+            passwordEncoder.encode("12345678"),
+            "Test User"
+        );
         user.setRole(role);
 
         userRepository.save(user);
