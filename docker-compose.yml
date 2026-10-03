@@ -5,9 +5,9 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-construction_management}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-2911}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -26,7 +26,7 @@ services:
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-construction_management}
       DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:-2911}
       APP_PORT: 8080
     ports:
       - "${APP_PORT:-8080}:8080"

@@ -3,12 +3,12 @@ package com.ntdhtcct.service;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.domain.CycleDetectionResult;
 import com.ntdhtcct.domain.CycleDetector;
-import com.ntdhtcct.domain.TaskDependency;
 import com.ntdhtcct.domain.TaskDependencyGraph;
+import com.ntdhtcct.domain.dependency.TaskDependency;
+import com.ntdhtcct.domain.dependency.TaskDependencyRepository;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
-import com.ntdhtcct.repository.TaskDependencyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V7.1-preserve-s06-dependencies" author="NTDHTCT-26">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="task_dependencies"/>
+            <columnExists tableName="task_dependencies" columnName="predecessor_id"/>
+            <columnExists tableName="task_dependencies" columnName="successor_id"/>
+        </preConditions>
+
+        <renameTable
+            oldTableName="task_dependencies"
+            newTableName="task_dependencies_s06"/>
+    </changeSet>
+
+    <changeSet id="V7.2-rename-s06-dependency-primary-key" author="NTDHTCT-26">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="task_dependencies_s06"/>
+            <primaryKeyExists
+                tableName="task_dependencies_s06"
+                primaryKeyName="pk_task_dependencies"/>
+        </preConditions>
+
+        <sql>
+            ALTER TABLE task_dependencies_s06
+            RENAME CONSTRAINT pk_task_dependencies TO pk_task_dependencies_s06
+        </sql>
+    </changeSet>
+</databaseChangeLog>

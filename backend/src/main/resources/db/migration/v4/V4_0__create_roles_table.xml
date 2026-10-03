@@ -6,6 +6,11 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="V4.0-create-roles-table" author="T-03.2">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="roles"/>
+            </not>
+        </preConditions>
 
         <comment>
             Tạo bảng roles phục vụ quản lý vai trò người dùng.

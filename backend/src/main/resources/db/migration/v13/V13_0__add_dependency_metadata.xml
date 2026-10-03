@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V13.0-add-dependency-metadata" author="NTDHTCT-26">
+        <addColumn tableName="task_dependencies">
+            <column name="project_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE task_dependencies dependency
+            SET project_id = item.project_id
+            FROM wbs_items item
+            WHERE dependency.successor_id = item.id
+              AND dependency.project_id IS NULL
+        </sql>
+
+        <addNotNullConstraint
+            tableName="task_dependencies"
+            columnName="project_id"
+            columnDataType="UUID"/>
+
+        <addColumn tableName="task_dependencies">
+            <column name="dependency_type" type="VARCHAR(10)" defaultValue="FS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lag_days" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="V13.1-restore-s06-dependencies" author="NTDHTCT-26">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="task_dependencies_s06"/>
+            <columnExists tableName="task_dependencies_s06" columnName="project_id"/>
+        </preConditions>
+
+        <sql>
+            INSERT INTO task_dependencies (
+                id, project_id, predecessor_id, successor_id,
+                dependency_type, lag_days, created_at
+            )
+            SELECT legacy.id, legacy.project_id, legacy.predecessor_id,
+                   legacy.successor_id, legacy.dependency_type,
+                   legacy.lag_days, legacy.created_at
+            FROM task_dependencies_s06 legacy
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM task_dependencies current_dependency
+                WHERE current_dependency.predecessor_id = legacy.predecessor_id
+                  AND current_dependency.successor_id = legacy.successor_id
+            )
+        </sql>
+
+        <dropTable tableName="task_dependencies_s06"/>
+    </changeSet>
+
+    <changeSet id="V13.2-restore-legacy-dependencies" author="NTDHTCT-26">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="task_dependencies_s06"/>
+            <not>
+                <columnExists tableName="task_dependencies_s06" columnName="project_id"/>
+            </not>
+        </preConditions>
+
+        <sql>
+            INSERT INTO task_dependencies (
+                id, project_id, predecessor_id, successor_id,
+                dependency_type, lag_days, created_at
+            )
+            SELECT gen_random_uuid(), item.project_id, legacy.predecessor_id,
+                   legacy.successor_id, COALESCE(legacy.dependency_type, 'FS'),
+                   COALESCE(legacy.lag_days, 0),
+                   COALESCE(legacy.created_at, CURRENT_TIMESTAMP)
+            FROM task_dependencies_s06 legacy
+            JOIN wbs_items item ON item.id = legacy.successor_id
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM task_dependencies current_dependency
+                WHERE current_dependency.predecessor_id = legacy.predecessor_id
+                  AND current_dependency.successor_id = legacy.successor_id
+            )
+        </sql>
+
+        <dropTable tableName="task_dependencies_s06"/>
+    </changeSet>
+
+    <changeSet id="V13.3-unique-dependency-pairs" author="NTDHTCT-26">
+        <addUniqueConstraint
+            tableName="task_dependencies"
+            columnNames="predecessor_id, successor_id"
+            constraintName="uk_task_dependencies_pair"/>
+    </changeSet>
+</databaseChangeLog>

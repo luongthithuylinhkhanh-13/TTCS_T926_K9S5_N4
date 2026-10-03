@@ -1,5 +1,6 @@
 package com.ntdhtcct.domain;
 
+import com.ntdhtcct.domain.dependency.TaskDependency;
 import com.ntdhtcct.domain.wbs.WbsItem;
 
 import java.util.ArrayDeque;
