@@ -38,7 +38,7 @@ const Sidebar = ({ collapsed }) => {
   return (
     <aside
       className="app-sidebar"
-      style={{ width: collapsed ? 80 : 250, background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
+      style={{ width: collapsed ? 80 : 280, background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
     >
       {/* Brand Header */}
       <div className="sidebar-brand">

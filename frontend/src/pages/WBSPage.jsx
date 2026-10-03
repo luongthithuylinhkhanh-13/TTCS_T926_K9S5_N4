@@ -399,6 +399,19 @@ const WBSPage = () => {
     return calculateStats(rawTreeNodes);
   }, [rawTreeNodes]);
 
+  const flatTaskList = useMemo(() => {
+    const tasks = [];
+    const visit = nodes => {
+      nodes.forEach(node => {
+        tasks.push(node);
+        visit(node.children || []);
+      });
+    };
+
+    visit(rawTreeNodes);
+    return tasks;
+  }, [rawTreeNodes]);
+
   // =========================================================
   // PROJECT SELECT
   // =========================================================
@@ -918,9 +931,7 @@ const WBSPage = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() =>
-              handleOpenAddModal(null)
-            }
+            onClick={() => handleOpenAddModal(null)}
             disabled={!currentProject}
           >
             + Thêm công việc
@@ -1070,6 +1081,7 @@ const WBSPage = () => {
       {/* DETAIL DRAWER */}
       <WorkDetailDrawer
         visible={drawerVisible}
+        projectId={selectedProjectId}
         allTasks={flatTaskList}
 
         onClose={() =>

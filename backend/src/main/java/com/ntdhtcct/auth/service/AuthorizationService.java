@@ -18,7 +18,6 @@ public class AuthorizationService {
 
     private static final Logger log =
             LoggerFactory.getLogger(AuthorizationService.class);
-
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
 
@@ -72,10 +71,8 @@ public class AuthorizationService {
         // Kiểm tra role có nằm trong danh sách role được phép không
         if (requiredRoles != null) {
             for (String allowedRole : requiredRoles) {
-
                 if (allowedRole != null
                         && allowedRole.trim().equalsIgnoreCase(userRole)) {
-
                     return userRole;
                 }
             }

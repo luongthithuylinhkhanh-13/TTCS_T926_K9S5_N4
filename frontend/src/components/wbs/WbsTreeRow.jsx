@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Progress, Dropdown, Button, Image } from 'antd';
+import { Tag, Progress, Dropdown, Button } from 'antd';
 import {
   RightOutlined,
   DownOutlined,
@@ -172,47 +172,6 @@ const WbsTreeRow = ({
             {node.progress || 0}%
           </span>
         </div>
-      </td>
-
-      {/* HÌNH ẢNH COLUMN */}
-      <td className="tree-cell" style={{ width: 60, textAlign: 'center' }}>
-        {node.images && node.images.length > 0 ? (
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <Image
-              src={
-                typeof node.images[0] === 'string'
-                  ? `/images/construction/${node.images[0]}`
-                  : node.images[0]?.url
-              }
-              width={44}
-              height={34}
-              style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={false}
-            />
-            {node.images.length > 1 && (
-              <span style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                color: '#FFF',
-                fontSize: 10,
-                padding: '2px 4px',
-                borderRadius: '0 4px 0 4px'
-              }}>
-                +{node.images.length - 1}
-              </span>
-            )}
-          </div>
-        ) : (
-          <Image
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AARwMD/UUAKQAAAABJRU5ErkJggg=="
-            width={44}
-            height={34}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            preview={false}
-          />
-        )}
       </td>
 
       {/* THAO TÁC COLUMN */}
