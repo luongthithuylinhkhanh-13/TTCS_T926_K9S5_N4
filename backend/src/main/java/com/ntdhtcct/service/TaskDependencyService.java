@@ -4,12 +4,10 @@ import com.ntdhtcct.domain.DependencyType;
 import com.ntdhtcct.domain.TaskDependency;
 import com.ntdhtcct.dto.CreateDependencyRequest;
 import com.ntdhtcct.repository.TaskDependencyRepository;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
-@Service
 public class TaskDependencyService {
 
     private final TaskDependencyRepository dependencyRepository;

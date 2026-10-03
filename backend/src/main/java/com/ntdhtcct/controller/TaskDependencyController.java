@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/api/tasks/legacy")
 @CrossOrigin(origins = "*")
 public class TaskDependencyController {
 
