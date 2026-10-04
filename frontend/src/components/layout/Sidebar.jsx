@@ -103,21 +103,11 @@ const Sidebar = ({ collapsed }) => {
       </div>
 
       {/* Bottom Gradient placeholder */}
-      <div
-        className="sidebar-bottom-image"
-        style={{
-          flexGrow: 1,
-          display: 'flex',
-          alignItems: 'flex-end',
-          padding: '12px',
-        }}
-      >
+      <div className="sidebar-bottom-image">
         <div
+          className="sidebar-bottom-image-box"
           style={{
-            width: '100%',
-            height: '80px',
             background: 'linear-gradient(135deg, #3c6382, #0a3d62)',
-            borderRadius: '4px',
           }}
         />
       </div>
