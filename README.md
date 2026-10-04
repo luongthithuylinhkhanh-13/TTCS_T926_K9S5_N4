@@ -363,9 +363,44 @@ Kiểm tra trạng thái các service:
 docker compose ps
 ```
 
-PostgreSQL phải ở trạng thái `healthy` và Backend phải ở trạng thái `running`.
+PostgreSQL phải ở trạng thái `healthy`, Backend và dịch vụ sao lưu phải ở trạng thái `running`.
 
-### 3. Kiểm tra log
+### 3. Sao lưu cơ sở dữ liệu
+
+Dịch vụ `postgres-backup` tự động tạo bản sao lưu PostgreSQL mỗi ngày lúc **02:00 giờ Việt Nam** (mặc định `BACKUP_TIME_UTC=19:00`, tức 19:00 UTC). Có thể đổi giờ bằng cách đặt `BACKUP_TIME_UTC=HH:MM` theo UTC trong file `.env`.
+
+Các bản sao lưu ở định dạng PostgreSQL custom được lưu trong Docker volume `postgres_backups`; chỉ giữ lại 7 bản thành công gần nhất. Bản mới được ghi tạm và chỉ đưa vào danh sách sau khi `pg_dump` hoàn tất. Log hoạt động và lỗi sao lưu/khôi phục được lưu trong `backup-restore.log` trên cùng volume, đồng thời hiển thị trong log container.
+
+Kiểm tra trạng thái, log và danh sách bản sao lưu:
+
+```bash
+docker compose ps postgres-backup
+docker compose logs postgres-backup
+docker compose exec postgres-backup tail -n 100 /backups/backup-restore.log
+docker compose exec postgres-backup ls -lh /backups
+```
+
+### 4. Khôi phục cơ sở dữ liệu
+
+Liệt kê các bản sao lưu rồi chọn đúng tên file cần khôi phục:
+
+```bash
+docker compose exec postgres-backup ls -lh /backups
+```
+
+Khôi phục sẽ thay thế các đối tượng có trong bản sao lưu và có thể khiến cơ sở dữ liệu ở trạng thái chưa hoàn chỉnh nếu lệnh thất bại. Hãy dừng backend để tránh ghi dữ liệu trong lúc khôi phục, rồi xác nhận tường minh bằng `CONFIRM_RESTORE=YES`:
+
+```bash
+docker compose stop backend
+docker compose exec -e CONFIRM_RESTORE=YES postgres-backup /bin/sh /restore.sh database_20261004T190000Z.dump
+docker compose start backend
+```
+
+Thay tên file mẫu bằng một file có trong volume. Lệnh khôi phục từ chối đường dẫn bên ngoài thư mục sao lưu. Kết quả và lỗi chi tiết được ghi vào `backup-restore.log`; nếu khôi phục lỗi, kiểm tra log trước khi khởi động lại ứng dụng.
+
+Volume sao lưu tồn tại sau `docker compose down`. Không dùng `docker compose down -v` nếu muốn giữ các bản sao lưu.
+
+### 5. Kiểm tra log
 
 Kiểm tra Backend:
 
@@ -385,7 +420,7 @@ Backend khởi động thành công khi log hiển thị:
 Started Application
 ```
 
-### 4. Kiểm tra Database và Migration
+### 6. Kiểm tra Database và Migration
 
 Kết nối vào PostgreSQL container:
 
@@ -411,18 +446,18 @@ Phải thấy record với:
 version_tag = phase1-infrastructure
 ```
 
-### 5. Dừng hệ thống
+### 7. Dừng hệ thống
 
 ```bash
 docker compose down
 ```
 
-> Không sử dụng `docker compose down -v` nếu muốn giữ dữ liệu PostgreSQL.
+> Không sử dụng `docker compose down -v` nếu muốn giữ dữ liệu PostgreSQL và các bản sao lưu.
 
-### 6. Chạy lại hệ thống
+### 8. Chạy lại hệ thống
 
 ```bash
 docker compose up -d
 ```
 
-Docker Compose sẽ khởi động PostgreSQL trước. Backend chỉ khởi động sau khi PostgreSQL đạt trạng thái `healthy`.
+Docker Compose sẽ khởi động PostgreSQL trước. Backend và dịch vụ sao lưu chỉ khởi động sau khi PostgreSQL đạt trạng thái `healthy`.
