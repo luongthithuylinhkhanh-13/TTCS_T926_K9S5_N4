@@ -54,14 +54,14 @@
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
              relativeToChangelogFile="false"/>
 
-<<<<<<< HEAD
+    <!-- Tạo bảng tasks / task_dependencies trước -->
+    <include file="db/migration/v13/V13_1__create_tasks_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- Thêm cột / sửa đổi bảng sau -->
     <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
-=======
-    <include file="db/migration/v13/V13_0__create_tasks_table.xml"
->>>>>>> feature/S-14-gantt-cpm
              relativeToChangelogFile="false"/>
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
-
 </databaseChangeLog>

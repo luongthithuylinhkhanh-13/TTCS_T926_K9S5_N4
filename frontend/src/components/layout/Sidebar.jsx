@@ -12,10 +12,12 @@ import {
 import { message, Tooltip } from 'antd';
 import { logoutUser, getAuthUser } from '../../utils/auth';
 import { logout } from '../../services/wbsApi';
+import { useLocale } from '../../utils/LocaleContext';
 
 
 
 const Sidebar = ({ collapsed }) => {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
   const user = getAuthUser();
@@ -27,12 +29,12 @@ const Sidebar = ({ collapsed }) => {
       message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
     }
     logoutUser();
-    message.info('Đã đăng xuất tài khoản');
+    message.info(t('Đã đăng xuất tài khoản'));
     navigate('/login');
   };
 
   const handleNonWbsClick = (menuName) => {
-    message.info(`Mục "${menuName}" là chức năng ngoài phạm vi T-05/T-06`);
+    message.info(`${t('Mục')} "${menuName}" ${t('là chức năng ngoài phạm vi T-05/T-06')}`);
   };
 
   return (
@@ -46,59 +48,59 @@ const Sidebar = ({ collapsed }) => {
         {!collapsed && (
           <div className="sidebar-title-box">
             <span className="sidebar-title">CONSTRUCTFLOW</span>
-            <span className="sidebar-subtitle">Quản lý thi công</span>
+            <span className="sidebar-subtitle">{t('Quản lý thi công')}</span>
           </div>
         )}
       </div>
 
       {/* Navigation Menu */}
       <div className="sidebar-menu">
-        {!collapsed && <div className="sidebar-section-label">TỔNG QUAN</div>}
+        {!collapsed && <div className="sidebar-section-label">{t('TỔNG QUAN')}</div>}
         <div
           className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dashboard')}
-          title={collapsed ? 'Dashboard' : ''}
+          onClick={() => handleNonWbsClick(t('Dashboard'))}
+          title={collapsed ? t('Dashboard') : ''}
         >
           <DashboardOutlined />
-          {!collapsed && <span>Dashboard</span>}
+          {!collapsed && <span>{t('Dashboard')}</span>}
         </div>
 
-        {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>DỰ ÁN</div>}
+        {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>{t('DỰ ÁN')}</div>}
         <div
           className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dự án')}
-          title={collapsed ? 'Dự án' : ''}
+          onClick={() => handleNonWbsClick(t('Dự án'))}
+          title={collapsed ? t('Dự án') : ''}
         >
           <ProjectOutlined />
-          {!collapsed && <span>Dự án</span>}
+          {!collapsed && <span>{t('Dự án')}</span>}
         </div>
 
         {/* ACTIVE ITEM */}
         <div
           className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
           onClick={() => navigate('/')}
-          title={collapsed ? 'Cơ cấu công việc' : ''}
+          title={collapsed ? t('Cơ cấu công việc') : ''}
         >
           <NodeIndexOutlined />
-          {!collapsed && <span>Cơ cấu công việc</span>}
+          {!collapsed && <span>{t('Cơ cấu công việc')}</span>}
         </div>
 
         <div
           className={`sidebar-item ${location.pathname === '/progress' ? 'active' : ''}`}
           onClick={() => navigate('/progress')}
-          title={collapsed ? 'Tiến độ' : ''}
+          title={collapsed ? t('Tiến độ') : ''}
         >
           <HistoryOutlined />
-          {!collapsed && <span>Tiến độ</span>}
+          {!collapsed && <span>{t('Tiến độ')}</span>}
         </div>
 
         <div
           className="sidebar-item"
-          onClick={() => handleNonWbsClick('Công việc')}
-          title={collapsed ? 'Công việc' : ''}
+          onClick={() => handleNonWbsClick(t('Công việc'))}
+          title={collapsed ? t('Công việc') : ''}
         >
           <CheckSquareOutlined />
-          {!collapsed && <span>Công việc</span>}
+          {!collapsed && <span>{t('Công việc')}</span>}
         </div>
       </div>
 
@@ -118,12 +120,12 @@ const Sidebar = ({ collapsed }) => {
           <div className="user-avatar-initials">QT</div>
           {!collapsed && (
             <div className="user-details">
-              <span className="user-name">{user?.fullName || 'Quản trị viên'}</span>
+              <span className="user-name">{user?.fullName || t('Quản trị viên')}</span>
               <span className="user-role">{user?.username || 'admin'}</span>
             </div>
           )}
         </div>
-        <Tooltip title="Đăng xuất">
+        <Tooltip title={t('Đăng xuất')}>
           <div className="logout-btn" onClick={handleLogout}>
             <LogoutOutlined />
           </div>

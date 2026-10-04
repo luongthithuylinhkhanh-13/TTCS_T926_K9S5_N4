@@ -7,6 +7,7 @@ import {
   CompressOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons';
+import { useLocale } from '../../utils/LocaleContext';
 
 const { Option } = Select;
 
@@ -22,6 +23,7 @@ const WbsToolbar = ({
   onCollapseAll,
   onClearFilters
 }) => {
+  const { t } = useLocale();
   const isFiltered =
     !!searchText || (statusFilter && statusFilter !== 'ALL');
 
@@ -33,7 +35,7 @@ const WbsToolbar = ({
           onChange={onSelectProject}
           style={{ width: '100%' }}
           size="middle"
-          placeholder="Chọn dự án"
+          placeholder={t('Chọn dự án')}
         >
           {projects.map(project => (
             <Option key={project.id} value={project.id}>
@@ -45,7 +47,7 @@ const WbsToolbar = ({
 
       <div className="toolbar-search">
         <Input
-          placeholder="Tìm kiếm theo tên hoặc mã WBS..."
+          placeholder={t('Tìm kiếm theo tên hoặc mã WBS...')}
           prefix={<SearchOutlined style={{ color: '#94A3B8' }} />}
           value={searchText}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -60,11 +62,11 @@ const WbsToolbar = ({
           style={{ width: '100%' }}
           prefix={<FilterOutlined />}
         >
-          <Option value="ALL">Tất cả trạng thái</Option>
-          <Option value="not_started">Chưa bắt đầu</Option>
-          <Option value="in_progress">Đang thực hiện</Option>
-          <Option value="completed">Hoàn thành</Option>
-          <Option value="paused">Tạm dừng</Option>
+          <Option value="ALL">{t('Tất cả trạng thái')}</Option>
+          <Option value="not_started">{t('Chưa bắt đầu')}</Option>
+          <Option value="in_progress">{t('Đang thực hiện')}</Option>
+          <Option value="completed">{t('Hoàn thành')}</Option>
+          <Option value="paused">{t('Tạm dừng')}</Option>
         </Select>
       </div>
 
@@ -75,20 +77,20 @@ const WbsToolbar = ({
           onClick={onClearFilters}
           style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
         >
-          Xóa bộ lọc
+          {t('Xóa bộ lọc')}
         </Button>
       )}
 
       <Space style={{ marginLeft: 'auto' }}>
-        <Tooltip title="Mở rộng tất cả cây WBS">
+        <Tooltip title={t('Mở rộng tất cả cây WBS')}>
           <Button icon={<ExpandOutlined />} onClick={onExpandAll}>
-            Mở rộng tất cả
+            {t('Mở rộng tất cả')}
           </Button>
         </Tooltip>
 
-        <Tooltip title="Thu gọn tất cả cây WBS">
+        <Tooltip title={t('Thu gọn tất cả cây WBS')}>
           <Button icon={<CompressOutlined />} onClick={onCollapseAll}>
-            Thu gọn tất cả
+            {t('Thu gọn tất cả')}
           </Button>
         </Tooltip>
       </Space>
