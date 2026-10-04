@@ -10,9 +10,12 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(config => {
-  const token = getAuthUser()?.token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const auth = getAuthUser();
+  if (auth?.token) {
+    config.headers.Authorization = `Bearer ${auth.token}`;
+  }
+  if (auth?.userId) {
+    config.headers['X-User-Id'] = auth.userId;
   }
   return config;
 });

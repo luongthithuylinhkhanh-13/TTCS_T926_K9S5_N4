@@ -54,7 +54,11 @@
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
              relativeToChangelogFile="false"/>
 
+<<<<<<< HEAD
     <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+=======
+    <include file="db/migration/v13/V13_0__create_tasks_table.xml"
+>>>>>>> feature/S-14-gantt-cpm
              relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

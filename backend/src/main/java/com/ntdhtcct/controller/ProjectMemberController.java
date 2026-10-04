@@ -26,10 +26,10 @@ public class ProjectMemberController {
 
     /**
      * Thêm thành viên vào Project.
-     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @PostMapping
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> addMember(
             @PathVariable UUID projectId,
             @Valid @RequestBody AddMemberRequest request) {
@@ -52,10 +52,10 @@ public class ProjectMemberController {
 
     /**
      * Cập nhật Role của User trong Project.
-     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @PutMapping("/{userId}/role")
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> updateMemberRole(
             @PathVariable UUID projectId,
             @PathVariable UUID userId,
@@ -78,10 +78,10 @@ public class ProjectMemberController {
 
     /**
      * Xóa thành viên khỏi Project.
-     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @DeleteMapping("/{userId}")
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<Void>> removeMember(
             @PathVariable UUID projectId,
             @PathVariable UUID userId) {

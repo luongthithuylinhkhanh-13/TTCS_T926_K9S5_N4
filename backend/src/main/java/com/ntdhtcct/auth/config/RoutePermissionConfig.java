@@ -23,7 +23,6 @@ public class RoutePermissionConfig {
     }
 
     private void initDefaultRules() {
-        // Quản lý thành viên: Thêm, sửa role, xóa thành viên yêu cầu ADMIN hoặc PROJECT_MANAGER
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
@@ -34,6 +33,11 @@ public class RoutePermissionConfig {
 
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/schedule", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/critical-path", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

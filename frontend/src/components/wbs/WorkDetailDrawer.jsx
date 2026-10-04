@@ -1,4 +1,5 @@
 import TaskDependencySection from './TaskDependencySection';
+import CategoryTaskSection from './CategoryTaskSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -18,6 +19,7 @@ const WorkDetailDrawer = ({
   visible,
   onClose,
   node,
+  projectId,
   parentName,
   onAddChild,
   onEditNode,
@@ -303,10 +305,9 @@ const WorkDetailDrawer = ({
             />
           </div>
         )}
-        {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
-        <TaskDependencySection
-          taskId={node?.id || node?.key}
-          allTasks={allTasks}
+        <CategoryTaskSection
+          projectId={projectId}
+          category={node}
         />
         {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
         <TaskDependencySection

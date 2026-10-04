@@ -1,8 +1,14 @@
 package com.ntdhtcct;
 
+import com.ntdhtcct.domain.wbs.Task;
+import com.ntdhtcct.domain.wbs.TaskRepository;
+import com.ntdhtcct.domain.wbs.WbsItemRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Kiểm tra Spring Boot context load thành công.
@@ -12,8 +18,28 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class ApplicationTest {
 
+    @Autowired
+    private TaskRepository taskRepository;
+
+    @Autowired
+    private WbsItemRepository wbsItemRepository;
+
     @Test
     void contextLoads() {
         // Xác nhận Spring context khởi động không lỗi
+    }
+
+    @Test
+    void taskPersistsWithCategoryAndDuration() {
+        var category = wbsItemRepository.findAll().get(0);
+
+        Task saved = taskRepository.saveAndFlush(
+                new Task(category, "Công việc kiểm thử", 3)
+        );
+
+        assertThat(saved.getId()).isNotNull();
+        assertThat(taskRepository.findByCategoryId(category.getId()))
+                .extracting(Task::getName)
+                .contains("Công việc kiểm thử");
     }
 }
