@@ -143,11 +143,44 @@ const WbsTreeRow = ({
         )}
       </td>
 
-      {/* THỜI GIAN COLUMN */}
+      {/* PLANNED START COLUMN */}
       <td className="tree-cell">
-        {node.startDate && node.endDate ? (
+        {node.startDate ? (
           <span style={{ fontSize: 13, color: '#475569' }}>
-            {dayjs(node.startDate).format('DD/MM/YY')} - {dayjs(node.endDate).format('DD/MM/YY')}
+            {dayjs(node.startDate).format('DD/MM/YY')}
+          </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
+        )}
+      </td>
+
+      {/* PLANNED END COLUMN */}
+      <td className="tree-cell">
+        {node.endDate ? (
+          <span style={{ fontSize: 13, color: '#475569' }}>
+            {dayjs(node.endDate).format('DD/MM/YY')}
+          </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
+        )}
+      </td>
+
+      {/* ACTUAL START COLUMN */}
+      <td className="tree-cell">
+        {node.actualStartDate ? (
+          <span style={{ fontSize: 13, color: '#0f766e' }}>
+            {dayjs(node.actualStartDate).format('DD/MM/YY')}
+          </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
+        )}
+      </td>
+
+      {/* ACTUAL END COLUMN */}
+      <td className="tree-cell">
+        {node.actualEndDate ? (
+          <span style={{ fontSize: 13, color: '#0f766e' }}>
+            {dayjs(node.actualEndDate).format('DD/MM/YY')}
           </span>
         ) : (
           <span style={{ color: '#94A3B8' }}>--</span>
@@ -163,13 +196,13 @@ const WbsTreeRow = ({
       <td className="tree-cell" style={{ width: 140 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Progress
-            percent={node.progress || 0}
+            percent={node.progressPercent ?? node.progress ?? 0}
             size="small"
             showInfo={false}
-            strokeColor={node.progress === 100 ? '#16A34A' : '#2563EB'}
+            strokeColor={(node.progressPercent ?? node.progress ?? 0) === 100 ? '#16A34A' : '#2563EB'}
           />
           <span style={{ fontSize: 12, fontWeight: 600, minWidth: 32, color: '#334155' }}>
-            {node.progress || 0}%
+            {node.progressPercent ?? node.progress ?? 0}%
           </span>
         </div>
       </td>

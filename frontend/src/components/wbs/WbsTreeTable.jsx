@@ -59,9 +59,12 @@ const WbsTreeTable = ({
           <tr>
             <th style={{ width: '36%' }}>CÔNG VIỆC</th>
             <th>NGƯỜI PHỤ TRÁCH</th>
-            <th style={{ width: '16%' }}>THỜI GIAN</th>
+            <th>NGÀY BẮT ĐẦU KẾ HOẠCH</th>
+            <th>NGÀY KẾT THÚC KẾ HOẠCH</th>
+            <th>NGÀY BẮT ĐẦU THỰC TẾ</th>
+            <th>NGÀY KẾT THÚC THỰC TẾ</th>
             <th>TRẠNG THÁI</th>
-            <th style={{ width: '15%' }}>TIẾN ĐỘ</th>
+            <th style={{ width: '12%' }}>TIẾN ĐỘ THỰC TẾ</th>
             <th style={{ width: 60, textAlign: 'center' }}>THAO TÁC</th>
           </tr>
         </thead>

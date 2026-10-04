@@ -43,6 +43,7 @@ import {
  */
 const mapApiItem = (item) => ({
   ...item,
+  progressPercent: item.progressPercent ?? item.progress ?? 0,
 
   assignee: item.assigneeId
     ? {
@@ -130,10 +131,13 @@ const normalizeFormData = (formData) => {
 
     status: formData.status || 'not_started',
 
-    progress: Number(formData.progress || 0),
+    progress: Number(formData.progressPercent ?? formData.progress ?? 0),
+    progressPercent: Number(formData.progressPercent ?? formData.progress ?? 0),
 
     startDate: formData.startDate || null,
     endDate: formData.endDate || null,
+    actualStartDate: formData.actualStartDate || null,
+    actualEndDate: formData.actualEndDate || null,
     predecessorIds: formData.predecessorIds || [],
 
     description: formData.description || '',
@@ -496,11 +500,15 @@ const WBSPage = () => {
             item.assignee?.name || '',
           status: item.status,
           progress:
-            `${item.progress || 0}%`,
+            `${item.progressPercent ?? item.progress ?? 0}%`,
           startDate:
             item.startDate || '',
           endDate:
-            item.endDate || ''
+            item.endDate || '',
+          actualStartDate:
+            item.actualStartDate || '',
+          actualEndDate:
+            item.actualEndDate || ''
         });
 
         if (item.children?.length) {
@@ -521,9 +529,11 @@ const WBSPage = () => {
       'Loại',
       'Người phụ trách',
       'Trạng thái',
-      'Tiến độ',
-      'Ngày bắt đầu',
-      'Ngày kết thúc'
+      'Tiến độ thực tế (%)',
+      'Ngày bắt đầu kế hoạch',
+      'Ngày kết thúc kế hoạch',
+      'Ngày bắt đầu thực tế',
+      'Ngày kết thúc thực tế'
     ];
 
     const escapeCsv = value =>
@@ -542,7 +552,9 @@ const WBSPage = () => {
         row.status,
         row.progress,
         row.startDate,
-        row.endDate
+        row.endDate,
+        row.actualStartDate,
+        row.actualEndDate
       ])
     ]
       .map(row =>

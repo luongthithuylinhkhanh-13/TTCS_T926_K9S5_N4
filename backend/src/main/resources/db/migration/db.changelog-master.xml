@@ -54,4 +54,7 @@
     <include file="db/migration/v13/V13_0__create_tasks_table.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

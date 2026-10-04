@@ -38,6 +38,10 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.GET, "/api/projects/*/critical-path", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.POST, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // WBS task creation is managed; task updates also allow field engineers to record progress.
+        addRule(HttpMethod.POST, "/api/projects/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/tasks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {
