@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Button, Empty, Progress, Select, Spin, Table } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
+import ProgressTimeline from '../components/wbs/ProgressTimeline';
 
 const ProgressPage = () => {
   const [projects, setProjects] = useState([]);
@@ -189,6 +190,12 @@ const ProgressPage = () => {
                 </div>
               </div>
             </div>
+
+            <ProgressTimeline
+              tasks={schedule.tasks || []}
+              baselineTasks={schedule.baselineTasks || []}
+              baselineCapturedAt={schedule.baselineCapturedAt}
+            />
 
             <section className="wbs-main-card progress-table-section">
               <div className="wbs-card-header">

@@ -40,6 +40,9 @@ public class Project {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "schedule_baseline_captured_at")
+    private OffsetDateTime scheduleBaselineCapturedAt;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
@@ -122,6 +125,14 @@ public class Project {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public OffsetDateTime getScheduleBaselineCapturedAt() {
+        return scheduleBaselineCapturedAt;
+    }
+
+    public void setScheduleBaselineCapturedAt(OffsetDateTime scheduleBaselineCapturedAt) {
+        this.scheduleBaselineCapturedAt = scheduleBaselineCapturedAt;
     }
 
     public String getDescription() {
