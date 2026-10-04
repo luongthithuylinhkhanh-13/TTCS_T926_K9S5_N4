@@ -34,5 +34,29 @@ services:
       postgres:
         condition: service_healthy
 
+  postgres-backup:
+    image: postgres:18
+    container_name: construction-postgres-backup
+    restart: always
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - chown postgres:postgres /backups && exec gosu postgres /bin/sh /backup.sh
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${DB_NAME:-construction_management}
+      PGUSER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-2911}
+      BACKUP_TIME_UTC: ${BACKUP_TIME_UTC:-19:00}
+    volumes:
+      - ./database/scripts/backup.sh:/backup.sh:ro
+      - ./database/scripts/restore.sh:/restore.sh:ro
+      - postgres_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  postgres_backups:
