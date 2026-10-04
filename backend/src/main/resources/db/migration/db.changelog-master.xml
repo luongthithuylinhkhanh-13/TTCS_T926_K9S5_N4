@@ -61,4 +61,7 @@
 >>>>>>> feature/S-14-gantt-cpm
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

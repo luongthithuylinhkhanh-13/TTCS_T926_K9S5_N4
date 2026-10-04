@@ -65,6 +65,12 @@ public class WbsItem {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "actual_start_date")
+    private LocalDate actualStartDate;
+
+    @Column(name = "actual_end_date")
+    private LocalDate actualEndDate;
+
     @Column(name = "duration")
     private Integer duration;
 
@@ -205,6 +211,16 @@ public class WbsItem {
         this.progress = progress;
     }
 
+    @JsonProperty("progressPercent")
+    public int getProgressPercent() {
+        return progress;
+    }
+
+    @JsonProperty("progressPercent")
+    public void setProgressPercent(int progressPercent) {
+        this.progress = progressPercent;
+    }
+
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -219,6 +235,22 @@ public class WbsItem {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public LocalDate getActualStartDate() {
+        return actualStartDate;
+    }
+
+    public void setActualStartDate(LocalDate actualStartDate) {
+        this.actualStartDate = actualStartDate;
+    }
+
+    public LocalDate getActualEndDate() {
+        return actualEndDate;
+    }
+
+    public void setActualEndDate(LocalDate actualEndDate) {
+        this.actualEndDate = actualEndDate;
     }
 
     public Integer getDuration() {

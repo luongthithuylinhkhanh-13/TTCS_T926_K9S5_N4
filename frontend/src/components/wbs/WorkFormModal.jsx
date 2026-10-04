@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Slider, InputNumber, Row, Col, message } from 'antd';
+import { Alert, Modal, Form, Input, Select, DatePicker, Slider, InputNumber, Row, Col, message } from 'antd';
 import dayjs from 'dayjs';
 import { USERS } from '../../data/users';
 
@@ -13,9 +13,19 @@ const WorkFormModal = ({
   initialValues,
   parentOptions = [],
   taskOptions = [],
-  isEdit = false
+  isEdit = false,
+  confirmLoading = false
 }) => {
   const [form] = Form.useForm();
+  const actualStartDate = Form.useWatch('actualStartDate', form);
+  const actualEndDate = Form.useWatch('actualEndDate', form);
+  const progressPercent = Form.useWatch('progressPercent', form);
+  const actualDatesInvalid = Boolean(
+    actualStartDate &&
+    actualEndDate &&
+    actualEndDate.isBefore(actualStartDate, 'day')
+  );
+  const progressInvalid = progressPercent == null || progressPercent < 0 || progressPercent > 100;
 
   useEffect(() => {
     if (visible) {
@@ -23,14 +33,20 @@ const WorkFormModal = ({
         form.setFieldsValue({
           wbsCode: initialValues.wbsCode || '',
           name: initialValues.name || '',
-          duration: initialValues.duration ?? undefined,
+          duration: initialValues.duration ?? (
+            initialValues.startDate && initialValues.endDate
+              ? dayjs(initialValues.endDate).diff(dayjs(initialValues.startDate), 'day') + 1
+              : undefined
+          ),
           parentId: initialValues.parentId || null,
           assigneeId: initialValues.assignee?.id || undefined,
           status: initialValues.status || 'not_started',
           startDate: initialValues.startDate ? dayjs(initialValues.startDate) : null,
           endDate: initialValues.endDate ? dayjs(initialValues.endDate) : null,
+          actualStartDate: initialValues.actualStartDate ? dayjs(initialValues.actualStartDate) : null,
+          actualEndDate: initialValues.actualEndDate ? dayjs(initialValues.actualEndDate) : null,
           predecessorIds: initialValues.predecessorIds || [],
-          progress: initialValues.progress || 0,
+          progressPercent: initialValues.progressPercent ?? initialValues.progress ?? 0,
           description: initialValues.description || ''
         });
       } else {
@@ -38,7 +54,7 @@ const WorkFormModal = ({
         form.setFieldsValue({
           status: 'not_started',
           duration: undefined,
-          progress: 0,
+          progressPercent: 0,
           predecessorIds: []
         });
       }
@@ -53,6 +69,11 @@ const WorkFormModal = ({
         return;
       }
     }
+    if (values.actualStartDate && values.actualEndDate
+      && values.actualEndDate.isBefore(values.actualStartDate, 'day')) {
+      message.error('Ngày kết thúc thực tế phải sau hoặc cùng ngày với ngày bắt đầu thực tế');
+      return;
+    }
 
     const assigneeObj = USERS.find(u => u.id === values.assigneeId) || null;
 
@@ -65,9 +86,12 @@ const WorkFormModal = ({
       parentId: values.parentId || null,
       assignee: assigneeObj,
       status: values.status,
-      progress: values.progress,
+      progress: values.progressPercent,
+      progressPercent: values.progressPercent,
       startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : '',
       endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : '',
+      actualStartDate: values.actualStartDate ? values.actualStartDate.format('YYYY-MM-DD') : null,
+      actualEndDate: values.actualEndDate ? values.actualEndDate.format('YYYY-MM-DD') : null,
       description: values.description || ''
     };
 
@@ -84,6 +108,8 @@ const WorkFormModal = ({
       okText={isEdit ? "Lưu thay đổi" : "Thêm công việc"}
       cancelText="Hủy"
       destroyOnClose
+      confirmLoading={confirmLoading}
+      okButtonProps={{ disabled: actualDatesInvalid || progressInvalid || confirmLoading }}
     >
       <div style={{ marginBottom: 16, color: '#667085', fontSize: 13 }}>
         {isEdit 
@@ -97,6 +123,15 @@ const WorkFormModal = ({
         onFinish={handleFinish}
         requiredMark={false}
       >
+        {actualDatesInvalid && (
+          <Alert
+            type="error"
+            showIcon
+            message="Ngày kết thúc thực tế phải sau hoặc cùng ngày với ngày bắt đầu thực tế"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         {/* ROW 1: WBS Code & Name */}
         <Row gutter={16}>
           <Col span={8}>
@@ -240,21 +275,74 @@ const WorkFormModal = ({
           </Col>
         </Row>
 
-        {/* ROW 5: Progress */}
-        <Form.Item label="Tiến độ hoàn thành (%)">
+        <div className="actual-progress-form-section">
+          <div className="actual-progress-form-heading">TIẾN ĐỘ THỰC TẾ</div>
           <Row gutter={16} align="middle">
             <Col span={18}>
-              <Form.Item name="progress" noStyle>
-                <Slider min={0} max={100} />
-              </Form.Item>
+              <Slider
+                min={0}
+                max={100}
+                value={progressPercent ?? 0}
+                onChange={value => form.setFieldValue('progressPercent', value)}
+              />
             </Col>
             <Col span={6}>
-              <Form.Item name="progress" noStyle>
-                <InputNumber min={0} max={100} formatter={value => `${value}%`} parser={value => value.replace('%', '')} style={{ width: '100%' }} />
+              <Form.Item
+                name="progressPercent"
+                rules={[
+                  { required: true, type: 'number', message: 'Vui lòng nhập phần trăm hoàn thành' },
+                  { type: 'number', min: 0, max: 100, message: 'Phần trăm hoàn thành phải từ 0 đến 100' }
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  max={100}
+                  precision={0}
+                  formatter={value => value == null ? '' : `${value}%`}
+                  parser={value => value?.replace('%', '') ?? ''}
+                  style={{ width: '100%' }}
+                  aria-label="Phần trăm hoàn thành thực tế"
+                />
               </Form.Item>
             </Col>
           </Row>
-        </Form.Item>
+        </div>
+
+        <div className="actual-progress-form-section">
+          <div className="actual-progress-form-heading">NGÀY THỰC TẾ</div>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Ngày bắt đầu thực tế" name="actualStartDate">
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày bắt đầu thực tế" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Ngày kết thúc thực tế"
+                name="actualEndDate"
+                dependencies={['actualStartDate']}
+                validateTrigger={['onChange', 'onBlur']}
+                validateStatus={actualDatesInvalid ? 'error' : undefined}
+                help={actualDatesInvalid ? 'Ngày kết thúc thực tế không được trước ngày bắt đầu thực tế' : undefined}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const start = getFieldValue('actualStartDate');
+                      if (!value || !start || !value.isBefore(start, 'day')) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error(
+                        'Ngày kết thúc thực tế không được trước ngày bắt đầu thực tế'
+                      ));
+                    }
+                  })
+                ]}
+              >
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày kết thúc thực tế" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
 
         {/* ROW 6: Description */}
         <Form.Item label="Mô tả công việc" name="description">

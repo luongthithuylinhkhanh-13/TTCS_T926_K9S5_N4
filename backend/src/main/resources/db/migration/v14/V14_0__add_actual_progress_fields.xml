@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V14.0-add-actual-progress-fields" author="NTDHTCT-176">
+        <addColumn tableName="wbs_items">
+            <column name="actual_start_date" type="DATE"/>
+            <column name="actual_end_date" type="DATE"/>
+        </addColumn>
+
+        <sql>
+            ALTER TABLE wbs_items
+            ADD CONSTRAINT chk_wbs_actual_dates_order
+            CHECK (actual_start_date IS NULL OR actual_end_date IS NULL OR actual_end_date &gt;= actual_start_date)
+        </sql>
+        <sql>
+            ALTER TABLE wbs_items
+            ADD CONSTRAINT chk_wbs_progress_range
+            CHECK (progress BETWEEN 0 AND 100)
+        </sql>
+
+        <rollback>
+            <sql>ALTER TABLE wbs_items DROP CONSTRAINT chk_wbs_progress_range</sql>
+            <sql>ALTER TABLE wbs_items DROP CONSTRAINT chk_wbs_actual_dates_order</sql>
+            <dropColumn tableName="wbs_items" columnName="actual_end_date"/>
+            <dropColumn tableName="wbs_items" columnName="actual_start_date"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
