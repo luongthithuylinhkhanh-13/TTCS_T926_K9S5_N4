@@ -17,7 +17,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18
+        image: postgres:16
         env:
           POSTGRES_DB: construction_management
           POSTGRES_USER: postgres
@@ -97,7 +97,7 @@ jobs:
       - name: Start Staging with Docker Compose
         run: |
           docker compose -f docker-compose.staging.yml up -d
-          sleep 20
+          sleep 30
           docker compose -f docker-compose.staging.yml ps
 
       - name: Verify Staging System Accessibility
