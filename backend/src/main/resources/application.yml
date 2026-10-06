@@ -32,6 +32,11 @@ spring:
 server:
   port: ${APP_PORT:8080}
 
+schedule:
+  # Danh sách ngày lễ được loại trừ khỏi thời lượng dự án.
+  # Các giá trị có thể được đặt theo định dạng: YYYY-MM-DD,YYYY-MM-DD.
+  holidays: ""
+
 logging:
   level:
     root: INFO

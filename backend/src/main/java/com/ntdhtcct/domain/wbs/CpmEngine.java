@@ -1,11 +1,14 @@
 package com.ntdhtcct.domain.wbs;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
-import java.time.temporal.ChronoUnit;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +18,29 @@ import java.util.UUID;
 
 @Component
 public class CpmEngine {
+
+    private Set<LocalDate> holidays = new HashSet<>();
+
+    public CpmEngine() {
+    }
+
+    CpmEngine(Set<LocalDate> holidays) {
+        this.holidays = new HashSet<>(holidays);
+    }
+
+    @Value("${schedule.holidays:}")
+    public void configureHolidays(String holidayValues) {
+        holidays.clear();
+        if (holidayValues.isBlank()) {
+            return;
+        }
+
+        Arrays.stream(holidayValues.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(LocalDate::parse)
+                .forEach(holidays::add);
+    }
 
     public Result calculate(List<WbsItem> items) {
         Set<UUID> parentIds = new HashSet<>();
@@ -146,10 +172,24 @@ public class CpmEngine {
 
     private Integer getDuration(WbsItem item) {
         if (item.getStartDate() != null && item.getEndDate() != null) {
-            long days = ChronoUnit.DAYS.between(item.getStartDate(), item.getEndDate()) + 1;
-            return days > 0 && days <= Integer.MAX_VALUE ? (int) days : null;
+            long workdays = 0;
+            LocalDate date = item.getStartDate();
+            LocalDate endDate = item.getEndDate();
+
+            while (!date.isAfter(endDate)) {
+                if (!isNonWorkingDay(date)) {
+                    workdays++;
+                }
+                date = date.plusDays(1);
+            }
+
+            return workdays > 0 && workdays <= Integer.MAX_VALUE ? (int) workdays : null;
         }
         return item.getDuration();
+    }
+
+    private boolean isNonWorkingDay(LocalDate date) {
+        return date.getDayOfWeek() == DayOfWeek.SUNDAY || holidays.contains(date);
     }
 
     private void clearCpmValues(WbsItem item) {
