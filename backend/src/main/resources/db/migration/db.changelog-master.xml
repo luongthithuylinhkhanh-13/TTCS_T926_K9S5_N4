@@ -46,6 +46,10 @@
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
              relativeToChangelogFile="false"/>
 
+    <!-- T-51, T-52, T-53: Báo cáo hằng ngày -->
+    <include file="db/migration/v13/V13_0__add_wbs_columns_and_daily_reports.xml"
+             relativeToChangelogFile="false"/>
+
     <!-- T-54, T-55: Quản lý thành viên dự án -->
     <include file="db/migration/v14/V14_0__create_project_members_and_invitations.xml"
              relativeToChangelogFile="false"/>
