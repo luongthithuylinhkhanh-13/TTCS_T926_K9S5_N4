@@ -18,15 +18,18 @@ public class WbsController {
     private final WbsService wbsService;
     private final AuthTokenService authTokenService;
     private final ObjectMapper objectMapper;
+    private final com.ntdhtcct.domain.project.ProjectMemberService projectMemberService;
 
     public WbsController(
             WbsService wbsService,
             AuthTokenService authTokenService,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            com.ntdhtcct.domain.project.ProjectMemberService projectMemberService
     ) {
         this.wbsService = wbsService;
         this.authTokenService = authTokenService;
         this.objectMapper = objectMapper;
+        this.projectMemberService = projectMemberService;
     }
 
     @GetMapping("/projects")
@@ -35,7 +38,7 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
         }
 
         List<Project> projects = wbsService.getProjects();
@@ -49,7 +52,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -70,7 +76,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -89,7 +98,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -109,7 +121,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -131,7 +146,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -164,7 +182,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -197,7 +218,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -213,21 +237,43 @@ public class WbsController {
         }
     }
 
-    private boolean isAuthorized(String authorization) {
-        if (authorization == null
-                || !authorization.startsWith("Bearer ")) {
+    private boolean checkAccess(UUID projectId, String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
             return false;
         }
+        String token = authorization.substring(7);
+        if (!authTokenService.isTokenValid(token)) {
+            return false;
+        }
+        UUID userId = authTokenService.getUserIdFromToken(token);
+        if (userId == null) {
+            return false;
+        }
+        return projectMemberService.hasAccess(projectId, userId);
+    }
 
+    private boolean isAuthorized(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return false;
+        }
         String token = authorization.substring(7);
         return authTokenService.isTokenValid(token);
     }
 
-    private ResponseEntity<ApiResponse> unauthorized() {
+    private ResponseEntity<ApiResponse> unauthorized(String message) {
         return ResponseEntity.status(401).body(
                 new ApiResponse(
                         false,
-                        "Token không hợp lệ hoặc đã hết hạn"
+                        message != null ? message : "Token không hợp lệ hoặc đã hết hạn"
+                )
+        );
+    }
+
+    private ResponseEntity<ApiResponse> forbidden() {
+        return ResponseEntity.status(403).body(
+                new ApiResponse(
+                        false,
+                        "Bạn không có quyền truy cập vào dự án này"
                 )
         );
     }
