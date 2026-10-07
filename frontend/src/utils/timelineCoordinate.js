@@ -9,6 +9,9 @@ export const TIMELINE_CONFIG = {
   HEADER_HEIGHT: 56,
   SECONDARY_TIER_HEIGHT: 26,
   PRIMARY_TIER_HEIGHT: 30,
+  ROW_HEIGHT: 36,
+  BAR_HEIGHT: 22,
+  BAR_Y_OFFSET: 7,
 };
 
 const MS_PER_DAY = 86400000;
@@ -443,3 +446,94 @@ export function generateSecondaryGroups(ticks) {
 
   return groups;
 }
+
+/**
+ * Computes pixel geometry (x, y, width, height) for a single task bar.
+ * Reuses dateToX() and bounds.dayWidth from T-30.
+ *
+ * @param {Object} task
+ * @param {Object} bounds Timeline bounds from calculateTimelineBounds()
+ * @param {number} [rowIndex=0] 0-indexed row position
+ * @param {typeof TIMELINE_CONFIG} [config=TIMELINE_CONFIG]
+ * @returns {{
+ *   x: number,
+ *   y: number,
+ *   width: number,
+ *   height: number,
+ *   progressWidth: number,
+ *   progressPercent: number,
+ *   isCritical: boolean,
+ *   isValid: boolean
+ * }|null}
+ */
+export function computeTaskBarGeometry(task, bounds, rowIndex = 0, config = TIMELINE_CONFIG) {
+  if (!task || !bounds) return null;
+
+  const rowHeight = config?.ROW_HEIGHT ?? TIMELINE_CONFIG.ROW_HEIGHT;
+  const barHeight = config?.BAR_HEIGHT ?? TIMELINE_CONFIG.BAR_HEIGHT;
+  const barYOffset = config?.BAR_Y_OFFSET ?? Math.floor((rowHeight - barHeight) / 2);
+  const unit = bounds.unit || 'day';
+
+  let startDate = task.startDate;
+  let endDate = task.endDate;
+  let durationDays;
+
+  if (startDate && endDate) {
+    try {
+      const daysDiff = diffInDays(startDate, endDate);
+      if (daysDiff < 0) return null;
+      durationDays = daysDiff + 1; // Inclusive duration
+    } catch {
+      return null;
+    }
+  } else if (task.start != null && task.duration != null && task.duration > 0) {
+    // Benchmark / numeric offset format
+    try {
+      startDate = addDays(bounds.timelineStart, task.start);
+      durationDays = task.duration;
+      endDate = addDays(startDate, durationDays - 1);
+    } catch {
+      return null;
+    }
+  } else {
+    // Unscheduled task
+    return null;
+  }
+
+  const x = dateToX(startDate, bounds.timelineStart, unit, config);
+  const width = durationDays * bounds.dayWidth;
+  const y = rowIndex * rowHeight + barYOffset;
+  const progressPercent = Math.min(100, Math.max(0, Number(task.progress ?? task.progressPercent ?? 0)));
+  const progressWidth = (progressPercent / 100) * width;
+
+  return {
+    x,
+    y,
+    width,
+    height: barHeight,
+    progressWidth,
+    progressPercent,
+    isCritical: Boolean(task.isCritical || task.critical),
+    isValid: true,
+  };
+}
+
+/**
+ * Checks if an error message corresponds to a cycle dependency failure from T-25.
+ *
+ * @param {string|Error} error
+ * @returns {boolean}
+ */
+export function isCycleError(error) {
+  const msg = typeof error === 'string' ? error : error?.message;
+  if (!msg || typeof msg !== 'string') return false;
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('quan hệ tiền nhiệm tạo thành vòng lặp') ||
+    lower.includes('vòng lặp') ||
+    lower.includes('cycle') ||
+    lower.includes('cyclic') ||
+    lower.includes('chu trình')
+  );
+}
+
