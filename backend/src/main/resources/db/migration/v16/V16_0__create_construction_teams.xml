@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- T-48: Quản lý đội thi công -->
+    <changeSet id="V16.0-create-construction-teams" author="NTDHTCT-48">
+
+        <comment>
+            T-48 - Tạo đội thi công, thành viên đội và liên kết đội thi công với WBS
+        </comment>
+
+        <!-- Bảng đội thi công -->
+        <createTable tableName="construction_teams"
+                     remarks="Danh sách đội thi công theo từng dự án">
+
+            <column name="id" type="UUID"
+                    defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"
+                             nullable="false"
+                             primaryKeyName="pk_construction_teams"/>
+            </column>
+
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_construction_teams_project"
+                             referencedTableName="projects"
+                             referencedColumnNames="id"
+                             deleteCascade="true"/>
+            </column>
+
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="status" type="VARCHAR(30)"
+                    defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <!-- Không cho trùng mã đội trong cùng một dự án -->
+        <addUniqueConstraint
+            tableName="construction_teams"
+            columnNames="project_id,code"
+            constraintName="uk_construction_team_project_code"/>
+
+        <createIndex
+            tableName="construction_teams"
+            indexName="idx_construction_teams_project_id">
+            <column name="project_id"/>
+        </createIndex>
+
+
+        <!-- Thành viên đội thi công -->
+        <createTable tableName="construction_team_members"
+                     remarks="Người dùng thuộc đội thi công">
+
+            <column name="id" type="UUID"
+                    defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"
+                             nullable="false"
+                             primaryKeyName="pk_construction_team_members"/>
+            </column>
+
+            <column name="team_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_team_members_team"
+                             referencedTableName="construction_teams"
+                             referencedColumnNames="id"
+                             deleteCascade="true"/>
+            </column>
+
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_team_members_user"
+                             referencedTableName="users"
+                             referencedColumnNames="id"
+                             deleteCascade="true"/>
+            </column>
+
+            <column name="joined_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <!-- Một user không thể xuất hiện 2 lần trong cùng một đội -->
+        <addUniqueConstraint
+            tableName="construction_team_members"
+            columnNames="team_id,user_id"
+            constraintName="uk_construction_team_member"/>
+
+        <createIndex
+            tableName="construction_team_members"
+            indexName="idx_construction_team_members_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+
+        <!-- Gán đội thi công cho WBS -->
+        <addColumn tableName="wbs_items">
+            <column name="team_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_items"
+            baseColumnNames="team_id"
+            referencedTableName="construction_teams"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_team"
+            onDelete="SET NULL"/>
+
+        <createIndex
+            tableName="wbs_items"
+            indexName="idx_wbs_items_team_id">
+            <column name="team_id"/>
+        </createIndex>
+
+
+        <rollback>
+
+            <dropIndex
+                tableName="wbs_items"
+                indexName="idx_wbs_items_team_id"/>
+
+            <dropForeignKeyConstraint
+                baseTableName="wbs_items"
+                constraintName="fk_wbs_team"/>
+
+            <dropColumn
+                tableName="wbs_items"
+                columnName="team_id"/>
+
+            <dropIndex
+                tableName="construction_team_members"
+                indexName="idx_construction_team_members_user_id"/>
+
+            <dropTable tableName="construction_team_members"/>
+
+            <dropIndex
+                tableName="construction_teams"
+                indexName="idx_construction_teams_project_id"/>
+
+            <dropTable tableName="construction_teams"/>
+
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

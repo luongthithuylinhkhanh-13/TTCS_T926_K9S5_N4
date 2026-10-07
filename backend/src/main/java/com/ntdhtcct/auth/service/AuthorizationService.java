@@ -1,22 +1,24 @@
 package com.ntdhtcct.auth.service;
 
-import com.ntdhtcct.common.exception.ForbiddenException;
-import com.ntdhtcct.common.exception.ResourceNotFoundException;
-import com.ntdhtcct.repository.ProjectMemberRepository;
-import com.ntdhtcct.domain.project.ProjectRepository;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.UUID;
+import com.ntdhtcct.common.exception.ForbiddenException;
+import com.ntdhtcct.common.exception.ResourceNotFoundException;
+import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 
 @Service
 public class AuthorizationService {
 
     private static final Logger log =
             LoggerFactory.getLogger(AuthorizationService.class);
+
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
 
@@ -29,7 +31,7 @@ public class AuthorizationService {
     }
 
     public String checkProjectAccess(
-            UUID projectId,
+            Long projectId,
             UUID userId,
             String[] requiredRoles) {
 

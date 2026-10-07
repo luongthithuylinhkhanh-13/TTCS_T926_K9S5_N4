@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V17.0-create-team-assignment-history" author="NTDHTCCT-192">
+
+        <createTable tableName="team_assignment_history">
+
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="wbs_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="old_team_id" type="UUID"/>
+
+            <column name="new_team_id" type="UUID"/>
+
+            <column name="changed_by" type="UUID"/>
+
+            <column name="changed_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="reason" type="VARCHAR(500)"/>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_team_history_project"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="wbs_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_team_history_wbs"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="old_team_id"
+            referencedTableName="construction_teams"
+            referencedColumnNames="id"
+            constraintName="fk_team_history_old_team"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="new_team_id"
+            referencedTableName="construction_teams"
+            referencedColumnNames="id"
+            constraintName="fk_team_history_new_team"
+            onDelete="SET NULL"/>
+
+        <createIndex
+            tableName="team_assignment_history"
+            indexName="idx_team_history_wbs">
+            <column name="wbs_id"/>
+        </createIndex>
+
+        <createIndex
+            tableName="team_assignment_history"
+            indexName="idx_team_history_project">
+            <column name="project_id"/>
+        </createIndex>
+
+        <createIndex
+            tableName="team_assignment_history"
+            indexName="idx_team_history_changed_at">
+            <column name="changed_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="team_assignment_history"/>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

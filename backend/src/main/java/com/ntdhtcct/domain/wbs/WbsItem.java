@@ -1,8 +1,13 @@
 package com.ntdhtcct.domain.wbs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,12 +19,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
 @Entity
 @Table(name = "wbs_items")
 public class WbsItem {
@@ -29,8 +28,11 @@ public class WbsItem {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /*
+     * project_id trong database là BIGINT
+     */
     @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    private Long projectId;
 
     @Column(name = "parent_id")
     private UUID parentId;
@@ -52,6 +54,12 @@ public class WbsItem {
 
     @Column(name = "assignee_initials", length = 20)
     private String assigneeInitials;
+
+    /*
+     * T-48: Gán đội thi công cho WBS
+     */
+    @Column(name = "team_id")
+    private UUID teamId;
 
     @Column(name = "status", length = 50)
     private String status;
@@ -131,11 +139,11 @@ public class WbsItem {
         return id;
     }
 
-    public UUID getProjectId() {
+    public Long getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(UUID projectId) {
+    public void setProjectId(Long projectId) {
         this.projectId = projectId;
     }
 
@@ -195,6 +203,17 @@ public class WbsItem {
         this.assigneeInitials = assigneeInitials;
     }
 
+    /*
+     * T-48: Đội thi công
+     */
+    public UUID getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(UUID teamId) {
+        this.teamId = teamId;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -211,12 +230,13 @@ public class WbsItem {
         this.progress = progress;
     }
 
-    @JsonProperty("progressPercent")
+    /*
+     * Tương thích với các test/service cũ
+     */
     public int getProgressPercent() {
         return progress;
     }
 
-    @JsonProperty("progressPercent")
     public void setProgressPercent(int progressPercent) {
         this.progress = progressPercent;
     }
@@ -301,7 +321,6 @@ public class WbsItem {
         this.slack = slack;
     }
 
-    @JsonProperty("isCritical")
     public boolean isCritical() {
         return critical;
     }
@@ -315,9 +334,7 @@ public class WbsItem {
     }
 
     public void setPredecessorIds(Set<UUID> predecessorIds) {
-        this.predecessorIds = predecessorIds == null
-                ? new HashSet<>()
-                : new HashSet<>(predecessorIds);
+        this.predecessorIds = predecessorIds;
     }
 
     public String getDescription() {

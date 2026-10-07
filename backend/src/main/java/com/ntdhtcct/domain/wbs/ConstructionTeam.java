@@ -1,7 +1,7 @@
-package com.ntdhtcct.domain.project;
+package com.ntdhtcct.domain.wbs;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,37 +13,28 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "projects")
-public class Project {
+@Table(name = "construction_teams")
+public class ConstructionTeam {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false)
-    private Long id;
+    private UUID id;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
+    @Column(name = "project_id", nullable = false)
+    private Long projectId;
+
+    @Column(name = "code", nullable = false, length = 50)
     private String code;
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "status", length = 50)
-    private String status;
-
-    @Column(name = "progress", nullable = false)
-    private int progress = 0;
-
-    @Column(name = "start_date")
-    private LocalDate startDate;
-
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description")
     private String description;
 
-    @Column(name = "image", length = 500)
-    private String image;
+    @Column(name = "status", nullable = false, length = 30)
+    private String status = "ACTIVE";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -51,12 +42,20 @@ public class Project {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected Project() {
+    public ConstructionTeam() {
     }
 
-    public Project(String code, String name) {
+    public ConstructionTeam(
+            Long projectId,
+            String code,
+            String name,
+            String description
+    ) {
+        this.projectId = projectId;
         this.code = code;
         this.name = name;
+        this.description = description;
+        this.status = "ACTIVE";
     }
 
     @PrePersist
@@ -71,8 +70,16 @@ public class Project {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
+    }
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
     }
 
     public String getCode() {
@@ -91,38 +98,6 @@ public class Project {
         this.name = name;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public int getProgress() {
-        return progress;
-    }
-
-    public void setProgress(int progress) {
-        this.progress = progress;
-    }
-
-    public LocalDate getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
-    }
-
     public String getDescription() {
         return description;
     }
@@ -131,12 +106,12 @@ public class Project {
         this.description = description;
     }
 
-    public String getImage() {
-        return image;
+    public String getStatus() {
+        return status;
     }
 
-    public void setImage(String image) {
-        this.image = image;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public OffsetDateTime getCreatedAt() {

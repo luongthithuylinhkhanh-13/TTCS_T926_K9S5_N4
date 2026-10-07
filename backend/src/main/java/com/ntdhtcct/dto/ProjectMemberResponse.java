@@ -1,9 +1,9 @@
 package com.ntdhtcct.dto;
 
-import com.ntdhtcct.entity.ProjectMember;
-
 import java.time.OffsetDateTime;
 import java.util.UUID;
+
+import com.ntdhtcct.entity.ProjectMember;
 
 /**
  * T-04.4: DTO thông tin thành viên dự án và vai trò được gán.
@@ -11,7 +11,7 @@ import java.util.UUID;
 public class ProjectMemberResponse {
 
     private Long id;
-    private UUID projectId;
+    private Long projectId;
     private String projectCode;
     private String projectName;
 
@@ -74,11 +74,11 @@ public class ProjectMemberResponse {
         this.id = id;
     }
 
-    public UUID getProjectId() {
+    public Long getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(UUID projectId) {
+    public void setProjectId(Long projectId) {
         this.projectId = projectId;
     }
 

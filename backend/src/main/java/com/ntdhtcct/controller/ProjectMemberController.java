@@ -1,18 +1,27 @@
 package com.ntdhtcct.controller;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.ntdhtcct.auth.annotation.RequireProjectRole;
 import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.dto.AddMemberRequest;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 import com.ntdhtcct.service.ProjectMemberService;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/members")
@@ -26,12 +35,12 @@ public class ProjectMemberController {
 
     /**
      * Thêm thành viên vào Project.
-          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @PostMapping
-        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> addMember(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @Valid @RequestBody AddMemberRequest request) {
 
         ProjectMemberResponse response =
@@ -52,12 +61,12 @@ public class ProjectMemberController {
 
     /**
      * Cập nhật Role của User trong Project.
-          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @PutMapping("/{userId}/role")
-        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> updateMemberRole(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
 
@@ -78,12 +87,12 @@ public class ProjectMemberController {
 
     /**
      * Xóa thành viên khỏi Project.
-          * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
      */
     @DeleteMapping("/{userId}")
-        @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
     public ResponseEntity<ApiResponse<Void>> removeMember(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID userId) {
 
         projectMemberService.removeMemberFromProject(
@@ -110,7 +119,7 @@ public class ProjectMemberController {
             "VIEWER"
     })
     public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getProjectMembers(
-            @PathVariable UUID projectId) {
+            @PathVariable Long projectId) {
 
         List<ProjectMemberResponse> members =
                 projectMemberService.getProjectMembers(projectId);
@@ -131,7 +140,7 @@ public class ProjectMemberController {
             "VIEWER"
     })
     public ResponseEntity<ApiResponse<ProjectMemberResponse>> getProjectMember(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID userId) {
 
         ProjectMemberResponse member =

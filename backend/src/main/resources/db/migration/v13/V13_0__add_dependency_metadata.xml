@@ -7,7 +7,7 @@
 
     <changeSet id="V13.0-add-dependency-metadata" author="NTDHTCT-26">
         <addColumn tableName="task_dependencies">
-            <column name="project_id" type="UUID"/>
+            <column name="project_id" type="BIGINT"/>
         </addColumn>
 
         <sql>

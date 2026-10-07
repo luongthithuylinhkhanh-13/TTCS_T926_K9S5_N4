@@ -1,6 +1,11 @@
 package com.ntdhtcct.domain.milestone;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 import com.ntdhtcct.domain.wbs.WbsItem;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,10 +21,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
 @Entity
 @Table(name = "milestones")
 public class Milestone {
@@ -31,7 +32,7 @@ public class Milestone {
 
     @NotNull(message = "ID dự án không được để trống")
     @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    private Long projectId;
 
     @NotNull(message = "Hạng mục gắn mốc không được để trống")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -59,7 +60,13 @@ public class Milestone {
     protected Milestone() {
     }
 
-    public Milestone(UUID projectId, WbsItem category, String name, LocalDate targetDate, String description) {
+    public Milestone(
+            Long projectId,
+            WbsItem category,
+            String name,
+            LocalDate targetDate,
+            String description
+    ) {
         this.projectId = projectId;
         this.category = category;
         this.name = name;
@@ -83,11 +90,11 @@ public class Milestone {
         return id;
     }
 
-    public UUID getProjectId() {
+    public Long getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(UUID projectId) {
+    public void setProjectId(Long projectId) {
         this.projectId = projectId;
     }
 

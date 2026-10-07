@@ -469,7 +469,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
     // HELPER
     // =========================================================
     private WbsItem createItem(
-            UUID projectId,
+            Long projectId,
             UUID parentId,
             String wbsCode,
             String name,
@@ -514,9 +514,13 @@ public class ProjectWbsSeeder implements CommandLineRunner {
         if ("task".equalsIgnoreCase(type)
                 && item.getStartDate() != null
                 && item.getEndDate() != null) {
-            item.setDuration((int) ChronoUnit.DAYS.between(
-                    item.getStartDate(), item.getEndDate()
-            ) + 1);
+
+            item.setDuration(
+                    (int) ChronoUnit.DAYS.between(
+                            item.getStartDate(),
+                            item.getEndDate()
+                    ) + 1
+            );
         }
 
         item.setDescription(description);

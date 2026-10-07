@@ -1,15 +1,9 @@
 package com.ntdhtcct.auth.interceptor;
 
-import com.ntdhtcct.auth.annotation.RequireProjectRole;
-import com.ntdhtcct.auth.config.RoutePermissionConfig;
-import com.ntdhtcct.auth.context.UserSecurityContext;
-import com.ntdhtcct.auth.service.AuthorizationService;
-import com.ntdhtcct.common.exception.BadRequestException;
-import com.ntdhtcct.common.exception.ForbiddenException;
-import com.ntdhtcct.common.exception.UnauthorizedException;
-import com.ntdhtcct.domain.auth.AuthTokenService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -18,9 +12,17 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import com.ntdhtcct.auth.annotation.RequireProjectRole;
+import com.ntdhtcct.auth.config.RoutePermissionConfig;
+import com.ntdhtcct.auth.context.UserSecurityContext;
+import com.ntdhtcct.auth.service.AuthorizationService;
+import com.ntdhtcct.common.exception.BadRequestException;
+import com.ntdhtcct.common.exception.ForbiddenException;
+import com.ntdhtcct.common.exception.UnauthorizedException;
+import com.ntdhtcct.domain.auth.AuthTokenService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
@@ -56,9 +58,9 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
         if ("GET".equalsIgnoreCase(request.getMethod())
                 && "/api/projects".equals(request.getRequestURI())) {
             return true;
-                }
+        }
 
-        UUID projectId = extractProjectId(request);
+        Long projectId = extractProjectId(request);
 
         if (projectId == null) {
             return true;
@@ -74,6 +76,7 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
         }
 
         String token = authorization.substring(7).trim();
+
         if (token.isEmpty() || !authTokenService.isTokenValid(token)) {
             throw new UnauthorizedException(
                     "AUTH_INVALID_TOKEN",
@@ -110,7 +113,7 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
     }
 
     @SuppressWarnings("unchecked")
-    private UUID extractProjectId(HttpServletRequest request) {
+    private Long extractProjectId(HttpServletRequest request) {
 
         Object uriTemplateVarsObj =
                 request.getAttribute(
@@ -123,30 +126,33 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
 
             if (projectIdVal != null) {
                 try {
-                    return UUID.fromString(projectIdVal.toString());
-                } catch (IllegalArgumentException ignored) {
+                    return Long.valueOf(projectIdVal.toString());
+                } catch (NumberFormatException ignored) {
                 }
             }
         }
 
         String requestUri = request.getRequestURI();
         String projectPathPrefix = "/api/projects/";
+
         if (!requestUri.startsWith(projectPathPrefix)) {
             return null;
         }
 
-        String projectIdValue = requestUri.substring(projectPathPrefix.length())
-                .split("/", 2)[0];
+        String projectIdValue =
+                requestUri.substring(projectPathPrefix.length())
+                        .split("/", 2)[0];
+
         if (projectIdValue.isBlank()) {
             return null;
         }
 
         try {
-            return UUID.fromString(projectIdValue);
-        } catch (IllegalArgumentException e) {
+            return Long.valueOf(projectIdValue);
+        } catch (NumberFormatException e) {
             throw new BadRequestException(
                     "INVALID_PROJECT_ID",
-                    "ID công trình không đúng định dạng UUID"
+                    "ID công trình không đúng định dạng số"
             );
         }
     }

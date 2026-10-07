@@ -61,10 +61,32 @@
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
+             <!-- V14: Tạo bảng quan hệ predecessor giữa các WBS item -->
+    <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
+             relativeToChangelogFile="false"/>
 
     <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
+             <!-- T-48: Quản lý đội thi công -->
+<include file="db/migration/v16/V16_0__create_construction_teams.xml"
+         relativeToChangelogFile="false"/>
+
+<!-- T-50: Lưu lịch sử thay đổi đội thi công -->
+<include file="db/migration/v17/V17_0__create_team_assignment_history.xml"
+         relativeToChangelogFile="false"/>
+         <!-- V18: Thêm ngày kết thúc cho công trình -->
+<include file="db/migration/v18/V18_0__add_project_end_date.xml"
+         relativeToChangelogFile="false"/>
+         <!-- V19: Thêm hình ảnh cho công trình -->
+<include file="db/migration/v19/V19_0__add_project_image.xml"
+         relativeToChangelogFile="false"/>
+         <!-- V20: Thêm tiến độ cho công trình -->
+<include file="db/migration/v20/V20_0__add_project_progress.xml"
+         relativeToChangelogFile="false"/>
+         <!-- V21: Thêm ngày bắt đầu cho công trình -->
+<include file="db/migration/v21/V21_0__add_project_start_date.xml"
+         relativeToChangelogFile="false"/>
 
 </databaseChangeLog>
-
+    

@@ -1,10 +1,10 @@
 package com.ntdhtcct.domain.wbs;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CategoryTaskService {
@@ -21,13 +21,13 @@ public class CategoryTaskService {
     }
 
     @Transactional(readOnly = true)
-    public List<Task> getTasks(UUID projectId, UUID categoryId) {
+    public List<Task> getTasks(Long projectId, UUID categoryId) {
         requireCategory(projectId, categoryId);
         return taskRepository.findByCategoryIdOrderByCreatedAtAsc(categoryId);
     }
 
     @Transactional
-    public Task createTask(UUID projectId, UUID categoryId, String name, Integer duration) {
+    public Task createTask(Long projectId, UUID categoryId, String name, Integer duration) {
         WbsItem category = requireCategory(projectId, categoryId);
 
         if (name == null || name.isBlank()) {
@@ -43,7 +43,7 @@ public class CategoryTaskService {
         return taskRepository.save(new Task(category, name.trim(), duration));
     }
 
-    private WbsItem requireCategory(UUID projectId, UUID categoryId) {
+    private WbsItem requireCategory(Long projectId, UUID categoryId) {
         WbsItem category = wbsItemRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hạng mục"));
 

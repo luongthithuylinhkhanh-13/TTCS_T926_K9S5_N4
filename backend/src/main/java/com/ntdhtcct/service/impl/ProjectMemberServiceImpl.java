@@ -55,7 +55,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public ProjectMemberResponse addMemberToProject(
-            UUID projectId,
+            Long projectId,
             AddMemberRequest request
     ) {
         log.info(
@@ -112,7 +112,6 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 );
             }
 
-            // Kích hoạt lại thành viên cũ đã bị vô hiệu hóa
             existing.setRole(role);
             existing.setStatus("ACTIVE");
             existing.setJoinedAt(OffsetDateTime.now());
@@ -135,7 +134,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public ProjectMemberResponse updateMemberRole(
-            UUID projectId,
+            Long projectId,
             UUID userId,
             UpdateMemberRoleRequest request
     ) {
@@ -184,7 +183,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
     @Override
     public void removeMemberFromProject(
-            UUID projectId,
+            Long projectId,
             UUID userId
     ) {
         log.info(
@@ -212,7 +211,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Override
     @Transactional(readOnly = true)
     public List<ProjectMemberResponse> getProjectMembers(
-            UUID projectId
+            Long projectId
     ) {
         if (!projectRepository.existsById(projectId)) {
             throw new ResourceNotFoundException(
@@ -234,7 +233,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Override
     @Transactional(readOnly = true)
     public ProjectMemberResponse getProjectMember(
-            UUID projectId,
+            Long projectId,
             UUID userId
     ) {
         ProjectMember member =

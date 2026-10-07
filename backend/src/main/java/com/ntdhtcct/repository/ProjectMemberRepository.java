@@ -1,41 +1,42 @@
 package com.ntdhtcct.repository;
 
-import com.ntdhtcct.entity.ProjectMember;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import com.ntdhtcct.entity.ProjectMember;
 
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
     Optional<ProjectMember> findByProjectIdAndUserId(
-            UUID projectId,
+            Long projectId,
             UUID userId
     );
 
     Optional<ProjectMember> findByProjectIdAndUserIdAndStatus(
-            UUID projectId,
+            Long projectId,
             UUID userId,
             String status
     );
 
-    List<ProjectMember> findByProjectId(UUID projectId);
+    List<ProjectMember> findByProjectId(Long projectId);
 
     List<ProjectMember> findByUserId(UUID userId);
 
     boolean existsByProjectIdAndUserIdAndStatus(
-            UUID projectId,
+            Long projectId,
             UUID userId,
             String status
     );
 
     void deleteByProjectIdAndUserId(
-            UUID projectId,
+            Long projectId,
             UUID userId
     );
 
@@ -47,7 +48,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
           AND pm.status = 'ACTIVE'
     """)
     Optional<String> findActiveRoleNameByProjectAndUser(
-            @Param("projectId") UUID projectId,
+            @Param("projectId") Long projectId,
             @Param("userId") UUID userId
     );
 }

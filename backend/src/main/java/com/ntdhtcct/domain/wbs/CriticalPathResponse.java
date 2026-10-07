@@ -1,10 +1,9 @@
 package com.ntdhtcct.domain.wbs;
 
 import java.util.List;
-import java.util.UUID;
 
 public record CriticalPathResponse(
-        UUID projectId,
+        Long projectId,
         int durationDays,
         String criticalPathCount,
         boolean complete,

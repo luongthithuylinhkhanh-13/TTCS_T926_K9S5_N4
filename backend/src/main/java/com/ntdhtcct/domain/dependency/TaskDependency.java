@@ -1,5 +1,8 @@
 package com.ntdhtcct.domain.dependency;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,8 +12,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "task_dependencies")
@@ -22,7 +23,7 @@ public class TaskDependency {
     private UUID id;
 
     @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    private Long projectId;
 
     @Column(name = "predecessor_id", nullable = false)
     private UUID predecessorId;
@@ -43,7 +44,13 @@ public class TaskDependency {
     protected TaskDependency() {
     }
 
-    public TaskDependency(UUID projectId, UUID predecessorId, UUID successorId, DependencyType type, int lagDays) {
+    public TaskDependency(
+            Long projectId,
+            UUID predecessorId,
+            UUID successorId,
+            DependencyType type,
+            int lagDays
+    ) {
         this.projectId = projectId;
         this.predecessorId = predecessorId;
         this.successorId = successorId;
@@ -60,7 +67,7 @@ public class TaskDependency {
         return id;
     }
 
-    public UUID getProjectId() {
+    public Long getProjectId() {
         return projectId;
     }
 

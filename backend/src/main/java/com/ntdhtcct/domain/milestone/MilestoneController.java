@@ -1,6 +1,5 @@
 package com.ntdhtcct.domain.milestone;
 
-import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.milestone.dto.CreateMilestoneRequest;
 import com.ntdhtcct.domain.milestone.dto.MilestoneResponse;
@@ -34,7 +33,7 @@ public class MilestoneController {
      */
     @PostMapping("/milestones")
     public ResponseEntity<?> createMilestone(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @Valid @RequestBody CreateMilestoneRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
@@ -47,7 +46,8 @@ public class MilestoneController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(MilestoneResponse.from(created));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -56,7 +56,7 @@ public class MilestoneController {
      */
     @GetMapping("/milestones")
     public ResponseEntity<?> getMilestones(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
         if (!isAuthorized(authorization)) {
@@ -64,13 +64,16 @@ public class MilestoneController {
         }
 
         try {
-            List<MilestoneResponse> responses = milestoneService.getMilestones(projectId)
-                    .stream()
-                    .map(MilestoneResponse::from)
-                    .toList();
+            List<MilestoneResponse> responses =
+                    milestoneService.getMilestones(projectId)
+                            .stream()
+                            .map(MilestoneResponse::from)
+                            .toList();
+
             return ResponseEntity.ok(responses);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -79,7 +82,7 @@ public class MilestoneController {
      */
     @GetMapping("/milestones/{milestoneId}")
     public ResponseEntity<?> getMilestone(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID milestoneId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
@@ -88,10 +91,13 @@ public class MilestoneController {
         }
 
         try {
-            Milestone milestone = milestoneService.getMilestone(projectId, milestoneId);
+            Milestone milestone =
+                    milestoneService.getMilestone(projectId, milestoneId);
+
             return ResponseEntity.ok(MilestoneResponse.from(milestone));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -100,7 +106,7 @@ public class MilestoneController {
      */
     @PutMapping("/milestones/{milestoneId}")
     public ResponseEntity<?> updateMilestone(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID milestoneId,
             @Valid @RequestBody UpdateMilestoneRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization
@@ -110,10 +116,17 @@ public class MilestoneController {
         }
 
         try {
-            Milestone updated = milestoneService.updateMilestone(projectId, milestoneId, request);
+            Milestone updated =
+                    milestoneService.updateMilestone(
+                            projectId,
+                            milestoneId,
+                            request
+                    );
+
             return ResponseEntity.ok(MilestoneResponse.from(updated));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -122,7 +135,7 @@ public class MilestoneController {
      */
     @DeleteMapping("/milestones/{milestoneId}")
     public ResponseEntity<?> deleteMilestone(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @PathVariable UUID milestoneId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
@@ -132,9 +145,16 @@ public class MilestoneController {
 
         try {
             milestoneService.deleteMilestone(projectId, milestoneId);
-            return ResponseEntity.ok(new SimpleApiResponse(true, "Xóa mốc tiến độ thành công"));
+
+            return ResponseEntity.ok(
+                    new SimpleApiResponse(
+                            true,
+                            "Xóa mốc tiến độ thành công"
+                    )
+            );
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -144,7 +164,7 @@ public class MilestoneController {
      */
     @GetMapping({"/milestones/warnings", "/milestone-warnings"})
     public ResponseEntity<?> getMilestoneWarnings(
-            @PathVariable UUID projectId,
+            @PathVariable Long projectId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
         if (!isAuthorized(authorization)) {
@@ -152,10 +172,13 @@ public class MilestoneController {
         }
 
         try {
-            List<MilestoneWarningResponse> warnings = milestoneService.getMilestoneWarnings(projectId);
+            List<MilestoneWarningResponse> warnings =
+                    milestoneService.getMilestoneWarnings(projectId);
+
             return ResponseEntity.ok(warnings);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new SimpleApiResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new SimpleApiResponse(false, e.getMessage()));
         }
     }
 
@@ -164,17 +187,27 @@ public class MilestoneController {
             // Cho phép request nếu đã qua filter interceptor hoặc mock test
             return true;
         }
+
         if (!authorization.startsWith("Bearer ")) {
             return false;
         }
-        return authTokenService.isTokenValid(authorization.substring(7));
+
+        return authTokenService.isTokenValid(
+                authorization.substring(7)
+        );
     }
 
     private ResponseEntity<SimpleApiResponse> unauthorized() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new SimpleApiResponse(false, "Token không hợp lệ hoặc đã hết hạn"));
+                .body(new SimpleApiResponse(
+                        false,
+                        "Token không hợp lệ hoặc đã hết hạn"
+                ));
     }
 
-    public record SimpleApiResponse(boolean success, String message) {
+    public record SimpleApiResponse(
+            boolean success,
+            String message
+    ) {
     }
 }
