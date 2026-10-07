@@ -73,6 +73,22 @@ class WbsServiceDurationTest {
     }
 
     @Test
+    void rejectsActualEndDateWithoutActualStartDate() {
+        WbsItem item = new WbsItem();
+        item.setWbsCode("1.1");
+        item.setName("Task");
+        item.setDuration(1);
+        item.setActualStartDate(null);
+        item.setActualEndDate(LocalDate.parse("2026-10-10"));
+
+        assertThatThrownBy(() -> service.createTask(projectId, item))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế");
+
+        verify(wbsItemRepository, never()).save(item);
+    }
+
+    @Test
     void rejectsActualEndDateBeforeActualStartDate() {
         WbsItem item = new WbsItem();
         item.setWbsCode("1.1");
