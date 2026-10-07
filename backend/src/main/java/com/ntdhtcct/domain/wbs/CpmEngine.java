@@ -235,12 +235,55 @@ public class CpmEngine {
             WbsItem item = itemLookup.get(id);
             ActivityNode node = activities.get(id);
             item.setDuration(node.duration());
-            item.setEs(esMap.get(id));
-            item.setEf(efMap.get(id));
+            Integer es = esMap.get(id);
+            Integer ef = efMap.get(id);
+            item.setEs(es);
+            item.setEf(ef);
             item.setLs(lsMap.get(id));
             item.setLf(lfMap.get(id));
             item.setSlack(slackMap.get(id));
             item.setCritical(criticalMap.get(id));
+
+            if (es != null) {
+                item.setCalculatedStartDate(calendarConverter.toDate(es));
+            }
+
+            LocalDate calculatedEnd = null;
+            if (item.getActualEndDate() != null) {
+                calculatedEnd = item.getActualEndDate();
+            } else if (ef != null && ef > 0) {
+                calculatedEnd = calendarConverter.toDate(ef - 1);
+            }
+            item.setCalculatedEndDate(calculatedEnd);
+
+            if (calculatedEnd != null && item.getEndDate() != null) {
+                Integer calculatedEndOffset = calendarConverter.toOffset(calculatedEnd);
+                Integer plannedEndOffset = calendarConverter.toOffset(item.getEndDate());
+                if (calculatedEndOffset != null && plannedEndOffset != null) {
+                    item.setScheduleVarianceDays(calculatedEndOffset - plannedEndOffset);
+                }
+            }
+
+            if (item.getActualStartDate() != null && item.getStartDate() != null) {
+                Integer actualStartOffset = calendarConverter.toOffset(item.getActualStartDate());
+                Integer plannedStartOffset = calendarConverter.toOffset(item.getStartDate());
+                if (actualStartOffset != null && plannedStartOffset != null) {
+                    int delay = actualStartOffset - plannedStartOffset;
+                    if (delay > 0) {
+                        item.setDelayedStart(true);
+                        item.setStartDelayDays(delay);
+                    } else {
+                        item.setDelayedStart(false);
+                        item.setStartDelayDays(0);
+                    }
+                } else {
+                    item.setDelayedStart(false);
+                    item.setStartDelayDays(0);
+                }
+            } else {
+                item.setDelayedStart(false);
+                item.setStartDelayDays(0);
+            }
         }
 
         return new Result(projectDuration, criticalPathCount.toString(), complete, unscheduledTaskCount);
@@ -300,6 +343,11 @@ public class CpmEngine {
         item.setLf(null);
         item.setSlack(null);
         item.setCritical(false);
+        item.setCalculatedStartDate(null);
+        item.setCalculatedEndDate(null);
+        item.setScheduleVarianceDays(null);
+        item.setStartDelayDays(null);
+        item.setDelayedStart(false);
     }
 
     /**

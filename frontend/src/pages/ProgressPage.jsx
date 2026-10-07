@@ -3,7 +3,7 @@ import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'an
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
 import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
-import { GanttChart } from '../components/gantt';
+import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
 
 const ProgressPage = () => {
   const [projects, setProjects] = useState([]);
@@ -69,16 +69,63 @@ const ProgressPage = () => {
     ...scheduledTasks.map(task => task.ef)
   );
 
-  const renderCpmTooltip = task => (
-    <div className="gantt-tooltip">
-      <strong>{task.wbsCode} · {task.name}</strong>
-      <span>ES (bắt đầu sớm nhất): {task.es ?? '--'}</span>
-      <span>EF (kết thúc sớm nhất): {task.ef ?? '--'}</span>
-      <span>LS (bắt đầu muộn nhất): {task.ls ?? '--'}</span>
-      <span>LF (kết thúc muộn nhất): {task.lf ?? '--'}</span>
-      <span>Slack (độ trễ cho phép): {task.slack ?? '--'} ngày</span>
-    </div>
-  );
+  const renderCpmTooltip = task => {
+    const plannedStart = formatDateVN(task.startDate);
+    const plannedEnd = formatDateVN(task.endDate);
+    const calculatedStart = formatDateVN(task.calculatedStartDate);
+    const calculatedEnd = formatDateVN(task.calculatedEndDate);
+    const actualStart = formatDateVN(task.actualStartDate);
+    const actualEnd = formatDateVN(task.actualEndDate);
+    const varianceText = formatVariance(task.scheduleVarianceDays);
+
+    return (
+      <div className="gantt-tooltip">
+        <strong>{task.wbsCode ? `${task.wbsCode} · ` : ''}{task.name}</strong>
+
+        {(plannedStart || plannedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+            {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+            {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+          </div>
+        )}
+
+        {(calculatedStart || calculatedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Hiện tại:</span>
+            {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+            {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+          </div>
+        )}
+
+        {varianceText && (
+          <div className="gantt-tooltip-variance">
+            Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+          </div>
+        )}
+
+        {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+          <div className="gantt-tooltip-delay-warning">
+            ⚠ Mở trễ {task.startDelayDays} ngày
+          </div>
+        )}
+
+        {(actualStart || actualEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Thực tế:</span>
+            {actualStart && <div>Bắt đầu: {actualStart}</div>}
+            {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+          </div>
+        )}
+
+        <div className="gantt-tooltip-section gantt-tooltip-cpm">
+          <div>ES: {task.es ?? '--'} · EF: {task.ef ?? '--'}</div>
+          <div>LS: {task.ls ?? '--'} · LF: {task.lf ?? '--'}</div>
+          <div>Slack: {task.slack ?? '--'} ngày</div>
+        </div>
+      </div>
+    );
+  };
 
   const columns = [
     {

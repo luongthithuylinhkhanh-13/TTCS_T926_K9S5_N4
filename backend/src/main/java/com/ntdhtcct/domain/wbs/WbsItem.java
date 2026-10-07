@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -91,6 +92,21 @@ public class WbsItem {
 
     @Column(name = "is_critical", nullable = false)
     private boolean critical;
+
+    @Transient
+    private LocalDate calculatedStartDate;
+
+    @Transient
+    private LocalDate calculatedEndDate;
+
+    @Transient
+    private Integer scheduleVarianceDays;
+
+    @Transient
+    private Integer startDelayDays;
+
+    @Transient
+    private boolean delayedStart;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -308,6 +324,47 @@ public class WbsItem {
 
     public void setCritical(boolean critical) {
         this.critical = critical;
+    }
+
+    public LocalDate getCalculatedStartDate() {
+        return calculatedStartDate;
+    }
+
+    public void setCalculatedStartDate(LocalDate calculatedStartDate) {
+        this.calculatedStartDate = calculatedStartDate;
+    }
+
+    public LocalDate getCalculatedEndDate() {
+        return calculatedEndDate;
+    }
+
+    public void setCalculatedEndDate(LocalDate calculatedEndDate) {
+        this.calculatedEndDate = calculatedEndDate;
+    }
+
+    public Integer getScheduleVarianceDays() {
+        return scheduleVarianceDays;
+    }
+
+    public void setScheduleVarianceDays(Integer scheduleVarianceDays) {
+        this.scheduleVarianceDays = scheduleVarianceDays;
+    }
+
+    public Integer getStartDelayDays() {
+        return startDelayDays;
+    }
+
+    public void setStartDelayDays(Integer startDelayDays) {
+        this.startDelayDays = startDelayDays;
+    }
+
+    @JsonProperty("delayedStart")
+    public boolean isDelayedStart() {
+        return delayedStart;
+    }
+
+    public void setDelayedStart(boolean delayedStart) {
+        this.delayedStart = delayedStart;
     }
 
     public Set<UUID> getPredecessorIds() {

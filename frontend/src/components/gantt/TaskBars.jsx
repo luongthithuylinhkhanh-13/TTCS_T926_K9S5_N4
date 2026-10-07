@@ -5,6 +5,9 @@ import {
   computeTaskBarGeometry,
   generateTimelineTicks,
 } from '../../utils/timelineCoordinate';
+import { formatDateVN, formatVariance } from '../../utils/ganttFormatters';
+
+export { formatDateVN, formatVariance };
 
 /**
  * TaskBars component renders all Gantt task bars inside a SINGLE SVG root.
@@ -128,7 +131,16 @@ const TaskBars = ({
             if (!geom) return null; // Unscheduled task: no bar
 
             const isCritical = geom.isCritical;
+            const isDelayedStart = Boolean(task.delayedStart);
             const barKey = task.id || `task-bar-${index}`;
+
+            const plannedStart = formatDateVN(task.startDate);
+            const plannedEnd = formatDateVN(task.endDate);
+            const calculatedStart = formatDateVN(task.calculatedStartDate);
+            const calculatedEnd = formatDateVN(task.calculatedEndDate);
+            const actualStart = formatDateVN(task.actualStartDate);
+            const actualEnd = formatDateVN(task.actualEndDate);
+            const varianceText = formatVariance(task.scheduleVarianceDays);
 
             const defaultTooltipContent = (
               <div className="gantt-tooltip">
@@ -136,13 +148,51 @@ const TaskBars = ({
                   {task.wbsCode ? `${task.wbsCode} · ` : ''}
                   {task.name || task.label || `Task ${index + 1}`}
                 </strong>
-                {task.startDate && <div>Bắt đầu: {task.startDate}</div>}
-                {task.endDate && <div>Kết thúc: {task.endDate}</div>}
-                {task.duration != null && <div>Thời lượng: {task.duration} ngày</div>}
-                {task.es != null && <div>ES: {task.es}</div>}
-                {task.ef != null && <div>EF: {task.ef}</div>}
-                {task.slack != null && <div>Slack: {task.slack} ngày</div>}
-                {task.progress != null && <div>Tiến độ: {task.progress}%</div>}
+
+                {(plannedStart || plannedEnd) && (
+                  <div className="gantt-tooltip-section">
+                    <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+                    {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+                    {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+                  </div>
+                )}
+
+                {(calculatedStart || calculatedEnd) && (
+                  <div className="gantt-tooltip-section">
+                    <span className="gantt-tooltip-section-title">Hiện tại:</span>
+                    {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+                    {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+                  </div>
+                )}
+
+                {varianceText && (
+                  <div className="gantt-tooltip-variance">
+                    Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+                  </div>
+                )}
+
+                {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+                  <div className="gantt-tooltip-delay-warning">
+                    ⚠ Mở trễ {task.startDelayDays} ngày
+                  </div>
+                )}
+
+                {(actualStart || actualEnd) && (
+                  <div className="gantt-tooltip-section">
+                    <span className="gantt-tooltip-section-title">Thực tế:</span>
+                    {actualStart && <div>Bắt đầu: {actualStart}</div>}
+                    {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+                  </div>
+                )}
+
+                {(task.duration != null || task.es != null || task.ef != null || task.slack != null || task.progress != null) && (
+                  <div className="gantt-tooltip-section gantt-tooltip-cpm">
+                    {task.duration != null && <div>Thời lượng: {task.duration} ngày</div>}
+                    {task.es != null && task.ef != null && <div>ES: {task.es} · EF: {task.ef}</div>}
+                    {task.slack != null && <div>Slack: {task.slack} ngày</div>}
+                    {task.progress != null && <div>Tiến độ: {task.progress}%</div>}
+                  </div>
+                )}
               </div>
             );
 
@@ -150,18 +200,32 @@ const TaskBars = ({
 
             const tooltipAccessibleText = [
               task.name || task.label || `Công việc ${index + 1}`,
-              task.startDate ? `Bắt đầu: ${task.startDate}` : '',
-              task.endDate ? `Kết thúc: ${task.endDate}` : '',
-              task.duration ? `Thời lượng: ${task.duration} ngày` : '',
+              plannedStart ? `Kế hoạch bắt đầu: ${plannedStart}` : '',
+              plannedEnd ? `Kế hoạch kết thúc: ${plannedEnd}` : '',
+              calculatedEnd ? `Hiện tại kết thúc: ${calculatedEnd}` : '',
+              varianceText ? `Chênh lệch: ${varianceText}` : '',
+              task.delayedStart && task.startDelayDays ? `Mở trễ ${task.startDelayDays} ngày` : '',
               isCritical ? 'ĐƯỜNG GĂNG' : '',
             ]
               .filter(Boolean)
               .join('. ');
 
+            const groupClasses = [
+              'gantt-bar-group',
+              isCritical ? 'is-critical' : '',
+              isDelayedStart ? 'is-delayed-start' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            const barFill = isCritical ? '#fee2e2' : isDelayedStart ? '#fef3c7' : '#dbeafe';
+            const barStroke = isCritical ? '#dc2626' : isDelayedStart ? '#d97706' : '#2563eb';
+            const progressFill = isCritical ? '#dc2626' : isDelayedStart ? '#d97706' : '#2563eb';
+
             const barNode = (
               <g
                 key={barKey}
-                className={`gantt-bar-group${isCritical ? ' is-critical' : ''}`}
+                className={groupClasses}
                 tabIndex={0}
                 role="img"
                 aria-label={tooltipAccessibleText}
@@ -178,9 +242,9 @@ const TaskBars = ({
                   height={geom.height}
                   rx={4}
                   ry={4}
-                  fill={isCritical ? '#fee2e2' : '#dbeafe'}
-                  stroke={isCritical ? '#dc2626' : '#2563eb'}
-                  strokeWidth={isCritical ? 1.5 : 1}
+                  fill={barFill}
+                  stroke={barStroke}
+                  strokeWidth={isCritical || isDelayedStart ? 1.5 : 1}
                   className="gantt-bar-base"
                 />
 
@@ -193,9 +257,22 @@ const TaskBars = ({
                     height={geom.height}
                     rx={4}
                     ry={4}
-                    fill={isCritical ? '#dc2626' : '#2563eb'}
+                    fill={progressFill}
                     opacity={0.85}
                     className="gantt-bar-progress"
+                  />
+                )}
+
+                {/* Delayed start accent strip on left edge */}
+                {isDelayedStart && (
+                  <rect
+                    x={geom.x}
+                    y={geom.y}
+                    width={Math.min(5, geom.width)}
+                    height={geom.height}
+                    rx={2}
+                    fill="#b45309"
+                    className="gantt-bar-delayed-strip"
                   />
                 )}
 
@@ -211,6 +288,21 @@ const TaskBars = ({
                     className="gantt-bar-critical-label"
                   >
                     ⚠ GĂNG
+                  </text>
+                )}
+
+                {/* Delayed start indicator badge */}
+                {isDelayedStart && (
+                  <text
+                    x={geom.x + geom.width + (isCritical ? 56 : 6)}
+                    y={geom.y + geom.height / 2 + 4}
+                    fill="#b45309"
+                    fontSize={10}
+                    fontWeight={700}
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                    className="gantt-bar-delayed-label"
+                  >
+                    ⚠ MỞ TRỄ
                   </text>
                 )}
               </g>

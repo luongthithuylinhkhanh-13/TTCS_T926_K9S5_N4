@@ -584,6 +584,173 @@ class CpmEngineTest {
         return new BenchmarkFixture(allTasks, edgeCount);
     }
 
+    // =========================================================================
+    // T-37: Derived Schedule Variance & Delayed Start Tests
+    // =========================================================================
+
+    @Test
+    void t37_case1_onTimeTaskHasZeroVarianceAndNoDelayedStart() {
+        WbsItem item = task("1.1", "Foundation", "2026-01-05", "2026-01-09");
+        item.setActualStartDate(LocalDate.parse("2026-01-05"));
+        item.setActualEndDate(LocalDate.parse("2026-01-09"));
+
+        engine.calculate(List.of(item));
+
+        assertThat(item.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-05"));
+        assertThat(item.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-09"));
+        assertThat(item.getScheduleVarianceDays()).isEqualTo(0);
+        assertThat(item.isDelayedStart()).isFalse();
+        assertThat(item.getStartDelayDays()).isEqualTo(0);
+    }
+
+    @Test
+    void t37_case2_delayedStartDetectedWhenActualStartAfterPlannedStart() {
+        // Planned: Jan 05 (Mon) to Jan 09 (Fri)
+        // Actual start: Jan 08 (Thu) -> 3 working days delay
+        WbsItem item = task("1.1", "Excavation", "2026-01-05", "2026-01-09");
+        item.setActualStartDate(LocalDate.parse("2026-01-08"));
+
+        engine.calculate(List.of(item));
+
+        assertThat(item.isDelayedStart()).isTrue();
+        assertThat(item.getStartDelayDays()).isEqualTo(3);
+        assertThat(item.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-08"));
+    }
+
+    @Test
+    void t37_case3_projectedScheduleDelayPositiveVariance() {
+        // A -> B
+        // A delayed from Jan 07 to Jan 10 (Sat)
+        WbsItem a = task("1.1", "Trenching", "2026-01-05", "2026-01-07");
+        a.setActualStartDate(LocalDate.parse("2026-01-05"));
+        a.setActualEndDate(LocalDate.parse("2026-01-10")); // EF = 6
+
+        // B planned Jan 08 to Jan 09 (2 days, planned end offset 4: 2026-01-09)
+        // B has NO actual dates
+        WbsItem b = task("1.2", "Piping", "2026-01-08", "2026-01-09", a);
+
+        engine.calculate(List.of(a, b));
+
+        // B is projected late (not actual late start!)
+        assertThat(b.isDelayedStart()).isFalse();
+        assertThat(b.getStartDelayDays()).isEqualTo(0);
+        // B ES = 6 (Mon Jan 12), duration = 2, EF = 8 (Tue Jan 13)
+        assertThat(b.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-12"));
+        assertThat(b.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-13"));
+        // Variance: Jan 13 (offset 7) - Jan 09 (offset 4) = +3 working days
+        assertThat(b.getScheduleVarianceDays()).isEqualTo(3);
+    }
+
+    @Test
+    void t37_case4_earlyCompletionNegativeVariance() {
+        // Planned: Jan 05 to Jan 10 (Sat, 6 days)
+        // Actual: Jan 05 to Jan 08 (Thu, 4 days) -> 2 days early!
+        WbsItem item = task("1.1", "Framing", "2026-01-05", "2026-01-10");
+        item.setActualStartDate(LocalDate.parse("2026-01-05"));
+        item.setActualEndDate(LocalDate.parse("2026-01-08"));
+
+        engine.calculate(List.of(item));
+
+        assertThat(item.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-08"));
+        assertThat(item.getScheduleVarianceDays()).isEqualTo(-2);
+        assertThat(item.isDelayedStart()).isFalse();
+    }
+
+    @Test
+    void t37_case5_actualStartWithoutActualEndUsesCpmRecalculationForCalculatedEnd() {
+        // Planned: Jan 05 to Jan 07 (3 days: Mon, Tue, Wed)
+        // Actual start: Jan 08 (Thu), actual end: null
+        // Recalculated: ES = offset 3 (Jan 08), duration = 3 -> runs Thu (3), Fri (4), Sat (5)
+        // EF = 6 -> calculated end = Saturday Jan 10
+        WbsItem item = task("1.1", "Masonry", "2026-01-05", "2026-01-07");
+        item.setActualStartDate(LocalDate.parse("2026-01-08"));
+        item.setActualEndDate(null);
+
+        engine.calculate(List.of(item));
+
+        assertThat(item.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-08"));
+        assertThat(item.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-10"));
+        assertThat(item.isDelayedStart()).isTrue();
+        assertThat(item.getStartDelayDays()).isEqualTo(3);
+        // Variance: Jan 10 (offset 5) - Jan 07 (offset 2) = +3 working days
+        assertThat(item.getScheduleVarianceDays()).isEqualTo(3);
+    }
+
+    @Test
+    void t37_case6_actualStartEarlierThanPredecessorPreservesDependency() {
+        // A -> B
+        // A finishes at Jan 09 (Fri, offset 5)
+        WbsItem a = task("1.1", "Base", "2026-01-05", "2026-01-09");
+        a.setActualStartDate(LocalDate.parse("2026-01-05"));
+        a.setActualEndDate(LocalDate.parse("2026-01-09"));
+
+        // B has actual start Jan 08 (Thu, offset 3) - out of sequence!
+        WbsItem b = task("1.2", "Paving", "2026-01-10", "2026-01-12", a);
+        b.setActualStartDate(LocalDate.parse("2026-01-08"));
+
+        engine.calculate(List.of(a, b));
+
+        // Dependency guard: B.ES must be max(predEF=5, actualStartOffset=3) = 5
+        // calculatedStartDate must be toDate(5) = Jan 10 (Sat)
+        assertThat(b.getEs()).isEqualTo(5);
+        assertThat(b.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-10"));
+    }
+
+    @Test
+    void t37_case7_sundayAndHolidayExcludedFromVarianceAndDelay() {
+        // Baseline Jan 05 (Mon).
+        // Holiday on Jan 09 (Fri)
+        CpmEngine customEngine = new CpmEngine(Set.of(LocalDate.parse("2026-01-09")));
+
+        // Planned: Jan 05 to Jan 08 (Thu) -> planned end offset 3
+        // Delay: ends on Mon Jan 12 -> working days between Jan 08 and Jan 12:
+        // Fri Jan 09 is holiday (not counted), Sat Jan 10 is working (offset 4),
+        // Sun Jan 11 is Sunday (not counted), Mon Jan 12 is working (offset 5).
+        WbsItem item = task("1.1", "Concrete", "2026-01-05", "2026-01-08");
+        item.setActualStartDate(LocalDate.parse("2026-01-05"));
+        item.setActualEndDate(LocalDate.parse("2026-01-12"));
+
+        customEngine.calculate(List.of(item));
+
+        // Variance: offset(Jan 12)=5 - offset(Jan 08)=3 = 2 working days
+        assertThat(item.getScheduleVarianceDays()).isEqualTo(2);
+    }
+
+    @Test
+    void t37_case8_criticalAndDelayedCanCoexist() {
+        // Critical path single chain: A -> B
+        WbsItem a = task("1.1", "Steel Frame", "2026-01-05", "2026-01-07");
+        a.setActualStartDate(LocalDate.parse("2026-01-06")); // 1 day delayed start
+
+        WbsItem b = task("1.2", "Roofing", "2026-01-08", "2026-01-10", a);
+
+        engine.calculate(List.of(a, b));
+
+        assertThat(a.isCritical()).isTrue();
+        assertThat(a.isDelayedStart()).isTrue();
+        assertThat(a.getStartDelayDays()).isEqualTo(1);
+    }
+
+    @Test
+    void t37_case9_noActualDatesDisplaysNormallyWithoutDelayedStart() {
+        WbsItem a = task("1.1", "Plan A", "2026-01-05", "2026-01-07");
+        WbsItem b = task("1.2", "Plan B", "2026-01-08", "2026-01-09", a);
+
+        engine.calculate(List.of(a, b));
+
+        assertThat(a.isDelayedStart()).isFalse();
+        assertThat(a.getStartDelayDays()).isEqualTo(0);
+        assertThat(a.getScheduleVarianceDays()).isEqualTo(0);
+        assertThat(a.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-05"));
+        assertThat(a.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-07"));
+
+        assertThat(b.isDelayedStart()).isFalse();
+        assertThat(b.getStartDelayDays()).isEqualTo(0);
+        assertThat(b.getScheduleVarianceDays()).isEqualTo(0);
+        assertThat(b.getCalculatedStartDate()).isEqualTo(LocalDate.parse("2026-01-08"));
+        assertThat(b.getCalculatedEndDate()).isEqualTo(LocalDate.parse("2026-01-09"));
+    }
+
     private WbsItem taskWithIndex(int index, String name, int duration) {
         WbsItem item = new WbsItem();
         setId(item, UUID.randomUUID());
