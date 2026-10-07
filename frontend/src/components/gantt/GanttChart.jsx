@@ -165,7 +165,7 @@ const GanttChart = ({
                 {tasks.map((task, index) => (
                   <div
                     key={task.id || `task-row-${index}`}
-                    className={`gantt-left-row${task.isCritical ? ' is-critical' : ''}`}
+                    className={`gantt-left-row${task.isCritical ? ' is-critical' : ''}${task.delayedStart ? ' is-delayed-start' : ''}`}
                     style={{ height: rowHeight }}
                     role="row"
                   >
@@ -181,6 +181,9 @@ const GanttChart = ({
                       </span>
                       {task.isCritical && (
                         <span className="gantt-critical-tag">GĂNG</span>
+                      )}
+                      {task.delayedStart && (
+                        <span className="gantt-delayed-tag">TRỄ</span>
                       )}
                     </div>
                   </div>
@@ -223,6 +226,9 @@ const GanttChart = ({
           </span>
           <span>
             <i className="gantt-legend-bar is-critical" aria-hidden="true" /> Công việc găng (viền đậm, nhãn ⚠ GĂNG)
+          </span>
+          <span>
+            <i className="gantt-legend-bar is-delayed-start" aria-hidden="true" /> ⚠ Công việc mở trễ
           </span>
         </div>
       </Spin>

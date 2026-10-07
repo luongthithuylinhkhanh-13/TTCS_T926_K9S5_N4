@@ -6,6 +6,7 @@ import {
   computeTaskBarGeometry,
   isCycleError,
 } from '../src/utils/timelineCoordinate.js';
+import { formatDateVN, formatVariance } from '../src/utils/ganttFormatters.js';
 import { generateBenchmarkTasks } from '../src/benchmark/benchmarkData.js';
 
 test('1. Day mode task bar geometry calculation', () => {
@@ -204,4 +205,44 @@ test('6. T-25 Cycle dependency error detection contract', () => {
   assert.equal(isCycleError('Network error (500)'), false);
   assert.equal(isCycleError(null), false);
   assert.equal(isCycleError(undefined), false);
+});
+
+test('7. T-37 Date formatting and Schedule Variance formatting', () => {
+  // formatDateVN
+  assert.equal(formatDateVN('2026-10-01'), '01/10/2026');
+  assert.equal(formatDateVN('2026-01-05'), '05/01/2026');
+  assert.equal(formatDateVN(null), null);
+  assert.equal(formatDateVN(undefined), null);
+  assert.equal(formatDateVN(''), null);
+
+  // formatVariance
+  assert.equal(formatVariance(3), '+3 ngày');
+  assert.equal(formatVariance(0), '0 ngày');
+  assert.equal(formatVariance(-2), '-2 ngày');
+  assert.equal(formatVariance(null), null);
+  assert.equal(formatVariance(undefined), null);
+  assert.equal(formatVariance(NaN), null);
+});
+
+test('8. T-37 Task delayed start and critical coexistence contract', () => {
+  const bounds = calculateTimelineBounds('2026-09-01', '2026-09-30', 'day');
+
+  // Task concurrent isCritical and delayedStart
+  const taskCriticalDelayed = {
+    id: 't-crit-delay',
+    startDate: '2026-09-01',
+    endDate: '2026-09-05',
+    actualStartDate: '2026-09-04',
+    isCritical: true,
+    delayedStart: true,
+    startDelayDays: 3,
+    scheduleVarianceDays: 3,
+  };
+
+  const geom = computeTaskBarGeometry(taskCriticalDelayed, bounds, 0);
+  assert(geom != null);
+  assert.equal(geom.isCritical, true);
+  assert.equal(taskCriticalDelayed.delayedStart, true);
+  assert.equal(taskCriticalDelayed.startDelayDays, 3);
+  assert.equal(taskCriticalDelayed.scheduleVarianceDays, 3);
 });
