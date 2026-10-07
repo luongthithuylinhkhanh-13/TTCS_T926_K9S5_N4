@@ -23,7 +23,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpassword
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -54,7 +54,7 @@ jobs:
       - name: Run Tests
         env:
           DB_HOST: localhost
-          DB_PORT: 5432
+          DB_PORT: 5433
           DB_NAME: construction_management
           DB_USERNAME: postgres
           DB_PASSWORD: testpassword
@@ -105,7 +105,7 @@ jobs:
           echo "Waiting for Staging Backend to become accessible..."
           READY=false
           for i in $(seq 1 30); do
-            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5432 || echo "000")
             echo "Attempt $i: Response code received: $RESPONSE_CODE"
             if [ "$RESPONSE_CODE" != "000" ] && [ "$RESPONSE_CODE" != "000000" ]; then
               READY=true

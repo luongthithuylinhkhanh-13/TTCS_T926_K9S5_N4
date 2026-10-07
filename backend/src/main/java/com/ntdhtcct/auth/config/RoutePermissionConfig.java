@@ -33,6 +33,8 @@ public class RoutePermissionConfig {
 
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // WBS, schedule and critical-path read routes
         addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/schedule", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/critical-path", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
@@ -40,8 +42,11 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
         // WBS task creation is managed; task updates also allow field engineers to record progress.
+        addRule(HttpMethod.POST, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.POST, "/api/projects/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.PUT, "/api/projects/*/tasks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
 
         // T-43, T-44, T-45 (NTDHTCT-166): Milestones và cảnh báo mốc tiến độ
         addRule(HttpMethod.GET, "/api/projects/*/milestones", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});

@@ -94,10 +94,10 @@ public class WbsItem {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "task_dependencies",
-            joinColumns = @JoinColumn(name = "successor_id")
+            name = "wbs_item_predecessors",
+            joinColumns = @JoinColumn(name = "wbs_item_id")
     )
-        @Column(name = "predecessor_id", nullable = false)
+    @Column(name = "predecessor_id", nullable = false)
     private Set<UUID> predecessorIds = new HashSet<>();
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -112,7 +112,7 @@ public class WbsItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected WbsItem() {
+    public WbsItem() {
     }
 
     @PrePersist

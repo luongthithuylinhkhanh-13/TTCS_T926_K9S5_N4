@@ -1,9 +1,11 @@
 package com.ntdhtcct.domain.milestone;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.milestone.dto.CreateMilestoneRequest;
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.domain.wbs.TaskRepository;
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
 import com.ntdhtcct.entity.ProjectMember;
@@ -57,7 +59,13 @@ public class MilestoneIntegrationTest {
     private WbsItemRepository wbsItemRepository;
 
     @Autowired
+    private TaskRepository taskRepository;
+
+    @Autowired
     private MilestoneRepository milestoneRepository;
+
+    @Autowired
+    private AuthTokenService authTokenService;
 
     private User managerUser;
     private Project project;
@@ -66,6 +74,7 @@ public class MilestoneIntegrationTest {
     @BeforeEach
     void setUp() {
         milestoneRepository.deleteAll();
+        taskRepository.deleteAll();
         wbsItemRepository.deleteAll();
         projectMemberRepository.deleteAll();
         projectRepository.deleteAll();
@@ -101,7 +110,7 @@ public class MilestoneIntegrationTest {
         );
 
         mockMvc.perform(post("/api/projects/" + project.getId() + "/milestones")
-                        .header("X-User-Id", managerUser.getId())
+                        .header("Authorization", bearerToken(managerUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -151,7 +160,7 @@ public class MilestoneIntegrationTest {
         milestoneRepository.save(milestone);
 
         mockMvc.perform(get("/api/projects/" + project.getId() + "/milestones/warnings")
-                        .header("X-User-Id", managerUser.getId()))
+                        .header("Authorization", bearerToken(managerUser)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].milestoneName", is("Mốc hoàn thành sàn tầng 1")))
@@ -162,5 +171,9 @@ public class MilestoneIntegrationTest {
                 .andExpect(jsonPath("$[0].delayChain", hasSize(2)))
                 .andExpect(jsonPath("$[0].delayChain[0].name", is("Thi công cột")))
                 .andExpect(jsonPath("$[0].delayChain[1].name", is("Đổ sàn tầng 1")));
+    }
+
+    private String bearerToken(User user) {
+        return "Bearer " + authTokenService.createToken(user.getId()).getToken();
     }
 }

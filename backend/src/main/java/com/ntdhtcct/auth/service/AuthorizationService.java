@@ -2,7 +2,6 @@ package com.ntdhtcct.auth.service;
 
 import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
-import com.ntdhtcct.common.exception.UnauthorizedException;
 import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import org.slf4j.Logger;
@@ -56,8 +55,8 @@ public class AuthorizationService {
                 );
 
         if (activeRoleOpt.isEmpty()) {
-            throw new UnauthorizedException(
-                    "Người dùng không có quyền truy cập công trình này"
+            throw new ForbiddenException(
+                    "Người dùng không phải là thành viên của dự án này"
             );
         }
 
@@ -79,7 +78,8 @@ public class AuthorizationService {
         }
 
         throw new ForbiddenException(
-                "Người dùng không có vai trò phù hợp để thực hiện thao tác này"
+                "INSUFFICIENT_PROJECT_ROLE",
+                "Người dùng không có quyền thực hiện hành động này"
         );
     }
 }

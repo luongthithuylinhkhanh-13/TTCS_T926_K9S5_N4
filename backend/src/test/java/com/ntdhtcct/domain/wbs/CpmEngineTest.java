@@ -15,14 +15,28 @@ class CpmEngineTest {
     private final CpmEngine engine = new CpmEngine();
 
     @Test
+    void excludesSundaysAndConfiguredHolidaysFromTaskDuration() {
+        CpmEngine holidayAwareEngine = new CpmEngine(
+                Set.of(LocalDate.of(2026, 1, 5))
+        );
+        WbsItem task = task("1.1", "Delivery", "2026-01-01", "2026-01-05");
+
+        CpmEngine.Result result = holidayAwareEngine.calculate(List.of(task));
+
+        assertThat(result.durationDays()).isEqualTo(3);
+        assertThat(task.getDuration()).isEqualTo(3);
+        assertThat(task.getEf()).isEqualTo(3);
+    }
+
+    @Test
     void calculatesForwardBackwardPassSlackAndPersistsCriticalFlags() {
-        WbsItem first = task("1.1", "Foundation", "2026-01-01", "2026-01-03");
-        WbsItem critical = task("1.2", "Frame", "2026-01-04", "2026-01-07", first);
-        WbsItem parallel = task("1.3", "Survey", "2026-01-01", "2026-01-02");
+        WbsItem first = task("1.1", "Foundation", "2026-01-05", "2026-01-07");
+        WbsItem critical = task("1.2", "Frame", "2026-01-08", "2026-01-09", first);
+        WbsItem parallel = task("1.3", "Survey", "2026-01-05", "2026-01-06");
 
         CpmEngine.Result result = engine.calculate(List.of(first, critical, parallel));
 
-        assertThat(result.durationDays()).isEqualTo(7);
+        assertThat(result.durationDays()).isEqualTo(5);
         assertThat(result.criticalPathCount()).isEqualTo("1");
         assertThat(first.getEs()).isZero();
         assertThat(first.getEf()).isEqualTo(3);
@@ -31,19 +45,19 @@ class CpmEngineTest {
         assertThat(first.getSlack()).isZero();
         assertThat(first.isCritical()).isTrue();
         assertThat(critical.getEs()).isEqualTo(3);
-        assertThat(critical.getEf()).isEqualTo(7);
+        assertThat(critical.getEf()).isEqualTo(5);
         assertThat(critical.getSlack()).isZero();
         assertThat(critical.isCritical()).isTrue();
-        assertThat(parallel.getSlack()).isEqualTo(5);
+        assertThat(parallel.getSlack()).isEqualTo(3);
         assertThat(parallel.isCritical()).isFalse();
     }
 
     @Test
     void countsDistinctTiedCriticalPaths() {
-        WbsItem firstBranch = task("1.1", "North foundation", "2026-01-01", "2026-01-02");
-        WbsItem secondBranch = task("1.2", "South foundation", "2026-01-01", "2026-01-02");
-        WbsItem firstFinish = task("1.3", "North frame", "2026-01-03", "2026-01-04", firstBranch);
-        WbsItem secondFinish = task("1.4", "South frame", "2026-01-03", "2026-01-04", secondBranch);
+        WbsItem firstBranch = task("1.1", "North foundation", "2026-01-05", "2026-01-06");
+        WbsItem secondBranch = task("1.2", "South foundation", "2026-01-05", "2026-01-06");
+        WbsItem firstFinish = task("1.3", "North frame", "2026-01-07", "2026-01-08", firstBranch);
+        WbsItem secondFinish = task("1.4", "South frame", "2026-01-07", "2026-01-08", secondBranch);
 
         CpmEngine.Result result = engine.calculate(
                 List.of(firstBranch, secondBranch, firstFinish, secondFinish)
