@@ -1267,3 +1267,36 @@
   color: #475569;
   font-weight: 600;
 }
+/* ==========================================================================
+   Gantt SVG Timeline Axis (T-30)
+   ========================================================================== */
+
+.gantt-timeline-axis-wrapper {
+  position: relative;
+  background-color: #f8fafc;
+  border-top: 1px solid #cbd5e1;
+}
+
+.gantt-timeline-svg {
+  display: block;
+  user-select: none;
+}
+
+.gantt-timeline-month-group text {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  fill: #334155;
+}
+
+.gantt-timeline-tick text {
+  font-family: inherit;
+  font-size: 11px;
+  fill: #64748b;
+}
+
+.timeline-unit-control-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
