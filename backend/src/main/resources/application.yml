@@ -1,11 +1,13 @@
 spring:
+  config:
+    import: optional:file:../.env[.properties]
   main:
     allow-bean-definition-overriding: true
   application:
     name: construction-platform
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:construction_management}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:construction_management}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver

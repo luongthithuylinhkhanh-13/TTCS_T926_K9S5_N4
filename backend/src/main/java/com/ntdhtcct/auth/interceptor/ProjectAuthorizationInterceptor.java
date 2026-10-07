@@ -4,8 +4,10 @@ import com.ntdhtcct.auth.annotation.RequireProjectRole;
 import com.ntdhtcct.auth.config.RoutePermissionConfig;
 import com.ntdhtcct.auth.context.UserSecurityContext;
 import com.ntdhtcct.auth.service.AuthorizationService;
+import com.ntdhtcct.common.exception.BadRequestException;
 import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.common.exception.UnauthorizedException;
+import com.ntdhtcct.domain.auth.AuthTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -28,13 +30,16 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
 
     private final AuthorizationService authorizationService;
     private final RoutePermissionConfig routePermissionConfig;
+    private final AuthTokenService authTokenService;
 
     public ProjectAuthorizationInterceptor(
             AuthorizationService authorizationService,
-            RoutePermissionConfig routePermissionConfig) {
+            RoutePermissionConfig routePermissionConfig,
+            AuthTokenService authTokenService) {
 
         this.authorizationService = authorizationService;
         this.routePermissionConfig = routePermissionConfig;
+        this.authTokenService = authTokenService;
     }
 
     @Override
@@ -50,30 +55,28 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
 
         UUID projectId = extractProjectId(request);
 
-        if (projectId == null
-                && !request.getRequestURI().startsWith("/api/projects")) {
+        if (projectId == null) {
             return true;
         }
 
-        String userIdHeader = request.getHeader("X-User-Id");
+        String authorization = request.getHeader("Authorization");
 
-        if (userIdHeader == null || userIdHeader.isBlank()) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new UnauthorizedException(
-                    "AUTH_MISSING_USER_ID",
-                    "Yêu cầu cung cấp định danh người dùng qua Header X-User-Id"
+                    "AUTH_MISSING_TOKEN",
+                    "Yêu cầu cung cấp token đăng nhập qua Header Authorization"
             );
         }
 
-        UUID userId;
-
-        try {
-            userId = UUID.fromString(userIdHeader.trim());
-        } catch (IllegalArgumentException e) {
+        String token = authorization.substring(7).trim();
+        if (token.isEmpty() || !authTokenService.isTokenValid(token)) {
             throw new UnauthorizedException(
-                    "AUTH_INVALID_USER_ID",
-                    "Giá trị Header X-User-Id không hợp lệ: " + userIdHeader
+                    "AUTH_INVALID_TOKEN",
+                    "Token không hợp lệ hoặc đã hết hạn"
             );
         }
+
+        UUID userId = authTokenService.getUserIdFromToken(token);
 
         String[] requiredRoles =
                 resolveRequiredRoles(handlerMethod, request);
@@ -121,31 +124,26 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
             }
         }
 
-        String headerProjectId =
-                request.getHeader("X-Project-Id");
-
-        if (headerProjectId != null
-                && !headerProjectId.isBlank()) {
-
-            try {
-                return UUID.fromString(headerProjectId.trim());
-            } catch (IllegalArgumentException ignored) {
-            }
+        String requestUri = request.getRequestURI();
+        String projectPathPrefix = "/api/projects/";
+        if (!requestUri.startsWith(projectPathPrefix)) {
+            return null;
         }
 
-        String paramProjectId =
-                request.getParameter("projectId");
-
-        if (paramProjectId != null
-                && !paramProjectId.isBlank()) {
-
-            try {
-                return UUID.fromString(paramProjectId.trim());
-            } catch (IllegalArgumentException ignored) {
-            }
+        String projectIdValue = requestUri.substring(projectPathPrefix.length())
+                .split("/", 2)[0];
+        if (projectIdValue.isBlank()) {
+            return null;
         }
 
-        return null;
+        try {
+            return UUID.fromString(projectIdValue);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(
+                    "INVALID_PROJECT_ID",
+                    "ID công trình không đúng định dạng UUID"
+            );
+        }
     }
 
     private String[] resolveRequiredRoles(
