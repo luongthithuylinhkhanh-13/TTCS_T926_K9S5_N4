@@ -23,7 +23,6 @@ public class RoutePermissionConfig {
     }
 
     private void initDefaultRules() {
-        // Quản lý thành viên: Thêm, sửa role, xóa thành viên yêu cầu ADMIN hoặc PROJECT_MANAGER
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
@@ -39,13 +38,24 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/schedule", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/critical-path", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
-        // WBS mutations are restricted to project managers and site engineers
+        // WBS task creation is managed; task updates also allow field engineers to record progress.
         addRule(HttpMethod.POST, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
-        addRule(HttpMethod.POST, "/api/projects/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.PUT, "/api/projects/*/tasks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+        // T-43, T-44, T-45 (NTDHTCT-166): Milestones và cảnh báo mốc tiến độ
+        addRule(HttpMethod.GET, "/api/projects/*/milestones", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestones/warnings", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestone-warnings", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/milestones", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

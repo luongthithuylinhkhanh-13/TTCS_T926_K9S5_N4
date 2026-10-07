@@ -53,6 +53,11 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        if ("GET".equalsIgnoreCase(request.getMethod())
+                && "/api/projects".equals(request.getRequestURI())) {
+            return true;
+                }
+
         UUID projectId = extractProjectId(request);
 
         if (projectId == null) {

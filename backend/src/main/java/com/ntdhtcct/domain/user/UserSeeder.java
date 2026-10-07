@@ -5,10 +5,12 @@ import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(2)
 public class UserSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;

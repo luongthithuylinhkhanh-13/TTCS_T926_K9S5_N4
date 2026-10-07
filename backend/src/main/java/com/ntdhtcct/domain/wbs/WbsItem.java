@@ -65,6 +65,12 @@ public class WbsItem {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "actual_start_date")
+    private LocalDate actualStartDate;
+
+    @Column(name = "actual_end_date")
+    private LocalDate actualEndDate;
+
     @Column(name = "duration")
     private Integer duration;
 
@@ -88,10 +94,10 @@ public class WbsItem {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "task_dependencies",
-            joinColumns = @JoinColumn(name = "successor_id")
+            name = "wbs_item_predecessors",
+            joinColumns = @JoinColumn(name = "wbs_item_id")
     )
-        @Column(name = "predecessor_id", nullable = false)
+    @Column(name = "predecessor_id", nullable = false)
     private Set<UUID> predecessorIds = new HashSet<>();
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -106,7 +112,7 @@ public class WbsItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected WbsItem() {
+    public WbsItem() {
     }
 
     @PrePersist
@@ -205,6 +211,16 @@ public class WbsItem {
         this.progress = progress;
     }
 
+    @JsonProperty("progressPercent")
+    public int getProgressPercent() {
+        return progress;
+    }
+
+    @JsonProperty("progressPercent")
+    public void setProgressPercent(int progressPercent) {
+        this.progress = progressPercent;
+    }
+
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -219,6 +235,22 @@ public class WbsItem {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public LocalDate getActualStartDate() {
+        return actualStartDate;
+    }
+
+    public void setActualStartDate(LocalDate actualStartDate) {
+        this.actualStartDate = actualStartDate;
+    }
+
+    public LocalDate getActualEndDate() {
+        return actualEndDate;
+    }
+
+    public void setActualEndDate(LocalDate actualEndDate) {
+        this.actualEndDate = actualEndDate;
     }
 
     public Integer getDuration() {

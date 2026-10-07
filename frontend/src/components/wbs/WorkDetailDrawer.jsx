@@ -1,4 +1,5 @@
 import TaskDependencySection from './TaskDependencySection';
+import CategoryTaskSection from './CategoryTaskSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -18,6 +19,7 @@ const WorkDetailDrawer = ({
   visible,
   onClose,
   node,
+  projectId,
   parentName,
   onAddChild,
   onEditNode,
@@ -61,7 +63,7 @@ const WorkDetailDrawer = ({
     return diff > 0 ? `${diff} ngày` : '--';
   };
 
-  const progressVal = node.progress || 0;
+  const progressVal = node.progressPercent ?? node.progress ?? 0;
   const progressColor = progressVal === 100 ? '#16A34A' : progressVal >= 50 ? '#2563EB' : '#F59E0B';
 
   const getInitials = (name) => {
@@ -158,7 +160,7 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày bắt đầu</span>
+              <span className="drawer-info-label">Ngày bắt đầu kế hoạch</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#64748B' }} />
                 {node.startDate ? dayjs(node.startDate).format('DD/MM/YYYY') : '--'}
@@ -166,10 +168,26 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày kết thúc</span>
+              <span className="drawer-info-label">Ngày kết thúc kế hoạch</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#64748B' }} />
                 {node.endDate ? dayjs(node.endDate).format('DD/MM/YYYY') : '--'}
+              </span>
+            </div>
+
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">Ngày bắt đầu thực tế</span>
+              <span className="drawer-info-value">
+                <CalendarOutlined style={{ marginRight: 5, color: '#0f766e' }} />
+                {node.actualStartDate ? dayjs(node.actualStartDate).format('DD/MM/YYYY') : '--'}
+              </span>
+            </div>
+
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">Ngày kết thúc thực tế</span>
+              <span className="drawer-info-value">
+                <CalendarOutlined style={{ marginRight: 5, color: '#0f766e' }} />
+                {node.actualEndDate ? dayjs(node.actualEndDate).format('DD/MM/YYYY') : '--'}
               </span>
             </div>
 
@@ -303,10 +321,9 @@ const WorkDetailDrawer = ({
             />
           </div>
         )}
-        {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
-        <TaskDependencySection
-          taskId={node?.id || node?.key}
-          allTasks={allTasks}
+        <CategoryTaskSection
+          projectId={projectId}
+          category={node}
         />
         {/* === QUAN HỆ PHỤ THUỘC (S-06) === */}
         <TaskDependencySection
