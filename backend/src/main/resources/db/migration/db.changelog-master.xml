@@ -54,4 +54,22 @@
     <include file="db/migration/v14/V14_0__create_project_members_and_invitations.xml"
              relativeToChangelogFile="false"/>
 
+    <!-- Tạo bảng tasks / task_dependencies trước -->
+    <include file="db/migration/v13/V13_1__create_tasks_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- Thêm cột / sửa đổi bảng sau -->
+    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
+         relativeToChangelogFile="false"/>
+    <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
+    <include file="db/migration/v15/V15_0__create_milestones_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
