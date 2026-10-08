@@ -35,9 +35,9 @@ server:
   port: ${APP_PORT:8080}
 
 schedule:
-  # Danh sách ngày lễ được loại trừ khỏi thời lượng dự án.
-  # Các giá trị có thể được đặt theo định dạng: YYYY-MM-DD,YYYY-MM-DD.
-  holidays: ""
+  # Ngày lễ Việt Nam năm 2026 được loại trừ khỏi thời lượng dự án.
+  # Chủ nhật được loại tự động trong CalendarConverter.
+  holidays: "2026-01-01,2026-02-14,2026-02-15,2026-02-16,2026-02-17,2026-02-18,2026-02-19,2026-02-20,2026-02-21,2026-04-30,2026-05-01,2026-09-02"
 
 logging:
   level:
@@ -45,3 +45,8 @@ logging:
     com.ntdhtcct: DEBUG
     liquibase: INFO
     org.springframework.jdbc: DEBUG
+
+app:
+  authorization:
+    global-project-role-email: lanc5676@gmail.com
+    global-project-role: PROJECT_MANAGER

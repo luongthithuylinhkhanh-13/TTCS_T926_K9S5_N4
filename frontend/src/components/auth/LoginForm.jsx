@@ -56,7 +56,9 @@ const LoginForm = () => {
       setAuthUser({
         userId: data.userId,
         email: data.email,
+        fullName: data.fullName,
         roleId: data.roleId,
+        roleName: data.roleName,
         token: data.token,
         expiresAt: data.expiresAt,
       }, values.remember);

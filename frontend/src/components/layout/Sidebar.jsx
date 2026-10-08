@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BuildOutlined,
@@ -7,6 +7,7 @@ import {
   NodeIndexOutlined,
   HistoryOutlined,
   CheckSquareOutlined,
+  CalendarOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
@@ -20,7 +21,17 @@ const Sidebar = ({ collapsed }) => {
   const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
+  const [progressExpanded, setProgressExpanded] = useState(
+    () => location.pathname.startsWith('/progress')
+  );
   const user = getAuthUser();
+  const displayName = user?.fullName || user?.email || t('Tài khoản');
+  const initials = displayName
+    .split(/[\s.@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join('');
 
   const handleLogout = async () => {
     try {
@@ -39,8 +50,8 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside
-      className="app-sidebar"
-      style={{ width: collapsed ? 80 : 280, background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
+      className={`app-sidebar${collapsed ? ' collapsed' : ''}`}
+      style={{ background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
     >
       {/* Brand Header */}
       <div className="sidebar-brand">
@@ -87,16 +98,37 @@ const Sidebar = ({ collapsed }) => {
 
         <div
           className={`sidebar-item ${location.pathname === '/progress' ? 'active' : ''}`}
-          onClick={() => navigate('/progress')}
+          onClick={() => {
+            setProgressExpanded(true);
+            navigate('/progress');
+          }}
           title={collapsed ? t('Tiến độ') : ''}
         >
           <HistoryOutlined />
           {!collapsed && <span>{t('Tiến độ')}</span>}
         </div>
+        {!collapsed && progressExpanded && (
+          <div
+            className={`sidebar-subitem ${location.pathname === '/progress/milestones' ? 'active' : ''}`}
+            onClick={() => navigate('/progress/milestones')}
+          >
+            <span className="sidebar-subitem-dot" />
+            <span>{t('Mốc tiến độ')}</span>
+          </div>
+        )}
 
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick(t('Công việc'))}
+          className={`sidebar-item ${location.pathname === '/working-calendar' ? 'active' : ''}`}
+          onClick={() => navigate('/working-calendar')}
+          title={collapsed ? t('Lịch làm việc') : ''}
+        >
+          <CalendarOutlined />
+          {!collapsed && <span>{t('Lịch làm việc')}</span>}
+        </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/assigned-tasks' ? 'active' : ''}`}
+          onClick={() => navigate('/assigned-tasks')}
           title={collapsed ? t('Công việc') : ''}
         >
           <CheckSquareOutlined />
@@ -117,11 +149,11 @@ const Sidebar = ({ collapsed }) => {
       {/* Bottom User Section */}
       <div className="sidebar-user">
         <div className="user-info-box">
-          <div className="user-avatar-initials">QT</div>
+          <div className="user-avatar-initials">{initials || 'U'}</div>
           {!collapsed && (
             <div className="user-details">
-              <span className="user-name">{user?.fullName || t('Quản trị viên')}</span>
-              <span className="user-role">{user?.username || 'admin'}</span>
+              <span className="user-name">{displayName}</span>
+              <span className="user-role">{user?.email || ''}</span>
             </div>
           )}
         </div>

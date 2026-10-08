@@ -54,11 +54,24 @@ public class WbsItem {
     @Column(name = "assignee_initials", length = 20)
     private String assigneeInitials;
 
+    @Column(name = "assigned_team_member_id")
+    private UUID assignedTeamMemberId;
+
+    @Column(name = "assigned_team_name", length = 255)
+    private String assignedTeamName;
+
     @Column(name = "status", length = 50)
     private String status;
 
     @Column(name = "progress", nullable = false)
     private int progress = 0;
+
+    @Column(name = "total_volume")
+    private Double totalVolume;
+
+    @Column(name = "unit", length = 50)
+    private String unit;
+
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -209,6 +222,22 @@ public class WbsItem {
 
     public void setAssigneeInitials(String assigneeInitials) {
         this.assigneeInitials = assigneeInitials;
+    }
+
+    public UUID getAssignedTeamMemberId() {
+        return assignedTeamMemberId;
+    }
+
+    public void setAssignedTeamMemberId(UUID assignedTeamMemberId) {
+        this.assignedTeamMemberId = assignedTeamMemberId;
+    }
+
+    public String getAssignedTeamName() {
+        return assignedTeamName;
+    }
+
+    public void setAssignedTeamName(String assignedTeamName) {
+        this.assignedTeamName = assignedTeamName;
     }
 
     public String getStatus() {
@@ -399,5 +428,21 @@ public class WbsItem {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Double getTotalVolume() {
+        return totalVolume;
+    }
+
+    public void setTotalVolume(Double totalVolume) {
+        this.totalVolume = totalVolume;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 }

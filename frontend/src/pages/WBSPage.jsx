@@ -54,6 +54,9 @@ const mapApiItem = (item) => ({
       }
     : null,
 
+  assignedTeamMemberId: item.assignedTeamMemberId || null,
+  assignedTeamName: item.assignedTeamName || null,
+
   images: item.image ? [item.image] : [],
 
   children: []
@@ -1091,6 +1094,7 @@ const WBSPage = () => {
         visible={drawerVisible}
         projectId={selectedProjectId}
         allTasks={flatTaskList}
+        onTeamAssigned={() => loadWbs(selectedProjectId)}
 
         onClose={() =>
           setDrawerVisible(false)
