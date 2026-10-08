@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
+import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
 
 const ProgressPage = () => {
   const [projects, setProjects] = useState([]);
@@ -325,6 +326,8 @@ const ProgressPage = () => {
                 locale={{ emptyText: <Empty description="Chưa có công việc găng trong dự án này" /> }}
               />
             </section>
+
+            <MilestoneAlertSection projectId={selectedProjectId} />
           </>
         ) : (
           <div className="wbs-main-card progress-empty-state">
