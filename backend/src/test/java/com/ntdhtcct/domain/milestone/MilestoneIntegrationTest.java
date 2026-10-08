@@ -1,17 +1,11 @@
 package com.ntdhtcct.domain.milestone;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-feature/NTDHTCT-166-milestone-delay-alerts
-import com.ntdhtcct.domain.milestone.dto.CreateMilestoneRequest;
-import com.ntdhtcct.domain.project.Project;
-import com.ntdhtcct.domain.project.ProjectRepository;
-
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.milestone.dto.CreateMilestoneRequest;
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.wbs.TaskRepository;
-main
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
 import com.ntdhtcct.entity.ProjectMember;
@@ -65,10 +59,6 @@ public class MilestoneIntegrationTest {
     private WbsItemRepository wbsItemRepository;
 
     @Autowired
-    feature/NTDHTCT-166-milestone-delay-alerts
-    private MilestoneRepository milestoneRepository;
-
-
     private TaskRepository taskRepository;
 
     @Autowired
@@ -77,7 +67,6 @@ public class MilestoneIntegrationTest {
     @Autowired
     private AuthTokenService authTokenService;
 
-    main
     private User managerUser;
     private Project project;
     private WbsItem category;
@@ -85,10 +74,7 @@ public class MilestoneIntegrationTest {
     @BeforeEach
     void setUp() {
         milestoneRepository.deleteAll();
-        feature/NTDHTCT-166-milestone-delay-alerts
-
         taskRepository.deleteAll();
-        main
         wbsItemRepository.deleteAll();
         projectMemberRepository.deleteAll();
         projectRepository.deleteAll();
@@ -124,11 +110,8 @@ public class MilestoneIntegrationTest {
         );
 
         mockMvc.perform(post("/api/projects/" + project.getId() + "/milestones")
-        feature/NTDHTCT-166-milestone-delay-alerts
                         .header("X-User-Id", managerUser.getId())
-
                         .header("Authorization", bearerToken(managerUser))
-      main
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -178,11 +161,8 @@ public class MilestoneIntegrationTest {
         milestoneRepository.save(milestone);
 
         mockMvc.perform(get("/api/projects/" + project.getId() + "/milestones/warnings")
-        feature/NTDHTCT-166-milestone-delay-alerts
-                        .header("X-User-Id", managerUser.getId()))
-
+                        .header("X-User-Id", managerUser.getId())
                         .header("Authorization", bearerToken(managerUser)))
-         main
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].milestoneName", is("Mốc hoàn thành sàn tầng 1")))
@@ -194,11 +174,8 @@ public class MilestoneIntegrationTest {
                 .andExpect(jsonPath("$[0].delayChain[0].name", is("Thi công cột")))
                 .andExpect(jsonPath("$[0].delayChain[1].name", is("Đổ sàn tầng 1")));
     }
-      feature/NTDHTCT-166-milestone-delay-alerts
-
 
     private String bearerToken(User user) {
         return "Bearer " + authTokenService.createToken(user.getId()).getToken();
     }
- main
 }
