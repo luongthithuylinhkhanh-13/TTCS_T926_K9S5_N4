@@ -240,7 +240,7 @@ public class AuthController {
                             user.getEmail(),
                             user.getRole() != null
                                     ? user.getRole().getId()
-D                                    : null,
+                                     : null,
                             user.getRole() != null
                                     ? user.getRole().getName()
                                     : null,
@@ -294,6 +294,13 @@ D                                    : null,
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(new ErrorResponse(false, e.getMessage()));
         }
+    }
+    public record ProfileUpdateRequest(
+            String fullName,
+            String email,
+            String currentPassword,
+            String newPassword
+    ) {
     }
 
     public record LoginRequest(
