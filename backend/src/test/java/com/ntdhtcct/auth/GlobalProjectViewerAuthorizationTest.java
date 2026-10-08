@@ -61,6 +61,17 @@ class GlobalProjectViewerAuthorizationTest {
     }
 
     @Test
+    void grantsConfiguredAccountGeneralProjectAccessWithoutMembership() {
+        String role = authorizationService.checkProjectAccess(
+                projectId,
+                viewerId,
+                null
+        );
+
+        assertThat(role).isEqualTo("PROJECT_MANAGER");
+    }
+
+    @Test
     void onlyConfiguredGlobalProjectManagerCanViewEveryProject() {
         assertThat(authorizationService.canViewAllProjects(viewerId)).isTrue();
 

@@ -72,7 +72,7 @@ public class AuthorizationService {
         }
 
         if (hasGlobalProjectAccess(userId, requiredRoles)) {
-            return globalProjectRoleCanManage(requiredRoles)
+            return (requiredRoles == null || globalProjectRoleCanManage(requiredRoles))
                     ? "PROJECT_MANAGER"
                     : "VIEWER";
         }
@@ -121,8 +121,7 @@ public class AuthorizationService {
                 || globalProjectRoleEmail == null
                 || globalProjectRoleEmail.isBlank()
                 || globalProjectRole == null
-                || globalProjectRole.isBlank()
-                || requiredRoles == null) {
+                || globalProjectRole.isBlank()) {
             return false;
         }
 
@@ -130,7 +129,8 @@ public class AuthorizationService {
                 .map(user -> globalProjectRoleEmail.equalsIgnoreCase(user.getEmail()))
                 .orElse(false);
         return configuredAccount
-                && (globalProjectRoleCanManage(requiredRoles)
+                && (requiredRoles == null
+                    || globalProjectRoleCanManage(requiredRoles)
                     || (isGlobalProjectManager()
                         && containsRole(requiredRoles, "VIEWER")));
     }
