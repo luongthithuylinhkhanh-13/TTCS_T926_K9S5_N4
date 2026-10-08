@@ -1,7 +1,7 @@
 package com.ntdhtcct.auth;
 
 import com.ntdhtcct.auth.service.AuthorizationService;
-import com.ntdhtcct.common.exception.UnauthorizedException;
+import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.ProjectMemberRepository;
@@ -86,7 +86,7 @@ class GlobalProjectViewerAuthorizationTest {
                 projectId,
                 viewerId,
                 new String[]{"SITE_ENGINEER"}
-        )).isInstanceOf(UnauthorizedException.class);
+        )).isInstanceOf(ForbiddenException.class);
     }
 
     @Test
@@ -97,7 +97,7 @@ class GlobalProjectViewerAuthorizationTest {
                 projectId,
                 viewerId,
                 new String[]{"VIEWER"}
-        )).isInstanceOf(UnauthorizedException.class);
+        )).isInstanceOf(ForbiddenException.class);
     }
 
     @Test
