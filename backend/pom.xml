@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
              https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -16,6 +17,7 @@
     <artifactId>construction-platform</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
+
     <name>construction-platform</name>
     <description>Nền tảng điều hành thi công công trình</description>
 
@@ -26,6 +28,7 @@
     </properties>
 
     <dependencies>
+
         <!-- Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -38,13 +41,13 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Bean Validation (Jakarta Validation + Hibernate Validator) -->
+        <!-- Bean Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Password Hashing: Argon2id via Spring Security Crypto (không kéo theo auth stack) -->
+        <!-- Password Hashing: Argon2id -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
@@ -57,7 +60,7 @@
             <version>1.85</version>
         </dependency>
 
-        <!-- PostgreSQL JDBC Driver -->
+        <!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -66,7 +69,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Liquibase Migration -->
+        <!-- Liquibase -->
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
@@ -78,27 +81,42 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+
+            <!-- Spring Boot -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- Liquibase Maven Plugin for CLI rollback -->
+
+            <!-- Liquibase Maven Plugin -->
             <plugin>
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-maven-plugin</artifactId>
                 <version>4.29.2</version>
+
                 <configuration>
-                    <changeLogFile>src/main/resources/db/migration/db.changelog-master.xml</changeLogFile>
+                    <changeLogFile>
+                        src/main/resources/db/migration/db.changelog-master.xml
+                    </changeLogFile>
+
                     <url>${DB_URL}</url>
                     <username>${DB_USERNAME}</username>
                     <password>${DB_PASSWORD}</password>
                     <driver>org.postgresql.Driver</driver>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
+
 </project>

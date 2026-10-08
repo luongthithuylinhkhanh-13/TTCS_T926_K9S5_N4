@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Empty, Progress, Select, Spin, Table } from 'antd';
+import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
+import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
+         feature/NTDHTCT-166-milestone-delay-alerts
+
+import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
+        main
 
 const ProgressPage = () => {
   const [projects, setProjects] = useState([]);
@@ -59,7 +64,72 @@ const ProgressPage = () => {
     }
   }, [selectedProjectId]);
 
-  const criticalTasks = (schedule?.tasks || []).filter(task => task.isCritical);
+  const tasks = schedule?.tasks || [];
+  const criticalTasks = tasks.filter(task => task.isCritical);
+  const scheduledTasks = tasks.filter(task => task.es != null && task.ef != null && task.duration > 0);
+  const projectDuration = Math.max(
+    schedule?.summary?.projectDuration || 0,
+    ...scheduledTasks.map(task => task.ef)
+  );
+
+  const renderCpmTooltip = task => {
+    const plannedStart = formatDateVN(task.startDate);
+    const plannedEnd = formatDateVN(task.endDate);
+    const calculatedStart = formatDateVN(task.calculatedStartDate);
+    const calculatedEnd = formatDateVN(task.calculatedEndDate);
+    const actualStart = formatDateVN(task.actualStartDate);
+    const actualEnd = formatDateVN(task.actualEndDate);
+    const varianceText = formatVariance(task.scheduleVarianceDays);
+
+    return (
+      <div className="gantt-tooltip">
+        <strong>{task.wbsCode ? `${task.wbsCode} · ` : ''}{task.name}</strong>
+
+        {(plannedStart || plannedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+            {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+            {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+          </div>
+        )}
+
+        {(calculatedStart || calculatedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Hiện tại:</span>
+            {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+            {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+          </div>
+        )}
+
+        {varianceText && (
+          <div className="gantt-tooltip-variance">
+            Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+          </div>
+        )}
+
+        {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+          <div className="gantt-tooltip-delay-warning">
+            ⚠ Mở trễ {task.startDelayDays} ngày
+          </div>
+        )}
+
+        {(actualStart || actualEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Thực tế:</span>
+            {actualStart && <div>Bắt đầu: {actualStart}</div>}
+            {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+          </div>
+        )}
+
+        <div className="gantt-tooltip-section gantt-tooltip-cpm">
+          <div>ES: {task.es ?? '--'} · EF: {task.ef ?? '--'}</div>
+          <div>LS: {task.ls ?? '--'} · LF: {task.lf ?? '--'}</div>
+          <div>Slack: {task.slack ?? '--'} ngày</div>
+        </div>
+      </div>
+    );
+  };
+
   const columns = [
     {
       title: 'Mã WBS',
@@ -190,6 +260,16 @@ const ProgressPage = () => {
               </div>
             </div>
 
+            <section className="wbs-main-card gantt-section">
+              <GanttChart
+                tasks={scheduledTasks}
+                schedule={schedule}
+                scheduleError={pageError}
+                loading={loadingSchedule}
+                renderTooltip={renderCpmTooltip}
+              />
+            </section>
+
             <section className="wbs-main-card progress-table-section">
               <div className="wbs-card-header">
                 <div className="wbs-card-title-box">
@@ -207,6 +287,8 @@ const ProgressPage = () => {
                 locale={{ emptyText: <Empty description="Chưa có công việc găng trong dự án này" /> }}
               />
             </section>
+
+            <MilestoneAlertSection projectId={selectedProjectId} />
           </>
         ) : (
           <div className="wbs-main-card progress-empty-state">

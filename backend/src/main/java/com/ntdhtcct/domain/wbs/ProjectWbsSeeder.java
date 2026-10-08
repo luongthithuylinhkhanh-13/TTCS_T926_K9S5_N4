@@ -3,12 +3,15 @@ package com.ntdhtcct.domain.wbs;
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Component
+@Order(3)
 public class ProjectWbsSeeder implements CommandLineRunner {
 
     private final ProjectRepository projectRepository;
@@ -506,6 +509,14 @@ public class ProjectWbsSeeder implements CommandLineRunner {
             item.setEndDate(
                     LocalDate.parse(endDate)
             );
+        }
+
+        if ("task".equalsIgnoreCase(type)
+                && item.getStartDate() != null
+                && item.getEndDate() != null) {
+            item.setDuration((int) ChronoUnit.DAYS.between(
+                    item.getStartDate(), item.getEndDate()
+            ) + 1);
         }
 
         item.setDescription(description);

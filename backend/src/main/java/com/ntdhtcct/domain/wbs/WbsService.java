@@ -128,6 +128,8 @@ public class WbsService {
             throw new RuntimeException("Tiến độ phải nằm trong khoảng 0 đến 100");
         }
 
+        validateActualProgress(item);
+
         if (item.getStartDate() != null
                 && item.getEndDate() != null
                 && item.getEndDate().isBefore(item.getStartDate())) {
@@ -187,6 +189,8 @@ public class WbsService {
             throw new RuntimeException("Tiến độ phải nằm trong khoảng 0 đến 100");
         }
 
+        validateActualProgress(request);
+
         if (request.getStartDate() != null
                 && request.getEndDate() != null
                 && request.getEndDate().isBefore(request.getStartDate())) {
@@ -204,6 +208,8 @@ public class WbsService {
         item.setProgress(request.getProgress());
         item.setStartDate(request.getStartDate());
         item.setEndDate(request.getEndDate());
+        item.setActualStartDate(request.getActualStartDate());
+        item.setActualEndDate(request.getActualEndDate());
         item.setDuration(request.getDuration());
         item.setPredecessorIds(request.getPredecessorIds());
         item.setDescription(request.getDescription());
@@ -225,6 +231,21 @@ public class WbsService {
     private Project requireProject(UUID projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Dự án không tồn tại"));
+    }
+
+    private void validateActualProgress(WbsItem item) {
+        if (item.getActualEndDate() != null && item.getActualStartDate() == null) {
+            throw new IllegalArgumentException(
+                    "Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế"
+            );
+        }
+        if (item.getActualStartDate() != null
+                && item.getActualEndDate() != null
+                && item.getActualEndDate().isBefore(item.getActualStartDate())) {
+            throw new IllegalArgumentException(
+                    "Ngày kết thúc thực tế phải sau hoặc cùng ngày với ngày bắt đầu thực tế"
+            );
+        }
     }
 
     private WbsItem requireItem(UUID projectId, UUID itemId) {

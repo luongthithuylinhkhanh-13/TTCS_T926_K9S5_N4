@@ -46,6 +46,7 @@ public class AuthTokenService {
                     authTokenRepository.save(authToken);
                 });
     }
+
     public boolean isTokenValid(String token) {
         return authTokenRepository
                 .findByTokenAndRevokedFalse(token)

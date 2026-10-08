@@ -1,5 +1,6 @@
 package com.ntdhtcct.domain.user;
 
+import com.ntdhtcct.entity.User;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

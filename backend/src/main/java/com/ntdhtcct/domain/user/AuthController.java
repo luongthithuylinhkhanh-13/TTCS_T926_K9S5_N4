@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.user;
 
 import com.ntdhtcct.domain.auth.AuthToken;
 import com.ntdhtcct.domain.auth.AuthTokenService;
+import com.ntdhtcct.entity.User;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -20,25 +21,33 @@ public class AuthController {
     private final AuthTokenService authTokenService;
 
     public AuthController(
-        UserService userService,
-        AuthTokenService authTokenService
+            UserService userService,
+            AuthTokenService authTokenService
     ) {
-    this.userService = userService;
-    this.authTokenService = authTokenService;
+        this.userService = userService;
+        this.authTokenService = authTokenService;
     }
 
+    /**
+     * =========================
+     * LOGIN
+     * POST /api/auth/login
+     * =========================
+     */
     @PostMapping("/login")
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest request
     ) {
+
         try {
+
             User user = userService.login(
                     request.email(),
                     request.password()
             );
 
             AuthToken authToken =
-                   authTokenService.createToken(user.getId());
+                    authTokenService.createToken(user.getId());
 
             return ResponseEntity.ok(
                     new LoginResponse(
@@ -99,36 +108,60 @@ public class AuthController {
         }
     }
 
+        /**
+         * =========================
+         * LOGOUT
+         * POST /api/auth/logout
+         * =========================
+         */
     @PostMapping("/logout")
-      public ResponseEntity<?> logout(
-        @RequestHeader(value = "Authorization", required = false) String authorization
-     ) {
-      if (authorization == null || !authorization.startsWith("Bearer ")) {
-        return ResponseEntity.badRequest().body(
+    public ResponseEntity<?> logout(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization
+    ) {
+
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+
+            return ResponseEntity.badRequest().body(
+                    new ErrorResponse(
+                            false,
+                            "Token không hợp lệ hoặc không được cung cấp"
+                    )
+            );
+        }
+
+        String token = authorization.substring(7);
+
+        authTokenService.logout(token);
+
+        return ResponseEntity.ok(
                 new ErrorResponse(
-                        false,
-                        "Token không hợp lệ hoặc không được cung cấp"
+                        true,
+                        "Đăng xuất thành công"
                 )
         );
     }
 
-    String token = authorization.substring(7);
-
-    authTokenService.logout(token);
-
-    return ResponseEntity.ok(
-            new ErrorResponse(
-                    true,
-                    "Đăng xuất thành công"
-            )
-    );
-  }
-
+    /**
+     * =========================
+     * VALIDATE TOKEN
+     * GET /api/auth/validate
+     * =========================
+     */
     @GetMapping("/validate")
     public ResponseEntity<?> validateToken(
-            @RequestHeader(value = "Authorization", required = false) String authorization
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization
     ) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+
             return ResponseEntity.badRequest().body(
                     new ErrorResponse(
                             false,
@@ -207,7 +240,7 @@ public class AuthController {
                             user.getEmail(),
                             user.getRole() != null
                                     ? user.getRole().getId()
-                                    : null,
+D                                    : null,
                             user.getRole() != null
                                     ? user.getRole().getName()
                                     : null,
@@ -265,11 +298,17 @@ public class AuthController {
 
     public record LoginRequest(
 
-            @NotBlank(message = "Email không được để trống")
-            @Email(message = "Email không đúng định dạng")
+            @NotBlank(
+                    message = "Email không được để trống"
+            )
+            @Email(
+                    message = "Email không đúng định dạng"
+            )
             String email,
 
-            @NotBlank(message = "Password không được để trống")
+            @NotBlank(
+                    message = "Password không được để trống"
+            )
             String password
     ) {
     }
@@ -296,7 +335,7 @@ public class AuthController {
     public record LoginResponse(
             boolean success,
             String message,
-            java.util.UUID userId,
+            UUID userId,
             String email,
             UUID roleId,
             String roleName,
