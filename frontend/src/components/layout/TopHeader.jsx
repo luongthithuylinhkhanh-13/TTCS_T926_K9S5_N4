@@ -19,6 +19,13 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
   const location = useLocation();
   const [user, setUser] = useState(getAuthUser);
   const [modalMode, setModalMode] = useState(null);
+  const displayName = user?.fullName || user?.email || t('Tài khoản');
+  const initials = displayName
+    .split(/[\s.@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join('');
   const currentSection = location.pathname === '/progress'
     ? t('Tiến độ')
     : t('Cơ cấu công việc');
@@ -90,9 +97,11 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
 
         <Dropdown menu={{ items: userMenuItems, onClick: handleDropdownClick }} trigger={['click']}>
           <div className="header-user-dropdown">
-            <Avatar style={{ backgroundColor: '#2563EB', fontWeight: 600 }}>QT</Avatar>
+            <Avatar style={{ backgroundColor: '#2563EB', fontWeight: 600 }}>
+              {initials || 'U'}
+            </Avatar>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
-                {user?.fullName || t('Quản trị viên')}
+                {displayName}
             </span>
             <DownOutlined style={{ fontSize: 10, color: '#667085' }} />
           </div>

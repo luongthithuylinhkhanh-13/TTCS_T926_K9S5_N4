@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.auth.service.AuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,15 +18,18 @@ public class WbsController {
 
     private final WbsService wbsService;
     private final AuthTokenService authTokenService;
+    private final AuthorizationService authorizationService;
     private final ObjectMapper objectMapper;
 
     public WbsController(
             WbsService wbsService,
             AuthTokenService authTokenService,
+            AuthorizationService authorizationService,
             ObjectMapper objectMapper
     ) {
         this.wbsService = wbsService;
         this.authTokenService = authTokenService;
+        this.authorizationService = authorizationService;
         this.objectMapper = objectMapper;
     }
 
@@ -34,11 +38,14 @@ public class WbsController {
             @RequestHeader(value = "Authorization", required = false)
             String authorization
     ) {
-        if (!isAuthorized(authorization)) {
+        UUID userId = authenticatedUserId(authorization);
+        if (userId == null) {
             return unauthorized();
         }
 
-        List<Project> projects = wbsService.getProjects();
+        List<Project> projects = authorizationService.canViewAllProjects(userId)
+                ? wbsService.getProjects()
+                : wbsService.getProjectsForUser(userId);
         return ResponseEntity.ok(projects);
     }
 
@@ -214,13 +221,20 @@ public class WbsController {
     }
 
     private boolean isAuthorized(String authorization) {
+        return authenticatedUserId(authorization) != null;
+    }
+
+    private UUID authenticatedUserId(String authorization) {
         if (authorization == null
                 || !authorization.startsWith("Bearer ")) {
-            return false;
+            return null;
         }
 
         String token = authorization.substring(7);
-        return authTokenService.isTokenValid(token);
+        if (!authTokenService.isTokenValid(token)) {
+            return null;
+        }
+        return authTokenService.getUserIdFromToken(token);
     }
 
     private ResponseEntity<ApiResponse> unauthorized() {

@@ -4,7 +4,6 @@ import LoginPage from './pages/LoginPage';
 import ProgressPage from './pages/ProgressPage';
 import WBSPage from './pages/WBSPage';
 import { isAuthenticated } from './utils/auth';
-import './styles/wbs.css';
 
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {

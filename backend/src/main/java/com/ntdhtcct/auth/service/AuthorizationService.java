@@ -3,10 +3,12 @@ package com.ntdhtcct.auth.service;
 import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.common.exception.UnauthorizedException;
-import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
+import com.ntdhtcct.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -20,19 +22,40 @@ public class AuthorizationService {
             LoggerFactory.getLogger(AuthorizationService.class);
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final UserRepository userRepository;
+    private final String globalProjectRoleEmail;
+    private final String globalProjectRole;
 
     public AuthorizationService(
             ProjectRepository projectRepository,
-            ProjectMemberRepository projectMemberRepository) {
+            ProjectMemberRepository projectMemberRepository,
+            UserRepository userRepository,
+            @Value("${app.authorization.global-project-role-email:}")
+            String globalProjectRoleEmail,
+            @Value("${app.authorization.global-project-role:VIEWER}")
+            String globalProjectRole) {
 
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.userRepository = userRepository;
+        this.globalProjectRoleEmail = globalProjectRoleEmail;
+        this.globalProjectRole = globalProjectRole;
     }
 
     public String checkProjectAccess(
             UUID projectId,
             UUID userId,
             String[] requiredRoles) {
+
+        if (projectId == null) {
+            throw new ResourceNotFoundException("PROJECT_NOT_FOUND", "Không tìm thấy công trình.");
+        }
+        if (userId == null) {
+            throw new UnauthorizedException(
+                    "AUTH_MISSING_USER_ID",
+                    "Không xác định được người dùng yêu cầu."
+            );
+        }
 
         log.debug(
                 "Checking project access: projectId={}, userId={}, requiredRoles={}",
@@ -46,6 +69,12 @@ public class AuthorizationService {
             throw new ResourceNotFoundException(
                     "Không tìm thấy công trình với ID: " + projectId
             );
+        }
+
+        if (hasGlobalProjectAccess(userId, requiredRoles)) {
+            return globalProjectRoleCanManage(requiredRoles)
+                    ? "PROJECT_MANAGER"
+                    : "VIEWER";
         }
 
         // Kiểm tra user có được phân quyền trong project không
@@ -81,5 +110,50 @@ public class AuthorizationService {
         throw new ForbiddenException(
                 "Người dùng không có vai trò phù hợp để thực hiện thao tác này"
         );
+    }
+
+    private boolean hasGlobalProjectAccess(
+            UUID userId,
+            String[] requiredRoles
+    ) {
+        if (userId == null
+                || globalProjectRoleEmail == null
+                || globalProjectRoleEmail.isBlank()
+                || globalProjectRole == null
+                || globalProjectRole.isBlank()
+                || requiredRoles == null) {
+            return false;
+        }
+
+        boolean configuredAccount = userRepository.findById(userId)
+                .map(user -> globalProjectRoleEmail.equalsIgnoreCase(user.getEmail()))
+                .orElse(false);
+        return configuredAccount
+                && (globalProjectRoleCanManage(requiredRoles)
+                    || (isGlobalProjectManager()
+                        && containsRole(requiredRoles, "VIEWER")));
+    }
+
+    public boolean canViewAllProjects(UUID userId) {
+        if (userId == null || !isGlobalProjectManager()) {
+            return false;
+        }
+        return userRepository.findById(userId)
+                .map(user -> globalProjectRoleEmail.equalsIgnoreCase(user.getEmail()))
+                .orElse(false);
+    }
+
+    private boolean globalProjectRoleCanManage(String[] requiredRoles) {
+        return isGlobalProjectManager()
+                && containsRole(requiredRoles, "PROJECT_MANAGER");
+    }
+
+    private boolean isGlobalProjectManager() {
+        return "PROJECT_MANAGER".equalsIgnoreCase(globalProjectRole);
+    }
+
+    private boolean containsRole(String[] roles, String expectedRole) {
+        return Arrays.stream(roles)
+                .anyMatch(role -> expectedRole.equalsIgnoreCase(role));
     }
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
 
 const translations = {
   'Cơ cấu công việc': 'Work breakdown',
@@ -26,6 +26,22 @@ const translations = {
   'Đã nghiệm thu': 'Accepted',
   'Theo kế hoạch': 'As planned',
   'Chưa phân công': 'Unassigned',
+  'ĐỘI THI CÔNG ĐƯỢC GIAO': 'ASSIGNED CREW',
+  'Chọn đội thi công': 'Select a crew',
+  'Đổi đội': 'Reassign crew',
+  'Giao đội': 'Assign crew',
+  'Lịch sử phân công': 'Assignment history',
+  'Chưa có lịch sử phân công': 'No assignment history',
+  'Chưa giao': 'Unassigned',
+  'Đã gỡ phân công': 'Unassigned',
+  'Cảnh báo chồng lịch': 'Schedule overlap warning',
+  'Đã lưu phân công nhưng đội đang có công việc chồng lịch.': 'Assignment saved, but this crew has overlapping work.',
+  'Đã cập nhật đội thi công được giao.': 'Assigned crew updated.',
+  'Không thể tải đội thi công': 'Unable to load crews',
+  'Không thể cập nhật đội thi công': 'Unable to update crew assignment',
+  'Chưa có thành viên dự án với vai trò Đội thi công': 'No project members have the Crew role',
+  'Thêm thành viên vào dự án với vai trò WORKER để tạo danh sách đội thi công.': 'Add a project member with the WORKER role to make them available as a crew.',
+  'Tài khoản': 'Account',
   'Xem chi tiết': 'View details',
   'Thêm công việc con': 'Add child task',
   'Chỉnh sửa': 'Edit',
@@ -265,12 +281,19 @@ const LocaleContext = createContext({
 });
 
 export const LocaleProvider = ({ language, children }) => {
-  const t = value => language === 'en'
-    ? (translations[value] || value)
-    : value;
+  const t = useCallback(
+    value => language === 'en'
+      ? (translations[value] || value)
+      : value,
+    [language]
+  );
+  const contextValue = useMemo(
+    () => ({ language, t }),
+    [language, t]
+  );
 
   return (
-    <LocaleContext.Provider value={{ language, t }}>
+    <LocaleContext.Provider value={contextValue}>
       {children}
     </LocaleContext.Provider>
   );

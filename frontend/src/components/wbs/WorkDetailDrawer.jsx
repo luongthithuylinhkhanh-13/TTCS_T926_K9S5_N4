@@ -1,5 +1,6 @@
 import TaskDependencySection from './TaskDependencySection';
 import CategoryTaskSection from './CategoryTaskSection';
+import TeamAssignmentSection from './TeamAssignmentSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -25,6 +26,7 @@ const WorkDetailDrawer = ({
   onAddChild,
   onEditNode,
   onDeleteNode,
+  onTeamAssigned,
   allTasks = []
 }) => {
   const { t } = useLocale();
@@ -199,6 +201,12 @@ const WorkDetailDrawer = ({
             </div>
           </div>
         </div>
+
+        <TeamAssignmentSection
+          projectId={projectId}
+          task={node}
+          onAssigned={onTeamAssigned}
+        />
 
         {/* === DESCRIPTION SECTION === */}
         <div className="drawer-section">

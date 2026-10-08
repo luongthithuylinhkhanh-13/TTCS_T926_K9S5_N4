@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,10 +25,13 @@ class WbsServiceDurationTest {
 
     private final WbsItemRepository wbsItemRepository = mock(WbsItemRepository.class);
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
-        private final CpmEngine cpmEngine = new CpmEngine();
+    private final ProjectMemberRepository projectMemberRepository =
+            mock(ProjectMemberRepository.class);
+    private final CpmEngine cpmEngine = new CpmEngine();
     private final WbsService service = new WbsService(
             wbsItemRepository,
             projectRepository,
+            projectMemberRepository,
             cpmEngine
     );
     private final UUID projectId = UUID.randomUUID();

@@ -64,4 +64,7 @@
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

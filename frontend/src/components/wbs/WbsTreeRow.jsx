@@ -10,7 +10,8 @@ import {
   EyeOutlined,
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocale } from '../../utils/LocaleContext';
@@ -131,18 +132,29 @@ const WbsTreeRow = ({
 
       {/* NGƯỜI PHỤ TRÁCH COLUMN */}
       <td className="tree-cell">
-        {node.assignee ? (
-          <div className="assignee-box">
-            <div className="assignee-avatar">
-              {node.assignee.initials || 'NV'}
+        <div className="assignee-column">
+          {node.assignee ? (
+            <div className="assignee-box">
+              <div className="assignee-avatar">
+                {node.assignee.initials || 'NV'}
+              </div>
+              <span className="assignee-name">{node.assignee.name}</span>
             </div>
-            <span className="assignee-name">{node.assignee.name}</span>
-          </div>
-        ) : (
-          <span style={{ color: '#94A3B8', fontSize: 13, italic: 'true' }}>
-            {node.type === 'task' ? t('Chưa phân công') : '--'}
-          </span>
-        )}
+          ) : node.type === 'task' ? (
+            !node.assignedTeamName && (
+              <span style={{ color: '#94A3B8', fontSize: 13, fontStyle: 'italic' }}>
+                {t('Chưa phân công')}
+              </span>
+            )
+          ) : (
+            <span style={{ color: '#94A3B8', fontSize: 13 }}>--</span>
+          )}
+          {node.assignedTeamName && (
+            <Tag color="blue" className="assigned-team-tag">
+              <TeamOutlined /> {node.assignedTeamName}
+            </Tag>
+          )}
+        </div>
       </td>
 
       {/* PLANNED START COLUMN */}

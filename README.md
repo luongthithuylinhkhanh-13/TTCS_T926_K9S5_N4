@@ -35,7 +35,7 @@ nen-tang-dieu-hanh-thi-cong/
 
 | Layer    | Công nghệ                              |
 | -------- | -------------------------------------- |
-| Backend  | Java 21 · Spring Boot · Maven          |
+| Backend  | Java 25 · Spring Boot · Maven          |
 | Database | PostgreSQL 14+                         | 
 | Migration| Liquibase                              |
 | Container| Docker / Docker Compose                |
@@ -52,7 +52,7 @@ nen-tang-dieu-hanh-thi-cong/
 
 | Công cụ        | Phiên bản  | Link                                          |
 | -------------- | ---------- | --------------------------------------------- |
-| Java JDK       | 21 (LTS)   | https://www.oracle.com/java/technologies/downloads/ hoặc https://adoptium.net/ |
+| Java JDK       | 25 (LTS)   | https://www.oracle.com/java/technologies/downloads/ hoặc https://adoptium.net/ |
 | PostgreSQL     | 14+        | https://www.postgresql.org/download/          |
 | Git            | Bất kỳ     | https://git-scm.com/                          |
 
@@ -63,23 +63,23 @@ nen-tang-dieu-hanh-thi-cong/
 **Kiểm tra cài đặt:**
 
 ```bash
-java -version     # Phải là 21.x.x
+java -version     # Phải là 25.x.x
 psql --version    # Phải là 14+
 git --version
 ```
 
 ---
 
-### 2. Cài Java 21
+### 2. Cài Java 25
 
-Tải JDK 21 từ Oracle hoặc Adoptium (khuyến nghị). Sau khi cài, xác nhận:
+Tải JDK 25 từ Oracle hoặc Adoptium (khuyến nghị). Sau khi cài, xác nhận:
 
 ```bash
 java -version
-# java version "21.x.x" ...
+# java version "25.x.x" ...
 ```
 
-Đảm bảo biến môi trường `JAVA_HOME` trỏ đến JDK 21.
+Đảm bảo biến môi trường `JAVA_HOME` trỏ đến JDK 25.
 
 ---
 

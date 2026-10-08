@@ -38,3 +38,8 @@ logging:
     com.ntdhtcct: DEBUG
     liquibase: INFO
     org.springframework.jdbc: DEBUG
+
+app:
+  authorization:
+    global-project-role-email: lanc5676@gmail.com
+    global-project-role: PROJECT_MANAGER

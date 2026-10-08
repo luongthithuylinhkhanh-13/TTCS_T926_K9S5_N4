@@ -53,6 +53,12 @@ public class WbsItem {
     @Column(name = "assignee_initials", length = 20)
     private String assigneeInitials;
 
+    @Column(name = "assigned_team_member_id")
+    private UUID assignedTeamMemberId;
+
+    @Column(name = "assigned_team_name", length = 255)
+    private String assignedTeamName;
+
     @Column(name = "status", length = 50)
     private String status;
 
@@ -193,6 +199,22 @@ public class WbsItem {
 
     public void setAssigneeInitials(String assigneeInitials) {
         this.assigneeInitials = assigneeInitials;
+    }
+
+    public UUID getAssignedTeamMemberId() {
+        return assignedTeamMemberId;
+    }
+
+    public void setAssignedTeamMemberId(UUID assignedTeamMemberId) {
+        this.assignedTeamMemberId = assignedTeamMemberId;
+    }
+
+    public String getAssignedTeamName() {
+        return assignedTeamName;
+    }
+
+    public void setAssignedTeamName(String assignedTeamName) {
+        this.assignedTeamName = assignedTeamName;
     }
 
     public String getStatus() {

@@ -58,6 +58,7 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getId()
                                     : null,
+                            user.getFullName(),
                             authToken.getToken(),
                             authToken.getExpiresAt()
                     )
@@ -353,6 +354,7 @@ public class AuthController {
             UUID userId,
             String email,
             UUID roleId,
+            String fullName,
             String token,
             OffsetDateTime expiresAt
     ) {
