@@ -10,8 +10,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.ntdhtcct.domain.project.Project;
+
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
+
+    @Query("SELECT pm.project FROM ProjectMember pm WHERE pm.user.id = :userId AND pm.status = 'ACTIVE'")
+    List<Project> findActiveProjectsByUserId(@Param("userId") UUID userId);
 
     Optional<ProjectMember> findByProjectIdAndUserId(
             UUID projectId,
