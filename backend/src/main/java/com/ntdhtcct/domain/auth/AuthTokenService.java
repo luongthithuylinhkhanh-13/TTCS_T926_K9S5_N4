@@ -47,12 +47,19 @@ public class AuthTokenService {
                 });
     }
     public boolean isTokenValid(String token) {
+        return authTokenRepository
+                .findByTokenAndRevokedFalse(token)
+                .map(authToken ->
+                        authToken.getExpiresAt().isAfter(OffsetDateTime.now())
+                )
+                .orElse(false);
+    }
 
-    return authTokenRepository
-            .findByTokenAndRevokedFalse(token)
-            .map(authToken ->
-                    authToken.getExpiresAt().isAfter(OffsetDateTime.now())
-            )
-            .orElse(false);
+    public UUID getUserIdFromToken(String token) {
+        return authTokenRepository
+                .findByTokenAndRevokedFalse(token)
+                .filter(authToken -> authToken.getExpiresAt().isAfter(OffsetDateTime.now()))
+                .map(AuthToken::getUserId)
+                .orElse(null);
     }
 }
