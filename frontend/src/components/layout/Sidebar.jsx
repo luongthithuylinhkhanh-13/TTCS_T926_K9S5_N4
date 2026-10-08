@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BuildOutlined,
@@ -7,18 +7,31 @@ import {
   NodeIndexOutlined,
   HistoryOutlined,
   CheckSquareOutlined,
+  CalendarOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { logoutUser, getAuthUser } from '../../utils/auth';
 import { logout } from '../../services/wbsApi';
+import { useLocale } from '../../utils/LocaleContext';
 
 
 
 const Sidebar = ({ collapsed }) => {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
+  const [progressExpanded, setProgressExpanded] = useState(
+    () => location.pathname.startsWith('/progress')
+  );
   const user = getAuthUser();
+  const displayName = user?.fullName || user?.email || t('Tài khoản');
+  const initials = displayName
+    .split(/[\s.@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join('');
 
   const handleLogout = async () => {
     try {
@@ -27,18 +40,18 @@ const Sidebar = ({ collapsed }) => {
       message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
     }
     logoutUser();
-    message.info('Đã đăng xuất tài khoản');
+    message.info(t('Đã đăng xuất tài khoản'));
     navigate('/login');
   };
 
   const handleNonWbsClick = (menuName) => {
-    message.info(`Mục "${menuName}" là chức năng ngoài phạm vi T-05/T-06`);
+    message.info(`${t('Mục')} "${menuName}" ${t('là chức năng ngoài phạm vi T-05/T-06')}`);
   };
 
   return (
     <aside
-      className="app-sidebar"
-      style={{ width: collapsed ? 80 : 250, background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
+      className={`app-sidebar${collapsed ? ' collapsed' : ''}`}
+      style={{ background: 'linear-gradient(180deg, #0a3d62, #3c6382)' }}
     >
       {/* Brand Header */}
       <div className="sidebar-brand">
@@ -46,78 +59,89 @@ const Sidebar = ({ collapsed }) => {
         {!collapsed && (
           <div className="sidebar-title-box">
             <span className="sidebar-title">CONSTRUCTFLOW</span>
-            <span className="sidebar-subtitle">Quản lý thi công</span>
+            <span className="sidebar-subtitle">{t('Quản lý thi công')}</span>
           </div>
         )}
       </div>
 
       {/* Navigation Menu */}
       <div className="sidebar-menu">
-        {!collapsed && <div className="sidebar-section-label">TỔNG QUAN</div>}
+        {!collapsed && <div className="sidebar-section-label">{t('TỔNG QUAN')}</div>}
         <div
           className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dashboard')}
-          title={collapsed ? 'Dashboard' : ''}
+          onClick={() => handleNonWbsClick(t('Dashboard'))}
+          title={collapsed ? t('Dashboard') : ''}
         >
           <DashboardOutlined />
-          {!collapsed && <span>Dashboard</span>}
+          {!collapsed && <span>{t('Dashboard')}</span>}
         </div>
 
-        {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>DỰ ÁN</div>}
+        {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>{t('DỰ ÁN')}</div>}
         <div
           className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dự án')}
-          title={collapsed ? 'Dự án' : ''}
+          onClick={() => handleNonWbsClick(t('Dự án'))}
+          title={collapsed ? t('Dự án') : ''}
         >
           <ProjectOutlined />
-          {!collapsed && <span>Dự án</span>}
+          {!collapsed && <span>{t('Dự án')}</span>}
         </div>
 
         {/* ACTIVE ITEM */}
         <div
           className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
           onClick={() => navigate('/')}
-          title={collapsed ? 'Cơ cấu công việc' : ''}
+          title={collapsed ? t('Cơ cấu công việc') : ''}
         >
           <NodeIndexOutlined />
-          {!collapsed && <span>Cơ cấu công việc</span>}
+          {!collapsed && <span>{t('Cơ cấu công việc')}</span>}
         </div>
 
         <div
           className={`sidebar-item ${location.pathname === '/progress' ? 'active' : ''}`}
-          onClick={() => navigate('/progress')}
-          title={collapsed ? 'Tiến độ' : ''}
+          onClick={() => {
+            setProgressExpanded(true);
+            navigate('/progress');
+          }}
+          title={collapsed ? t('Tiến độ') : ''}
         >
           <HistoryOutlined />
-          {!collapsed && <span>Tiến độ</span>}
+          {!collapsed && <span>{t('Tiến độ')}</span>}
+        </div>
+        {!collapsed && progressExpanded && (
+          <div
+            className={`sidebar-subitem ${location.pathname === '/progress/milestones' ? 'active' : ''}`}
+            onClick={() => navigate('/progress/milestones')}
+          >
+            <span className="sidebar-subitem-dot" />
+            <span>{t('Mốc tiến độ')}</span>
+          </div>
+        )}
+
+        <div
+          className={`sidebar-item ${location.pathname === '/working-calendar' ? 'active' : ''}`}
+          onClick={() => navigate('/working-calendar')}
+          title={collapsed ? t('Lịch làm việc') : ''}
+        >
+          <CalendarOutlined />
+          {!collapsed && <span>{t('Lịch làm việc')}</span>}
         </div>
 
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick('Công việc')}
-          title={collapsed ? 'Công việc' : ''}
+          className={`sidebar-item ${location.pathname === '/assigned-tasks' ? 'active' : ''}`}
+          onClick={() => navigate('/assigned-tasks')}
+          title={collapsed ? t('Công việc') : ''}
         >
           <CheckSquareOutlined />
-          {!collapsed && <span>Công việc</span>}
+          {!collapsed && <span>{t('Công việc')}</span>}
         </div>
       </div>
 
       {/* Bottom Gradient placeholder */}
-      <div
-        className="sidebar-bottom-image"
-        style={{
-          flexGrow: 1,
-          display: 'flex',
-          alignItems: 'flex-end',
-          padding: '12px',
-        }}
-      >
+      <div className="sidebar-bottom-image">
         <div
+          className="sidebar-bottom-image-box"
           style={{
-            width: '100%',
-            height: '80px',
             background: 'linear-gradient(135deg, #3c6382, #0a3d62)',
-            borderRadius: '4px',
           }}
         />
       </div>
@@ -125,15 +149,15 @@ const Sidebar = ({ collapsed }) => {
       {/* Bottom User Section */}
       <div className="sidebar-user">
         <div className="user-info-box">
-          <div className="user-avatar-initials">QT</div>
+          <div className="user-avatar-initials">{initials || 'U'}</div>
           {!collapsed && (
             <div className="user-details">
-              <span className="user-name">{user?.fullName || 'Quản trị viên'}</span>
-              <span className="user-role">{user?.username || 'admin'}</span>
+              <span className="user-name">{displayName}</span>
+              <span className="user-role">{user?.email || ''}</span>
             </div>
           )}
         </div>
-        <Tooltip title="Đăng xuất">
+        <Tooltip title={t('Đăng xuất')}>
           <div className="logout-btn" onClick={handleLogout}>
             <LogoutOutlined />
           </div>

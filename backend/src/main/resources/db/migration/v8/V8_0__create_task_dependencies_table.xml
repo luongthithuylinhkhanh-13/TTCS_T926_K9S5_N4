@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="S-06-create-task-dependencies-table" author="s06-team">
+        <createTable tableName="task_dependencies">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_task_dependencies"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="predecessor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="successor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dependency_type" type="VARCHAR(10)" defaultValue="FS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lag_days" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="task_dependencies"
+            baseColumnNames="predecessor_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_dep_predecessor"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="task_dependencies"
+            baseColumnNames="successor_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_dep_successor"
+            onDelete="CASCADE"/>
+
+        <addUniqueConstraint
+            tableName="task_dependencies"
+            columnNames="predecessor_id, successor_id"
+            constraintName="uk_task_dependencies_pair"/>
+
+        <createIndex tableName="task_dependencies" indexName="idx_dep_project">
+            <column name="project_id"/>
+        </createIndex>
+        <createIndex tableName="task_dependencies" indexName="idx_dep_predecessor">
+            <column name="predecessor_id"/>
+        </createIndex>
+        <createIndex tableName="task_dependencies" indexName="idx_dep_successor">
+            <column name="successor_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V15.0-add-crew-task-assignments" author="S-25">
+        <addColumn tableName="wbs_items">
+            <column name="assigned_team_member_id" type="UUID"/>
+            <column name="assigned_team_name" type="VARCHAR(255)"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="wbs_items"
+            baseColumnNames="assigned_team_member_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_wbs_items_assigned_team_member"
+            onDelete="SET NULL"/>
+
+        <createTable tableName="team_assignment_history">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"
+                             primaryKeyName="pk_team_assignment_history"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_team_assignment_history_project"
+                             references="projects(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="wbs_item_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_team_assignment_history_wbs_item"
+                             references="wbs_items(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="from_team_member_id" type="UUID"/>
+            <column name="from_team_name" type="VARCHAR(255)"/>
+            <column name="to_team_member_id" type="UUID"/>
+            <column name="to_team_name" type="VARCHAR(255)"/>
+            <column name="changed_by_user_id" type="UUID"/>
+            <column name="changed_by_name" type="VARCHAR(255)"/>
+            <column name="changed_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="from_team_member_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_team_assignment_history_from_user"
+            onDelete="SET NULL"/>
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="to_team_member_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_team_assignment_history_to_user"
+            onDelete="SET NULL"/>
+        <addForeignKeyConstraint
+            baseTableName="team_assignment_history"
+            baseColumnNames="changed_by_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_team_assignment_history_actor"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="team_assignment_history"
+                     indexName="idx_team_assignment_history_item_changed">
+            <column name="wbs_item_id"/>
+            <column name="changed_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="team_assignment_history"/>
+            <dropForeignKeyConstraint baseTableName="wbs_items"
+                                      constraintName="fk_wbs_items_assigned_team_member"/>
+            <dropColumn tableName="wbs_items" columnName="assigned_team_member_id"/>
+            <dropColumn tableName="wbs_items" columnName="assigned_team_name"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

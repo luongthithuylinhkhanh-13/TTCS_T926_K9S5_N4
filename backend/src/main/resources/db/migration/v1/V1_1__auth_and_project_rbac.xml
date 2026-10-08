@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ========================================================================= -->
+    <!-- T-04.3: Bảng Users (Người dùng hệ thống)                                  -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.1-01-create-users-table" author="T-04.3">
+        <comment>Tạo bảng users lưu trữ thông tin tài khoản người dùng</comment>
+        <createTable tableName="users" remarks="Bảng tài khoản người dùng hệ thống">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_users"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_users_username"/>
+            </column>
+            <column name="email" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_users_email"/>
+            </column>
+            <column name="full_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="users"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ========================================================================= -->
+    <!-- T-04.1: Bảng Roles (Vai trò / Phân quyền)                                 -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.1-02-create-roles-table" author="T-04.1">
+        <comment>Tạo bảng roles định nghĩa danh sách vai trò trong hệ thống và dự án</comment>
+        <createTable tableName="roles" remarks="Bảng danh mục vai trò / quyền hạn">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_roles"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_roles_code"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="roles"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ========================================================================= -->
+    <!-- T-04.1 Seed: Dữ liệu khởi tạo cho các vai trò chuẩn                       -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.1-03-seed-roles" author="T-04.1">
+        <comment>Khởi tạo các vai trò chuẩn trong quản lý dự án thi công</comment>
+        <insert tableName="roles">
+            <column name="code" value="ADMIN"/>
+            <column name="name" value="Quản trị hệ thống"/>
+            <column name="description" value="Toàn quyền quản trị hệ thống và tất cả dự án"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="PROJECT_MANAGER"/>
+            <column name="name" value="Chỉ huy trưởng / Quản lý dự án"/>
+            <column name="description" value="Quản lý toàn diện công trình, phân công việc, duyệt nghiệm thu và thành viên"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="SITE_ENGINEER"/>
+            <column name="name" value="Kỹ sư công trường / Giám sát"/>
+            <column name="description" value="Ghi nhật ký, cập nhật tiến độ công việc, giám sát thi công"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="WORKER"/>
+            <column name="name" value="Đội thi công / Thầu phụ"/>
+            <column name="description" value="Xem nhiệm vụ được giao và báo cáo hoàn thành khối lượng"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="VIEWER"/>
+            <column name="name" value="Người xem / Kế toán"/>
+            <column name="description" value="Xem báo cáo, tiến độ và tài liệu dự án mà không có quyền thay đổi dữ liệu"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="roles">
+                <where>code IN ('ADMIN', 'PROJECT_MANAGER', 'SITE_ENGINEER', 'WORKER', 'VIEWER')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <!-- ========================================================================= -->
+    <!-- T-04.3: Bảng Projects (Dự án công trình)                                  -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.1-04-create-projects-table" author="T-04.3">
+        <comment>Tạo bảng projects quản lý thông tin các dự án công trình</comment>
+        <createTable tableName="projects" remarks="Bảng danh mục dự án thi công">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_projects"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_projects_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)" defaultValue="IN_PROGRESS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="projects"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ========================================================================= -->
+    <!-- T-04.2 & T-04.3: Bảng Project Members (Liên kết User với Project + Role)  -->
+    <!-- ========================================================================= -->
+    <changeSet id="V1.1-05-create-project-members-table" author="T-04.2">
+        <comment>Tạo bảng project_members liên kết người dùng với dự án kèm vai trò (RBAC)</comment>
+        <createTable tableName="project_members" remarks="Bảng thành viên dự án và vai trò trong dự án">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_project_members"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_project_members_project"
+                             references="projects(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_project_members_user"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="role_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_project_members_role"
+                             references="roles(id)"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="joined_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Ràng buộc mỗi User chỉ có 1 vai trò active trong 1 Project -->
+        <addUniqueConstraint tableName="project_members"
+                             columnNames="project_id, user_id"
+                             constraintName="uk_project_member_project_user"/>
+
+        <createIndex tableName="project_members" indexName="idx_project_members_project_id">
+            <column name="project_id"/>
+        </createIndex>
+
+        <createIndex tableName="project_members" indexName="idx_project_members_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="project_members"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

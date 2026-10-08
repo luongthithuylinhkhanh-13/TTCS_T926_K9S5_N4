@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.auth.service.AuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,19 +18,19 @@ public class WbsController {
 
     private final WbsService wbsService;
     private final AuthTokenService authTokenService;
+    private final AuthorizationService authorizationService;
     private final ObjectMapper objectMapper;
-    private final com.ntdhtcct.domain.project.ProjectMemberService projectMemberService;
 
     public WbsController(
             WbsService wbsService,
             AuthTokenService authTokenService,
-            ObjectMapper objectMapper,
-            com.ntdhtcct.domain.project.ProjectMemberService projectMemberService
+            AuthorizationService authorizationService,
+            ObjectMapper objectMapper
     ) {
         this.wbsService = wbsService;
         this.authTokenService = authTokenService;
+        this.authorizationService = authorizationService;
         this.objectMapper = objectMapper;
-        this.projectMemberService = projectMemberService;
     }
 
     @GetMapping("/projects")
@@ -37,11 +38,14 @@ public class WbsController {
             @RequestHeader(value = "Authorization", required = false)
             String authorization
     ) {
-        if (!isAuthorized(authorization)) {
+        UUID userId = authenticatedUserId(authorization);
+        if (userId == null) {
             return unauthorized(null);
         }
 
-        List<Project> projects = wbsService.getProjects();
+        List<Project> projects = authorizationService.canViewAllProjects(userId)
+                ? wbsService.getProjects()
+                : wbsService.getProjectsForUser(userId);
         return ResponseEntity.ok(projects);
     }
 
@@ -241,25 +245,36 @@ public class WbsController {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return false;
         }
-        String token = authorization.substring(7);
-        if (!authTokenService.isTokenValid(token)) {
-            return false;
-        }
-        UUID userId = authTokenService.getUserIdFromToken(token);
+        UUID userId = authenticatedUserId(authorization);
         if (userId == null) {
             return false;
         }
-        return projectMemberService.hasAccess(projectId, userId);
+        try {
+            authorizationService.checkProjectAccess(projectId, userId, null);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     private boolean isAuthorized(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            return false;
-        }
-        String token = authorization.substring(7);
-        return authTokenService.isTokenValid(token);
+        return authenticatedUserId(authorization) != null;
     }
 
+    private UUID authenticatedUserId(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authorization.substring(7).trim();
+        if (!authTokenService.isTokenValid(token)) {
+            return null;
+        }
+        try {
+            return authTokenService.getUserIdFromToken(token);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
     private ResponseEntity<ApiResponse> unauthorized(String message) {
         return ResponseEntity.status(401).body(
                 new ApiResponse(

@@ -35,7 +35,7 @@ nen-tang-dieu-hanh-thi-cong/
 
 | Layer    | Công nghệ                              |
 | -------- | -------------------------------------- |
-| Backend  | Java 21 · Spring Boot · Maven          |
+| Backend  | Java 25 · Spring Boot · Maven          |
 | Database | PostgreSQL 14+                         | 
 | Migration| Liquibase                              |
 | Container| Docker / Docker Compose                |
@@ -52,7 +52,7 @@ nen-tang-dieu-hanh-thi-cong/
 
 | Công cụ        | Phiên bản  | Link                                          |
 | -------------- | ---------- | --------------------------------------------- |
-| Java JDK       | 21 (LTS)   | https://www.oracle.com/java/technologies/downloads/ hoặc https://adoptium.net/ |
+| Java JDK       | 25 (LTS)   | https://www.oracle.com/java/technologies/downloads/ hoặc https://adoptium.net/ |
 | PostgreSQL     | 14+        | https://www.postgresql.org/download/          |
 | Git            | Bất kỳ     | https://git-scm.com/                          |
 
@@ -63,23 +63,23 @@ nen-tang-dieu-hanh-thi-cong/
 **Kiểm tra cài đặt:**
 
 ```bash
-java -version     # Phải là 21.x.x
+java -version     # Phải là 25.x.x
 psql --version    # Phải là 14+
 git --version
 ```
 
 ---
 
-### 2. Cài Java 21
+### 2. Cài Java 25
 
-Tải JDK 21 từ Oracle hoặc Adoptium (khuyến nghị). Sau khi cài, xác nhận:
+Tải JDK 25 từ Oracle hoặc Adoptium (khuyến nghị). Sau khi cài, xác nhận:
 
 ```bash
 java -version
-# java version "21.x.x" ...
+# java version "25.x.x" ...
 ```
 
-Đảm bảo biến môi trường `JAVA_HOME` trỏ đến JDK 21.
+Đảm bảo biến môi trường `JAVA_HOME` trỏ đến JDK 25.
 
 ---
 
@@ -91,18 +91,24 @@ Tải và cài PostgreSQL 14+ từ https://www.postgresql.org/download/
 
 #### 3.2 Khởi động PostgreSQL service
 
+Đặt PostgreSQL lắng nghe ở cổng `5433` trong file `postgresql.conf` (dòng `port = 5433`), lưu file rồi khởi động lại service. Trên Windows, mở PowerShell bằng quyền Administrator và chạy:
+
+```powershell
+Restart-Service postgresql-x64-18
+```
+
 ```bash
 # Linux / macOS
 sudo systemctl start postgresql   # hoặc: brew services start postgresql
 
 # Windows
-# Mở Services → tìm "postgresql" → Start
+# Mở Services → tìm service PostgreSQL → Restart
 ```
 
 #### 3.3 Kết nối PostgreSQL
 
 ```bash
-psql -U postgres
+psql -p 5433 -U postgres
 ```
 
 #### 3.4 Tạo database
@@ -136,34 +142,19 @@ APP_ENV=development
 APP_PORT=8080
 
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5433
+DB_PUBLISHED_PORT=5434
 DB_NAME=construction_management
 DB_USERNAME=postgres
 DB_PASSWORD=your_actual_password_here
 ```
 
 > Không để `DB_PASSWORD` trống nếu PostgreSQL yêu cầu password.
+> `DB_PORT` là cổng PostgreSQL ứng dụng kết nối tới; `DB_PUBLISHED_PORT` là cổng host được Docker Compose mở ra (mặc định `5434`), tách biệt với PostgreSQL cài trực tiếp trên máy ở cổng `5433`.
 
-#### 4.3 Load environment variables
+#### 4.3 Nạp cấu hình `.env`
 
-Spring Boot không tự đọc `.env`. Cần export trước khi chạy:
-
-**Linux / macOS:**
-
-```bash
-export $(grep -v '^#' .env | xargs)
-```
-
-**Windows (PowerShell):**
-
-```powershell
-Get-Content .env | Where-Object { $_ -notmatch '^#' -and $_ -ne '' } |
-  ForEach-Object { $k,$v = $_ -split '=', 2; [System.Environment]::SetEnvironmentVariable($k, $v, 'Process') }
-```
-
-**Hoặc cấu hình trực tiếp trong IDE:**
-- IntelliJ IDEA: `Run → Edit Configurations → Environment variables`
-- VS Code: `.vscode/launch.json` → `"env"` section
+Khi chạy backend từ thư mục `backend`, Spring Boot tự đọc file `.env` ở thư mục gốc dự án. Các biến môi trường đã đặt trong hệ điều hành hoặc IDE vẫn được ưu tiên hơn giá trị trong `.env`.
 
 ---
 
@@ -185,7 +176,7 @@ Build thành công khi thấy: `BUILD SUCCESS`
 
 ### 6. Chạy Backend
 
-Đảm bảo PostgreSQL đang chạy và `.env` đã được load, sau đó:
+Đảm bảo PostgreSQL đang chạy ở cổng `DB_PORT` trong `.env`, sau đó:
 
 ```bash
 cd backend
@@ -228,12 +219,12 @@ cd backend
 
 # Linux / macOS
 ./mvnw liquibase:update \
-  -DDB_URL="jdbc:postgresql://localhost:5432/construction_management" \
+  -DDB_URL="jdbc:postgresql://localhost:5433/construction_management" \
   -DDB_USERNAME=postgres \
   -DDB_PASSWORD="$DB_PASSWORD"
 
 # Windows (PowerShell)
-mvnw.cmd liquibase:update -DDB_URL="jdbc:postgresql://localhost:5432/construction_management" -DDB_USERNAME=postgres "-DDB_PASSWORD=$env:DB_PASSWORD"
+mvnw.cmd liquibase:update -DDB_URL="jdbc:postgresql://localhost:5433/construction_management" -DDB_USERNAME=postgres "-DDB_PASSWORD=$env:DB_PASSWORD"
 ```
 
 #### 7.3 Kiểm tra Migration đã áp dụng
@@ -260,12 +251,12 @@ cd backend
 # Linux / macOS
 ./mvnw liquibase:rollback \
   -Dliquibase.rollbackCount=1 \
-  -DDB_URL="jdbc:postgresql://localhost:5432/construction_management" \
+  -DDB_URL="jdbc:postgresql://localhost:5433/construction_management" \
   -DDB_USERNAME=postgres \
   -DDB_PASSWORD="$DB_PASSWORD"
 
 # Windows (PowerShell)
-mvnw.cmd liquibase:rollback -Dliquibase.rollbackCount=1 -DDB_URL="jdbc:postgresql://localhost:5432/construction_management" -DDB_USERNAME=postgres "-DDB_PASSWORD=$env:DB_PASSWORD"
+mvnw.cmd liquibase:rollback -Dliquibase.rollbackCount=1 -DDB_URL="jdbc:postgresql://localhost:5433/construction_management" -DDB_USERNAME=postgres "-DDB_PASSWORD=$env:DB_PASSWORD"
 ```
 
 #### 8.2 Xác nhận Rollback

@@ -9,6 +9,7 @@
         Master changelog: danh sách các migration file theo thứ tự.
         Thêm file mới vào cuối danh sách, không thay đổi thứ tự file cũ.
     -->
+
     <include file="db/migration/v1/V1_0__init_infrastructure_check.xml"
              relativeToChangelogFile="false"/>
 
@@ -31,6 +32,10 @@
     <include file="db/migration/v7/V7_0__create_projects_wbs_tables.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v7/V7_0__create_project_rbac_tables.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v7/V7_1__preserve_s06_dependencies.xml"
+             relativeToChangelogFile="false"/>
     <include file="db/migration/v8/V8_0__create_wbs_dependencies.xml"
              relativeToChangelogFile="false"/>
 
@@ -43,7 +48,26 @@
     <include file="db/migration/v11/V11_0__enforce_positive_wbs_duration.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v11/V11_1__backfill_task_durations.xml"
+             relativeToChangelogFile="false"/>
+
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- Tạo bảng tasks / task_dependencies trước -->
+    <include file="db/migration/v13/V13_1__create_tasks_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- Thêm cột / sửa đổi bảng sau -->
+    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
+             relativeToChangelogFile="false"/>
+    <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
+    <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
 
     <!-- T-51, T-52, T-53: Báo cáo hằng ngày -->
@@ -54,4 +78,6 @@
     <include file="db/migration/v14/V14_0__create_project_members_and_invitations.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

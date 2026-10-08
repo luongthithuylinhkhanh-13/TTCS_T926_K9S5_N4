@@ -1,14 +1,13 @@
-package com.ntdhtcct.domain.role;
+package com.ntdhtcct.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
+import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Entity ánh xạ bảng roles.
+ */
 @Entity
 @Table(name = "roles")
 public class Role {
@@ -21,7 +20,7 @@ public class Role {
     @Column(name = "name", nullable = false, unique = true, length = 50)
     private String name;
 
-    protected Role() {
+    public Role() {
     }
 
     public Role(String name) {
@@ -32,11 +31,27 @@ public class Role {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Role role)) return false;
+        return Objects.equals(id, role.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
