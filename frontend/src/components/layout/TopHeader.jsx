@@ -14,8 +14,39 @@ import { logout } from '../../services/wbsApi';
 const TopHeader = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = getAuthUser();
-  const currentSection = location.pathname === '/progress' ? 'Tiến độ' : 'Cơ cấu công việc';
+  const getBreadcrumbItems = () => {
+    switch (location.pathname) {
+      case '/dashboard':
+        return [
+          { title: 'Trang chủ' },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Dashboard</span> }
+        ];
+      case '/projects':
+        return [
+          { title: 'Trang chủ' },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Dự án</span> }
+        ];
+      case '/progress':
+        return [
+          { title: 'Trang chủ' },
+          { title: 'Dự án' },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Tiến độ</span> }
+        ];
+      case '/tasks':
+        return [
+          { title: 'Trang chủ' },
+          { title: 'Dự án' },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Công việc</span> }
+        ];
+      case '/wbs':
+      default:
+        return [
+          { title: 'Trang chủ' },
+          { title: 'Dự án' },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Cơ cấu công việc</span> }
+        ];
+    }
+  };
 
   const handleDropdownClick = async ({ key }) => {
     if (key === 'logout') {
@@ -50,13 +81,7 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
           {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
         </div>
 
-        <Breadcrumb
-          items={[
-            { title: 'Trang chủ' },
-            { title: 'Dự án' },
-            { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{currentSection}</span> },
-          ]}
-        />
+        <Breadcrumb items={getBreadcrumbItems()} />
       </div>
 
       <div className="header-right">

@@ -31,10 +31,6 @@ const Sidebar = ({ collapsed }) => {
     navigate('/login');
   };
 
-  const handleNonWbsClick = (menuName) => {
-    message.info(`Mục "${menuName}" là chức năng ngoài phạm vi T-05/T-06`);
-  };
-
   return (
     <aside
       className="app-sidebar"
@@ -55,8 +51,8 @@ const Sidebar = ({ collapsed }) => {
       <div className="sidebar-menu">
         {!collapsed && <div className="sidebar-section-label">TỔNG QUAN</div>}
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dashboard')}
+          className={`sidebar-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+          onClick={() => navigate('/dashboard')}
           title={collapsed ? 'Dashboard' : ''}
         >
           <DashboardOutlined />
@@ -65,18 +61,17 @@ const Sidebar = ({ collapsed }) => {
 
         {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>DỰ ÁN</div>}
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick('Dự án')}
+          className={`sidebar-item ${location.pathname === '/projects' ? 'active' : ''}`}
+          onClick={() => navigate('/projects')}
           title={collapsed ? 'Dự án' : ''}
         >
           <ProjectOutlined />
           {!collapsed && <span>Dự án</span>}
         </div>
 
-        {/* ACTIVE ITEM */}
         <div
-          className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
-          onClick={() => navigate('/')}
+          className={`sidebar-item ${location.pathname === '/wbs' ? 'active' : ''}`}
+          onClick={() => navigate('/wbs')}
           title={collapsed ? 'Cơ cấu công việc' : ''}
         >
           <NodeIndexOutlined />
@@ -93,8 +88,8 @@ const Sidebar = ({ collapsed }) => {
         </div>
 
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick('Công việc')}
+          className={`sidebar-item ${location.pathname === '/tasks' ? 'active' : ''}`}
+          onClick={() => navigate('/tasks')}
           title={collapsed ? 'Công việc' : ''}
         >
           <CheckSquareOutlined />

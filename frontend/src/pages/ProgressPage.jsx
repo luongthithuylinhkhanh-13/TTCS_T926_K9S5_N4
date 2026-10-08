@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
@@ -6,8 +7,11 @@ import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
 import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
 
 const ProgressPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    searchParams.get('projectId') || null
+  );
   const [schedule, setSchedule] = useState(null);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -42,7 +46,13 @@ const ProgressPage = () => {
         const result = await getProjects();
         const projectList = Array.isArray(result) ? result : [];
         setProjects(projectList);
-        setSelectedProjectId(projectList[0]?.id || null);
+
+        const queryId = searchParams.get('projectId');
+        if (queryId && projectList.some(p => p.id === queryId)) {
+          setSelectedProjectId(queryId);
+        } else {
+          setSelectedProjectId(projectList[0]?.id || null);
+        }
       } catch (error) {
         setPageError(error.message || 'Không thể tải danh sách dự án');
       } finally {
@@ -52,6 +62,13 @@ const ProgressPage = () => {
 
     loadProjects();
   }, []);
+
+  useEffect(() => {
+    const paramId = searchParams.get('projectId');
+    if (paramId && projects.some(p => p.id === paramId)) {
+      setSelectedProjectId(paramId);
+    }
+  }, [searchParams, projects]);
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -189,7 +206,10 @@ const ProgressPage = () => {
             aria-label="Chọn dự án"
             value={selectedProjectId}
             options={projectOptions}
-            onChange={setSelectedProjectId}
+            onChange={id => {
+              setSelectedProjectId(id);
+              setSearchParams(id ? { projectId: id } : {});
+            }}
             placeholder="Chọn dự án"
             style={{ width: 300, maxWidth: '100%' }}
             loading={loadingProjects}
