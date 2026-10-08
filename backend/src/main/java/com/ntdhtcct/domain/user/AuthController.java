@@ -9,6 +9,9 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -43,7 +46,13 @@ public class AuthController {
                             "Đăng nhập thành công",
                             user.getId(),
                             user.getEmail(),
-                            user.getRoleId(),
+                            user.getRole() != null
+                                    ? user.getRole().getId()
+                                    : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName(),
                             authToken.getToken(),
                             authToken.getExpiresAt()
                     )
@@ -113,40 +122,146 @@ public class AuthController {
                     "Đăng xuất thành công"
             )
     );
- }
-    @GetMapping("/validate")
-      public ResponseEntity<?> validateToken(
-        @RequestHeader(value = "Authorization", required = false) String authorization
-    ) {
-    if (authorization == null || !authorization.startsWith("Bearer ")) {
-        return ResponseEntity.badRequest().body(
-                new ErrorResponse(
-                        false,
-                        "Token không hợp lệ hoặc không được cung cấp"
-                )
-        );
-    }
-
-    String token = authorization.substring(7);
-
-    boolean valid = authTokenService.isTokenValid(token);
-
-    if (!valid) {
-        return ResponseEntity.status(401).body(
-                new ErrorResponse(
-                        false,
-                        "Token không hợp lệ hoặc đã hết hạn"
-                )
-        );
-    }
-
-    return ResponseEntity.ok(
-            new ErrorResponse(
-                    true,
-                    "Token hợp lệ"
-            )
-    );
   }
+
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(
+                    new ErrorResponse(
+                            false,
+                            "Token không hợp lệ hoặc không được cung cấp"
+                    )
+            );
+        }
+
+        String token = authorization.substring(7);
+
+        boolean valid =
+                authTokenService.isTokenValid(token);
+
+        if (!valid) {
+
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(
+                            false,
+                            "Token không hợp lệ hoặc đã hết hạn"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                new ErrorResponse(
+                        true,
+                        "Token hợp lệ"
+                )
+        );
+    }
+
+    /**
+     * =========================
+     * CURRENT USER
+     * GET /api/auth/me
+     * =========================
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> me(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization
+    ) {
+
+        // Không có Authorization
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(
+                            false,
+                            "Token không hợp lệ hoặc không được cung cấp"
+                    )
+            );
+        }
+
+        String token = authorization.substring(7);
+
+        try {
+
+            // Lấy userId từ token
+            UUID userId =
+                    authTokenService.getUserIdFromToken(token);
+
+            // Lấy User từ database
+            User user =
+                    userService.findById(userId);
+
+            // Trả thông tin user
+            return ResponseEntity.ok(
+                    new MeResponse(
+                            true,
+                            "Lấy thông tin người dùng thành công",
+                            user.getId(),
+                            user.getEmail(),
+                            user.getRole() != null
+                                    ? user.getRole().getId()
+                                    : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName()
+                    )
+            );
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(
+                            false,
+                            e.getMessage()
+                    )
+            );
+        }
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMe(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @Valid @RequestBody ProfileUpdateRequest request
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(false, "Token không hợp lệ hoặc không được cung cấp")
+            );
+        }
+
+        try {
+            UUID userId = authTokenService.getUserIdFromToken(authorization.substring(7));
+            User user = userService.updateProfile(
+                    userId,
+                    request.fullName(),
+                    request.email(),
+                    request.currentPassword(),
+                    request.newPassword()
+            );
+            return ResponseEntity.ok(new MeResponse(
+                    true,
+                    "Cập nhật thông tin cá nhân thành công",
+                    user.getId(),
+                    user.getEmail(),
+                    user.getRole() != null ? user.getRole().getId() : null,
+                    user.getRole() != null ? user.getRole().getName() : null,
+                    user.getFullName()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(new ErrorResponse(false, e.getMessage()));
+        }
+    }
 
     public record LoginRequest(
 
@@ -183,9 +298,22 @@ public class AuthController {
             String message,
             java.util.UUID userId,
             String email,
-            java.util.UUID roleId,
+            UUID roleId,
+            String roleName,
+            String fullName,
             String token,
-            java.time.OffsetDateTime expiresAt
+            OffsetDateTime expiresAt
+    ) {
+    }
+
+    public record MeResponse(
+            boolean success,
+            String message,
+            UUID userId,
+            String email,
+            UUID roleId,
+            String roleName,
+            String fullName
     ) {
     }
 
