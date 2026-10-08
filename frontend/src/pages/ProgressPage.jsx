@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
+<<<<<<< HEAD
 import { useLocale } from '../utils/LocaleContext';
+=======
+import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
+import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
+>>>>>>> f022a01a95bb5a0b18549ae648489720629402b9
 
 const ProgressPage = () => {
   const { t } = useLocale();
@@ -68,14 +73,8 @@ const ProgressPage = () => {
     schedule?.summary?.projectDuration || 0,
     ...scheduledTasks.map(task => task.ef)
   );
-  const tickInterval = Math.max(1, Math.ceil(projectDuration / 6));
-  const timelineTicks = projectDuration > 0
-    ? Array.from({ length: Math.floor(projectDuration / tickInterval) + 1 }, (_, index) => index * tickInterval)
-    : [];
-  if (projectDuration > 0 && timelineTicks[timelineTicks.length - 1] !== projectDuration) {
-    timelineTicks.push(projectDuration);
-  }
 
+<<<<<<< HEAD
   const renderCpmTooltip = task => (
     <div className="gantt-tooltip">
       <strong>{task.wbsCode} · {task.name}</strong>
@@ -86,6 +85,65 @@ const ProgressPage = () => {
       <span>Slack ({t('độ trễ cho phép')}): {task.slack ?? '--'} {t('ngày')}</span>
     </div>
   );
+=======
+  const renderCpmTooltip = task => {
+    const plannedStart = formatDateVN(task.startDate);
+    const plannedEnd = formatDateVN(task.endDate);
+    const calculatedStart = formatDateVN(task.calculatedStartDate);
+    const calculatedEnd = formatDateVN(task.calculatedEndDate);
+    const actualStart = formatDateVN(task.actualStartDate);
+    const actualEnd = formatDateVN(task.actualEndDate);
+    const varianceText = formatVariance(task.scheduleVarianceDays);
+
+    return (
+      <div className="gantt-tooltip">
+        <strong>{task.wbsCode ? `${task.wbsCode} · ` : ''}{task.name}</strong>
+
+        {(plannedStart || plannedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+            {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+            {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+          </div>
+        )}
+
+        {(calculatedStart || calculatedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Hiện tại:</span>
+            {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+            {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+          </div>
+        )}
+
+        {varianceText && (
+          <div className="gantt-tooltip-variance">
+            Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+          </div>
+        )}
+
+        {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+          <div className="gantt-tooltip-delay-warning">
+            ⚠ Mở trễ {task.startDelayDays} ngày
+          </div>
+        )}
+
+        {(actualStart || actualEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Thực tế:</span>
+            {actualStart && <div>Bắt đầu: {actualStart}</div>}
+            {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+          </div>
+        )}
+
+        <div className="gantt-tooltip-section gantt-tooltip-cpm">
+          <div>ES: {task.es ?? '--'} · EF: {task.ef ?? '--'}</div>
+          <div>LS: {task.ls ?? '--'} · LF: {task.lf ?? '--'}</div>
+          <div>Slack: {task.slack ?? '--'} ngày</div>
+        </div>
+      </div>
+    );
+  };
+>>>>>>> f022a01a95bb5a0b18549ae648489720629402b9
 
   const columns = [
     {
@@ -218,6 +276,7 @@ const ProgressPage = () => {
             </div>
 
             <section className="wbs-main-card gantt-section">
+<<<<<<< HEAD
               <div className="wbs-card-header">
                 <div className="wbs-card-title-box">
                   <span className="wbs-card-title">{t('Biểu đồ Gantt tiến độ')}</span>
@@ -308,6 +367,15 @@ const ProgressPage = () => {
                   <Empty description={t('Chưa có công việc đủ thời lượng để hiển thị trên biểu đồ')} />
                 </div>
               )}
+=======
+              <GanttChart
+                tasks={scheduledTasks}
+                schedule={schedule}
+                scheduleError={pageError}
+                loading={loadingSchedule}
+                renderTooltip={renderCpmTooltip}
+              />
+>>>>>>> f022a01a95bb5a0b18549ae648489720629402b9
             </section>
 
             <section className="wbs-main-card progress-table-section">
@@ -327,6 +395,8 @@ const ProgressPage = () => {
                 locale={{ emptyText: <Empty description={t('Chưa có công việc găng trong dự án này')} /> }}
               />
             </section>
+
+            <MilestoneAlertSection projectId={selectedProjectId} />
           </>
         ) : (
           <div className="wbs-main-card progress-empty-state">

@@ -54,14 +54,31 @@
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
              relativeToChangelogFile="false"/>
 
+<<<<<<< HEAD
     <!-- Tạo bảng tasks / task_dependencies trước -->
     <include file="db/migration/v13/V13_1__create_tasks_table.xml"
              relativeToChangelogFile="false"/>
 
     <!-- Thêm cột / sửa đổi bảng sau -->
     <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+=======
+    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+             relativeToChangelogFile="false"/>
+    <include file="db/migration/v13/V13_0__create_tasks_table.xml"
+>>>>>>> f022a01a95bb5a0b18549ae648489720629402b9
              relativeToChangelogFile="false"/>
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
+<<<<<<< HEAD
+=======
+    
+    <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
+         relativeToChangelogFile="false"/>
+    <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
+    <include file="db/migration/v15/V15_0__create_milestones_table.xml"
+             relativeToChangelogFile="false"/>
+
+>>>>>>> f022a01a95bb5a0b18549ae648489720629402b9
 </databaseChangeLog>
+
