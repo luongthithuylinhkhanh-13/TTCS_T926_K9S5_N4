@@ -20,14 +20,14 @@ public class WbsController {
     private final AuthTokenService authTokenService;
     private final AuthorizationService authorizationService;
     private final ObjectMapper objectMapper;
-    private final com.ntdhtcct.domain.project.ProjectMemberService projectMemberService;
+    private final com.ntdhtcct.service.ProjectMemberService projectMemberService;
 
     public WbsController(
             WbsService wbsService,
             AuthTokenService authTokenService,
             AuthorizationService authorizationService,
             ObjectMapper objectMapper,
-            com.ntdhtcct.domain.project.ProjectMemberService projectMemberService
+            com.ntdhtcct.service.ProjectMemberService projectMemberService
     ) {
         this.wbsService = wbsService;
         this.authTokenService = authTokenService;

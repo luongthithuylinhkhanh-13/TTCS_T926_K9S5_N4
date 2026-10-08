@@ -142,4 +142,30 @@ public class UserService {
                         )
                 );
     }
+
+    @Transactional
+    public User updateProfile(UUID userId, String fullName, String email, String currentPassword, String newPassword) {
+        User user = findById(userId);
+
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName.trim());
+        }
+
+        if (email != null && !email.trim().isEmpty()) {
+            String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+            if (!user.getEmail().equals(normalizedEmail) && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+                throw new IllegalArgumentException("Email này đã được sử dụng.");
+            }
+            user.setEmail(normalizedEmail);
+        }
+
+        if (currentPassword != null && !currentPassword.isEmpty() && newPassword != null && !newPassword.isEmpty()) {
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                throw new IllegalArgumentException("Mật khẩu hiện tại không đúng.");
+            }
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        return userRepository.save(user);
+    }
 }
