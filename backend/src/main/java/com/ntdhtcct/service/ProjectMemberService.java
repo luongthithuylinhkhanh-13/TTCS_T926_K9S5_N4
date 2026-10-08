@@ -37,4 +37,6 @@ public interface ProjectMemberService {
             UUID projectId,
             UUID userId
     );
+
+    boolean hasAccess(UUID projectId, UUID userId);
 }
