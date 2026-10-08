@@ -40,7 +40,7 @@ public class WbsController {
     ) {
         UUID userId = authenticatedUserId(authorization);
         if (userId == null) {
-            return unauthorized();
+            return unauthorized(null);
         }
 
         List<Project> projects = authorizationService.canViewAllProjects(userId)
@@ -56,7 +56,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -77,7 +80,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -96,7 +102,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -116,7 +125,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -138,7 +150,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -171,7 +186,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -204,7 +222,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -220,28 +241,55 @@ public class WbsController {
         }
     }
 
+    private boolean checkAccess(UUID projectId, String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return false;
+        }
+        UUID userId = authenticatedUserId(authorization);
+        if (userId == null) {
+            return false;
+        }
+        try {
+            authorizationService.checkProjectAccess(projectId, userId, null);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     private boolean isAuthorized(String authorization) {
         return authenticatedUserId(authorization) != null;
     }
 
     private UUID authenticatedUserId(String authorization) {
-        if (authorization == null
-                || !authorization.startsWith("Bearer ")) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
             return null;
         }
-
-        String token = authorization.substring(7);
+        String token = authorization.substring(7).trim();
         if (!authTokenService.isTokenValid(token)) {
             return null;
         }
-        return authTokenService.getUserIdFromToken(token);
+        try {
+            return authTokenService.getUserIdFromToken(token);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
-    private ResponseEntity<ApiResponse> unauthorized() {
+    private ResponseEntity<ApiResponse> unauthorized(String message) {
         return ResponseEntity.status(401).body(
                 new ApiResponse(
                         false,
-                        "Token không hợp lệ hoặc đã hết hạn"
+                        message != null ? message : "Token không hợp lệ hoặc đã hết hạn"
+                )
+        );
+    }
+
+    private ResponseEntity<ApiResponse> forbidden() {
+        return ResponseEntity.status(403).body(
+                new ApiResponse(
+                        false,
+                        "Bạn không có quyền truy cập vào dự án này"
                 )
         );
     }

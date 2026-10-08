@@ -65,6 +65,13 @@ public class WbsItem {
     @Column(name = "progress", nullable = false)
     private int progress = 0;
 
+    @Column(name = "total_volume")
+    private Double totalVolume;
+
+    @Column(name = "unit", length = 50)
+    private String unit;
+
+
     @Column(name = "start_date")
     private LocalDate startDate;
 
@@ -364,5 +371,21 @@ public class WbsItem {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Double getTotalVolume() {
+        return totalVolume;
+    }
+
+    public void setTotalVolume(Double totalVolume) {
+        this.totalVolume = totalVolume;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 }

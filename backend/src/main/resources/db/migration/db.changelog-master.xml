@@ -64,6 +64,9 @@
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
+    <!-- T-51, T-52, T-53: Báo cáo hằng ngày -->
+    <include file="db/migration/v13/V13_0__add_wbs_columns_and_daily_reports.xml"
+             relativeToChangelogFile="false"/>
 
     <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
              relativeToChangelogFile="false"/>
