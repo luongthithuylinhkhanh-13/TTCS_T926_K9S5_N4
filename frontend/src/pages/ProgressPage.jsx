@@ -3,6 +3,10 @@ import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'an
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
 import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
+         feature/NTDHTCT-166-milestone-delay-alerts
+
+import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
+        main
 
 const ProgressPage = () => {
   const [projects, setProjects] = useState([]);
@@ -67,24 +71,64 @@ const ProgressPage = () => {
     schedule?.summary?.projectDuration || 0,
     ...scheduledTasks.map(task => task.ef)
   );
-  const tickInterval = Math.max(1, Math.ceil(projectDuration / 6));
-  const timelineTicks = projectDuration > 0
-    ? Array.from({ length: Math.floor(projectDuration / tickInterval) + 1 }, (_, index) => index * tickInterval)
-    : [];
-  if (projectDuration > 0 && timelineTicks[timelineTicks.length - 1] !== projectDuration) {
-    timelineTicks.push(projectDuration);
-  }
 
-  const renderCpmTooltip = task => (
-    <div className="gantt-tooltip">
-      <strong>{task.wbsCode} · {task.name}</strong>
-      <span>ES (bắt đầu sớm nhất): {task.es ?? '--'}</span>
-      <span>EF (kết thúc sớm nhất): {task.ef ?? '--'}</span>
-      <span>LS (bắt đầu muộn nhất): {task.ls ?? '--'}</span>
-      <span>LF (kết thúc muộn nhất): {task.lf ?? '--'}</span>
-      <span>Slack (độ trễ cho phép): {task.slack ?? '--'} ngày</span>
-    </div>
-  );
+  const renderCpmTooltip = task => {
+    const plannedStart = formatDateVN(task.startDate);
+    const plannedEnd = formatDateVN(task.endDate);
+    const calculatedStart = formatDateVN(task.calculatedStartDate);
+    const calculatedEnd = formatDateVN(task.calculatedEndDate);
+    const actualStart = formatDateVN(task.actualStartDate);
+    const actualEnd = formatDateVN(task.actualEndDate);
+    const varianceText = formatVariance(task.scheduleVarianceDays);
+
+    return (
+      <div className="gantt-tooltip">
+        <strong>{task.wbsCode ? `${task.wbsCode} · ` : ''}{task.name}</strong>
+
+        {(plannedStart || plannedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+            {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+            {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+          </div>
+        )}
+
+        {(calculatedStart || calculatedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Hiện tại:</span>
+            {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+            {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+          </div>
+        )}
+
+        {varianceText && (
+          <div className="gantt-tooltip-variance">
+            Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+          </div>
+        )}
+
+        {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+          <div className="gantt-tooltip-delay-warning">
+            ⚠ Mở trễ {task.startDelayDays} ngày
+          </div>
+        )}
+
+        {(actualStart || actualEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Thực tế:</span>
+            {actualStart && <div>Bắt đầu: {actualStart}</div>}
+            {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+          </div>
+        )}
+
+        <div className="gantt-tooltip-section gantt-tooltip-cpm">
+          <div>ES: {task.es ?? '--'} · EF: {task.ef ?? '--'}</div>
+          <div>LS: {task.ls ?? '--'} · LF: {task.lf ?? '--'}</div>
+          <div>Slack: {task.slack ?? '--'} ngày</div>
+        </div>
+      </div>
+    );
+  };
 
   const columns = [
     {
@@ -217,96 +261,13 @@ const ProgressPage = () => {
             </div>
 
             <section className="wbs-main-card gantt-section">
-              <div className="wbs-card-header">
-                <div className="wbs-card-title-box">
-                  <span className="wbs-card-title">Biểu đồ Gantt tiến độ</span>
-                  <span className="wbs-card-subtitle">Di chuột hoặc dùng bàn phím để xem thông số CPM</span>
-                </div>
-              </div>
-              {scheduledTasks.length > 0 ? (
-                <div className="gantt-scroll-area">
-                  <div className="gantt-chart" role="table" aria-label="Biểu đồ Gantt và lịch CPM">
-                    <div className="gantt-header" role="row">
-                      <span className="gantt-task-heading" role="columnheader">Công việc</span>
-                      <div className="gantt-axis" role="columnheader" aria-label="Ngày dự án">
-                        <div className="gantt-plot">
-                          {timelineTicks.map(tick => (
-                            <span
-                              className="gantt-tick"
-                              key={tick}
-                              style={{ left: `${(tick / projectDuration) * 100}%` }}
-                            >
-                              {tick}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="gantt-body" role="rowgroup">
-                      {scheduledTasks.map(task => {
-                        const left = (task.es / projectDuration) * 100;
-                        const width = ((task.ef - task.es) / projectDuration) * 100;
-                        const tooltipDescription = [
-                          `${task.name}`,
-                          `ES: ${task.es ?? '--'}`,
-                          `EF: ${task.ef ?? '--'}`,
-                          `LS: ${task.ls ?? '--'}`,
-                          `LF: ${task.lf ?? '--'}`,
-                          `Slack: ${task.slack ?? '--'} ngày`
-                        ].join('. ');
-
-                        return (
-                          <div className="gantt-row" role="row" key={task.id}>
-                            <div className="gantt-task-label" role="rowheader">
-                              <span className="gantt-task-code">{task.wbsCode}</span>
-                              <span className="gantt-task-name">{task.name}</span>
-                              {task.isCritical && <span className="gantt-critical-tag">GĂNG</span>}
-                            </div>
-                            <div className="gantt-track" role="cell">
-                              <div className="gantt-plot">
-                                {timelineTicks.map(tick => (
-                                  <span
-                                    className="gantt-gridline"
-                                    key={tick}
-                                    style={{ left: `${(tick / projectDuration) * 100}%` }}
-                                    aria-hidden="true"
-                                  />
-                                ))}
-                                <Tooltip title={renderCpmTooltip(task)} placement="top">
-                                  <div
-                                    className={`gantt-bar${task.isCritical ? ' is-critical' : ''}`}
-                                    style={{ left: `${left}%`, width: `${width}%` }}
-                                    role="img"
-                                    tabIndex={0}
-                                    aria-label={tooltipDescription}
-                                  />
-                                </Tooltip>
-                                {task.isCritical && (
-                                  <span
-                                    className="gantt-critical-marker"
-                                    style={{ left: `calc(${left + width}% + 5px)` }}
-                                    aria-hidden="true"
-                                  >
-                                    ⚠ GĂNG
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="gantt-legend">
-                    <span><i className="gantt-legend-bar" aria-hidden="true" /> Công việc thường</span>
-                    <span><i className="gantt-legend-bar is-critical" aria-hidden="true" /> Công việc găng (viền đậm, sọc chéo, nhãn)</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="gantt-empty">
-                  <Empty description="Chưa có công việc đủ thời lượng để hiển thị trên biểu đồ" />
-                </div>
-              )}
+              <GanttChart
+                tasks={scheduledTasks}
+                schedule={schedule}
+                scheduleError={pageError}
+                loading={loadingSchedule}
+                renderTooltip={renderCpmTooltip}
+              />
             </section>
 
             <section className="wbs-main-card progress-table-section">

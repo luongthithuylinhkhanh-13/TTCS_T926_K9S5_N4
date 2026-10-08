@@ -224,6 +224,11 @@ public class WbsService {
     }
 
     private void validateActualProgress(WbsItem item) {
+        if (item.getActualEndDate() != null && item.getActualStartDate() == null) {
+            throw new IllegalArgumentException(
+                    "Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế"
+            );
+        }
         if (item.getActualStartDate() != null
                 && item.getActualEndDate() != null
                 && item.getActualEndDate().isBefore(item.getActualStartDate())) {

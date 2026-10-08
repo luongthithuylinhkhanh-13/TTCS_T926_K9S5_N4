@@ -5,10 +5,10 @@ import com.ntdhtcct.domain.CycleDetectionResult;
 import com.ntdhtcct.domain.DependencyType;
 import com.ntdhtcct.domain.TaskDependency;
 import com.ntdhtcct.domain.TaskDependencyGraph;
+import com.ntdhtcct.domain.dependency.TaskDependencyRepository;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
-import com.ntdhtcct.repository.TaskDependencyRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -70,10 +70,12 @@ class TaskDependencyGraphServiceTest {
         WbsItem predecessor = wbsItem(predecessorId);
         WbsItem successor = wbsItem(successorId);
         WbsItem isolated = wbsItem(isolatedId);
-        TaskDependency dependency = new TaskDependency(
+        com.ntdhtcct.domain.dependency.TaskDependency dependency =
+        new com.ntdhtcct.domain.dependency.TaskDependency(
+                projectId,
                 predecessorId,
                 successorId,
-                DependencyType.FS,
+                com.ntdhtcct.domain.dependency.DependencyType.FS,
                 2
         );
         Set<UUID> expectedTaskIds = Set.of(predecessorId, successorId, isolatedId);
@@ -89,7 +91,12 @@ class TaskDependencyGraphServiceTest {
         TaskDependencyGraph graph = graphService.getProjectGraph(projectId);
 
         assertEquals(expectedTaskIds, graph.getNodes().keySet());
-        assertEquals(List.of(dependency), graph.getOutgoingDependencies(predecessorId));
+        com.ntdhtcct.domain.TaskDependency graphDependency =
+                graph.getOutgoingDependencies(predecessorId).getFirst();
+        assertEquals(predecessorId, graphDependency.getPredecessorId());
+        assertEquals(successorId, graphDependency.getSuccessorId());
+        assertEquals(DependencyType.FS, graphDependency.getDependencyType());
+        assertEquals(2, graphDependency.getLagDays());
         assertTrue(graph.getOutgoingDependencies(isolatedId).isEmpty());
         verify(taskDependencyRepository).findByPredecessorIdInAndSuccessorIdIn(
                 eq(expectedTaskIds),
@@ -123,8 +130,16 @@ class TaskDependencyGraphServiceTest {
         UUID nodeB = UUID.randomUUID();
         WbsItem itemA = wbsItem(nodeA);
         WbsItem itemB = wbsItem(nodeB);
-        TaskDependency edgeAtoB = new TaskDependency(nodeA, nodeB, DependencyType.FS, 0);
-        TaskDependency edgeBtoA = new TaskDependency(nodeB, nodeA, DependencyType.FS, 0);
+        com.ntdhtcct.domain.dependency.TaskDependency edgeAtoB =
+                new com.ntdhtcct.domain.dependency.TaskDependency(
+                        projectId, nodeA, nodeB,
+                        com.ntdhtcct.domain.dependency.DependencyType.FS, 0
+                );
+        com.ntdhtcct.domain.dependency.TaskDependency edgeBtoA =
+                new com.ntdhtcct.domain.dependency.TaskDependency(
+                        projectId, nodeB, nodeA,
+                        com.ntdhtcct.domain.dependency.DependencyType.FS, 0
+                );
         Set<UUID> taskIds = Set.of(nodeA, nodeB);
 
         when(projectRepository.existsById(projectId)).thenReturn(true);

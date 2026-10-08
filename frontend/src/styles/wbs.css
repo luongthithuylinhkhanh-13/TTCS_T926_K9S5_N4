@@ -410,11 +410,46 @@
   );
 }
 
+.gantt-legend-bar.is-delayed-start {
+  border: 1.5px solid #d97706;
+  background: #fef3c7;
+}
+
 .gantt-tooltip {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 220px;
+}
+
+.gantt-tooltip-section {
+  margin-top: 3px;
+}
+
+.gantt-tooltip-section-title {
+  font-weight: 600;
+  color: #94a3b8;
+  display: block;
+  font-size: 11px;
+}
+
+.gantt-tooltip-variance {
+  margin-top: 3px;
+  padding: 1px 0;
+  color: #0f172a;
+}
+
+.gantt-tooltip-delay-warning {
+  margin-top: 3px;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.gantt-tooltip-cpm {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 4px;
+  color: #64748b;
+  font-size: 11px;
 }
 
 .gantt-tooltip strong {
@@ -1266,4 +1301,141 @@
 .wbs-code-cell {
   color: #475569;
   font-weight: 600;
+}
+/* ==========================================================================
+   Gantt SVG Timeline Axis (T-30)
+   ========================================================================== */
+
+.gantt-timeline-axis-wrapper {
+  position: relative;
+  background-color: #f8fafc;
+  border-top: 1px solid #cbd5e1;
+}
+
+.gantt-timeline-svg {
+  display: block;
+  user-select: none;
+}
+
+.gantt-timeline-month-group text {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  fill: #334155;
+}
+
+.gantt-timeline-tick text {
+  font-family: inherit;
+  font-size: 11px;
+  fill: #64748b;
+}
+
+.timeline-unit-control-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Gantt Two-Pane Layout & Task Bars (T-31)
+   ========================================================================== */
+
+.gantt-chart-wrapper {
+  margin-bottom: 16px;
+}
+
+.gantt-two-pane-container {
+  display: flex;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+.gantt-left-pane {
+  flex: 0 0 260px;
+  width: 260px;
+  min-width: 260px;
+  max-width: 260px;
+  border-right: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  z-index: 2;
+}
+
+.gantt-left-header {
+  display: flex;
+  align-items: flex-end;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+.gantt-left-row {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid #f1f5f9;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+
+.gantt-left-row:hover {
+  background-color: #f8fafc;
+}
+
+.gantt-left-row.is-critical {
+  background-color: #fff7ed;
+}
+
+.gantt-left-row.is-delayed-start {
+  background-color: #fffbeb;
+}
+
+.gantt-left-row.is-critical.is-delayed-start {
+  background-color: #fff1f2;
+}
+
+.gantt-delayed-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+
+.gantt-right-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gantt-timeline-canvas-container {
+  position: relative;
+}
+
+.gantt-bar-item {
+  cursor: pointer;
+}
+
+.gantt-bar-base {
+  transition: opacity 0.15s ease, stroke-width 0.15s ease;
+}
+
+.gantt-bar-group:hover .gantt-bar-base {
+  filter: brightness(0.95);
+  stroke-width: 2px;
+}
+
+.gantt-bar-delayed-strip {
+  pointer-events: none;
 }
