@@ -1,6 +1,7 @@
 package com.ntdhtcct.domain.user;
 
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
@@ -48,23 +49,29 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
         }
 
         var demoUser = userRepository.findByEmailIgnoreCase("test@test.com");
-        var adminRole = roleRepository.findByName("ADMIN");
+        var adminUser = userRepository.findByEmailIgnoreCase("lanc5676@gmail.com");
+        var adminRole = roleRepository.findByName("PROJECT_MANAGER");
 
-        if (demoUser.isEmpty() || adminRole.isEmpty()) {
+        if (adminRole.isEmpty()) {
             return;
         }
 
         projectRepository.findAll().forEach(project -> {
-            ProjectMember member = projectMemberRepository
-                    .findByProjectIdAndUserId(project.getId(), demoUser.get().getId())
-                    .orElseGet(() -> new ProjectMember(
-                            project,
-                            demoUser.get(),
-                            adminRole.get()
-                    ));
-            member.setRole(adminRole.get());
-            member.setStatus("ACTIVE");
-            projectMemberRepository.save(member);
+            demoUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
+            adminUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
         });
+    }
+
+    private void upsertAdminMember(
+            Project project,
+            com.ntdhtcct.entity.User user,
+            com.ntdhtcct.entity.Role adminRole
+    ) {
+        ProjectMember member = projectMemberRepository
+                .findByProjectIdAndUserId(project.getId(), user.getId())
+                .orElseGet(() -> new ProjectMember(project, user, adminRole));
+        member.setRole(adminRole);
+        member.setStatus("ACTIVE");
+        projectMemberRepository.save(member);
     }
 }

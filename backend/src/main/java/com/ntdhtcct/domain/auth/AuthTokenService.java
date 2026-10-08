@@ -48,12 +48,10 @@ public class AuthTokenService {
     }
 
     public boolean isTokenValid(String token) {
-
         return authTokenRepository
                 .findByTokenAndRevokedFalse(token)
                 .map(authToken ->
-                        authToken.getExpiresAt()
-                                .isAfter(OffsetDateTime.now())
+                        authToken.getExpiresAt().isAfter(OffsetDateTime.now())
                 )
                 .orElse(false);
     }

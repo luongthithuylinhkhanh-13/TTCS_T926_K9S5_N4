@@ -85,8 +85,8 @@ public class AuthorizationService {
                 );
 
         if (activeRoleOpt.isEmpty()) {
-            throw new UnauthorizedException(
-                    "Người dùng không có quyền truy cập công trình này"
+            throw new ForbiddenException(
+                    "Người dùng không phải là thành viên của dự án này"
             );
         }
 
@@ -120,8 +120,7 @@ public class AuthorizationService {
                 || globalProjectRoleEmail == null
                 || globalProjectRoleEmail.isBlank()
                 || globalProjectRole == null
-                || globalProjectRole.isBlank()
-                || requiredRoles == null) {
+                || globalProjectRole.isBlank()) {
             return false;
         }
 
@@ -129,7 +128,8 @@ public class AuthorizationService {
                 .map(user -> globalProjectRoleEmail.equalsIgnoreCase(user.getEmail()))
                 .orElse(false);
         return configuredAccount
-                && (globalProjectRoleCanManage(requiredRoles)
+                && (requiredRoles == null
+                    || globalProjectRoleCanManage(requiredRoles)
                     || (isGlobalProjectManager()
                         && containsRole(requiredRoles, "VIEWER")));
     }
@@ -144,6 +144,9 @@ public class AuthorizationService {
     }
 
     private boolean globalProjectRoleCanManage(String[] requiredRoles) {
+        if (isGlobalAdmin()) {
+            return requiredRoles != null && requiredRoles.length > 0;
+        }
         return isGlobalProjectManager()
                 && containsRole(requiredRoles, "PROJECT_MANAGER");
     }
@@ -152,7 +155,14 @@ public class AuthorizationService {
         return "PROJECT_MANAGER".equalsIgnoreCase(globalProjectRole);
     }
 
+    private boolean isGlobalAdmin() {
+        return "ADMIN".equalsIgnoreCase(globalProjectRole);
+    }
+
     private boolean containsRole(String[] roles, String expectedRole) {
+        if (roles == null) {
+            return false;
+        }
         return Arrays.stream(roles)
                 .anyMatch(role -> expectedRole.equalsIgnoreCase(role));
     }

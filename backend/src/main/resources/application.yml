@@ -32,6 +32,11 @@ spring:
 server:
   port: ${APP_PORT:8080}
 
+schedule:
+  # Ngày lễ Việt Nam năm 2026 được loại trừ khỏi thời lượng dự án.
+  # Chủ nhật được loại tự động trong CalendarConverter.
+  holidays: "2026-01-01,2026-02-14,2026-02-15,2026-02-16,2026-02-17,2026-02-18,2026-02-19,2026-02-20,2026-02-21,2026-04-30,2026-05-01,2026-09-02"
+
 logging:
   level:
     root: INFO

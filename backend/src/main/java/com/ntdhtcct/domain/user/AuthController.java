@@ -58,6 +58,9 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getId()
                                     : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
                             user.getFullName(),
                             authToken.getToken(),
                             authToken.getExpiresAt()
@@ -238,6 +241,9 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getId()
                                     : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
                             user.getFullName()
                     )
             );
@@ -280,6 +286,7 @@ public class AuthController {
                     user.getId(),
                     user.getEmail(),
                     user.getRole() != null ? user.getRole().getId() : null,
+                    user.getRole() != null ? user.getRole().getName() : null,
                     user.getFullName()
             ));
         } catch (IllegalArgumentException e) {
@@ -354,6 +361,7 @@ public class AuthController {
             UUID userId,
             String email,
             UUID roleId,
+            String roleName,
             String fullName,
             String token,
             OffsetDateTime expiresAt
@@ -366,6 +374,7 @@ public class AuthController {
             UUID userId,
             String email,
             UUID roleId,
+            String roleName,
             String fullName
     ) {
     }
