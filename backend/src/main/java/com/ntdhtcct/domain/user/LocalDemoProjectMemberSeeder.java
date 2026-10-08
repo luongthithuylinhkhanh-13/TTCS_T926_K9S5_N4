@@ -6,17 +6,11 @@ import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(4)
-@ConditionalOnProperty(
-        prefix = "spring.datasource",
-        name = "driver-class-name",
-        havingValue = "org.h2.Driver"
-)
 public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 
     private final ProjectRepository projectRepository;
