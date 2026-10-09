@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -23,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class ProjectMemberControllerTest {
 
     private MockMvc mockMvc;
@@ -53,7 +56,7 @@ public class ProjectMemberControllerTest {
         token = "valid-test-token";
         validAuthHeader = "Bearer " + token;
 
-        when(authTokenService.getUserIdFromToken(token)).thenReturn(userId);
+        lenient().when(authTokenService.getUserIdFromToken(token)).thenReturn(userId);
     }
 
     @Test
