@@ -29,11 +29,11 @@ class SyncQueueService {
       if (typeof window === 'undefined' || !window.localStorage) {
         return [];
       }
-      const data = localStorage.getItem(STORAGE_KEY);
+      const data = window.localStorage.getItem(STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (err) {
       console.error('Lỗi khi đọc hàng đợi đồng bộ:', err);
-      return [];
+      throw err;
     }
   }
 
@@ -43,11 +43,14 @@ class SyncQueueService {
   saveQueue(queue) {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+      } else {
+        throw new Error('Không thể truy cập bộ nhớ cục bộ của trình duyệt.');
       }
       this.dispatchQueueEvent();
     } catch (err) {
       console.error('Lỗi khi lưu hàng đợi đồng bộ:', err);
+      throw err;
     }
   }
 

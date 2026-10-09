@@ -160,3 +160,90 @@ test('TC-SYNC-06: T-70 - getStats tính toán đúng số lượng trạng thái
   assert.equal(stats.failed, 1);
   assert.equal(stats.hasPending, true);
 });
+
+test('TC-S29-01: Nhật ký tạo khi offline được lưu trên thiết bị với trạng thái chờ đồng bộ', () => {
+  syncQueueService.clearAll();
+  Object.defineProperty(globalThis.navigator, 'onLine', {
+    value: false,
+    configurable: true,
+    writable: true
+  });
+  const diaryData = {
+    diaryDate: '2026-10-09',
+    weather: 'Mưa nhẹ',
+    temperature: '27°C',
+    engineerCount: 2,
+    workerCount: 24,
+    crewCount: 3,
+    crewDetails: 'Tổ cốt thép: 8 người',
+    equipmentStatus: 'Máy đào: 1 chiếc - hoạt động',
+    workSummary: 'Đổ bê tông móng',
+    workingConditions: 'Mặt bằng trơn do mưa',
+    issues: 'Không có'
+  };
+
+  try {
+    assert.equal(syncQueueService.isOnline(), false);
+    const item = syncQueueService.enqueue({
+      projectId: 'project-offline',
+      entityType: 'SITE_DIARY',
+      action: 'CREATE',
+      endpoint: '/api/projects/project-offline/site-diaries/sync',
+      method: 'POST',
+      payload: diaryData,
+      title: 'Nhật ký ngày 09/10/2026'
+    });
+    const storedQueue = JSON.parse(localStorage.getItem('ntdhtcct_offline_sync_queue_v1'));
+
+    assert.equal(storedQueue.length, 1);
+    assert.equal(storedQueue[0].status, 'PENDING');
+    assert.equal(storedQueue[0].payload.crewDetails, diaryData.crewDetails);
+    assert.equal(storedQueue[0].payload.workingConditions, diaryData.workingConditions);
+    assert.equal(syncQueueService.getPendingItems()[0].id, item.id);
+  } finally {
+    Object.defineProperty(globalThis.navigator, 'onLine', {
+      value: true,
+      configurable: true,
+      writable: true
+    });
+    syncQueueService.clearAll();
+  }
+});
+
+test('TC-S29-02: Không báo lưu thành công nếu thiết bị không ghi được localStorage', () => {
+  syncQueueService.clearAll();
+  Object.defineProperty(globalThis.navigator, 'onLine', {
+    value: false,
+    configurable: true,
+    writable: true
+  });
+  const originalSetItem = localStorage.setItem;
+  const originalError = console.error;
+  localStorage.setItem = () => {
+    throw new Error('Storage full');
+  };
+  console.error = () => {};
+
+  try {
+    assert.throws(
+      () => syncQueueService.enqueue({
+        projectId: 'project-offline',
+        endpoint: '/api/projects/project-offline/site-diaries/sync',
+        payload: {
+          diaryDate: '2026-10-09',
+          workSummary: 'Đổ bê tông móng'
+        }
+      }),
+      /Storage full/
+    );
+  } finally {
+    localStorage.setItem = originalSetItem;
+    console.error = originalError;
+    Object.defineProperty(globalThis.navigator, 'onLine', {
+      value: true,
+      configurable: true,
+      writable: true
+    });
+    syncQueueService.clearAll();
+  }
+});
