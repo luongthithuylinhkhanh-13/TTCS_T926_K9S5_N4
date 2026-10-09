@@ -65,7 +65,7 @@
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
     <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
-         relativeToChangelogFile="false"/>
+             relativeToChangelogFile="false"/>
     <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
     
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
@@ -75,6 +75,14 @@
     <include file="db/migration/v13/V13_0__add_wbs_columns_and_daily_reports.xml"
              relativeToChangelogFile="false"/>
 
+    <!-- T-54, T-55: Quản lý thành viên dự án -->
+    <include file="db/migration/v14/V14_0__create_project_members_and_invitations.xml"
+             relativeToChangelogFile="false"/>
+
     <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-30 (NTDHTCT-214): Nhật ký công trường & hàng đợi đồng bộ tự gửi khi có mạng -->
+    <include file="db/migration/v16/V16_0__create_site_diaries_and_sync_queue.xml"
              relativeToChangelogFile="false"/>
 </databaseChangeLog>

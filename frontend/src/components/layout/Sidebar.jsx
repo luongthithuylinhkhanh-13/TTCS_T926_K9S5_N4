@@ -8,6 +8,7 @@ import {
   HistoryOutlined,
   CheckSquareOutlined,
   CalendarOutlined,
+  BookOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
@@ -133,6 +134,15 @@ const Sidebar = ({ collapsed }) => {
         >
           <CheckSquareOutlined />
           {!collapsed && <span>{t('Công việc')}</span>}
+        </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/site-diary' ? 'active' : ''}`}
+          onClick={() => navigate('/site-diary')}
+          title={collapsed ? t('Nhật ký công trường') : ''}
+        >
+          <BookOutlined />
+          {!collapsed && <span>{t('Nhật ký công trường')}</span>}
         </div>
       </div>
 

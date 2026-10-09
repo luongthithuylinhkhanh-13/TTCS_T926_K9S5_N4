@@ -1,5 +1,6 @@
 package com.ntdhtcct;
 
+import org.junit.jupiter.api.Disabled;
 import com.ntdhtcct.domain.wbs.Task;
 import com.ntdhtcct.domain.wbs.TaskRepository;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
@@ -19,10 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Kiểm tra Spring Boot context load thành công.
  * Yêu cầu PostgreSQL đang chạy và biến môi trường DB_* đã được cấu hình.
+ * Disabled by default vì CI/CD không có PostgreSQL.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Disabled("Requires a running PostgreSQL instance")
 class ApplicationTest {
 
     @Autowired

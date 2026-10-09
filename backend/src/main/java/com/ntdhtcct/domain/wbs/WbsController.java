@@ -245,11 +245,7 @@ public class WbsController {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return false;
         }
-        String token = authorization.substring(7);
-        if (!authTokenService.isTokenValid(token)) {
-            return false;
-        }
-        UUID userId = authTokenService.getUserIdFromToken(token);
+        UUID userId = authenticatedUserId(authorization);
         if (userId == null) {
             return false;
         }
@@ -279,7 +275,6 @@ public class WbsController {
             return null;
         }
     }
-
     private ResponseEntity<ApiResponse> unauthorized(String message) {
         return ResponseEntity.status(401).body(
                 new ApiResponse(
