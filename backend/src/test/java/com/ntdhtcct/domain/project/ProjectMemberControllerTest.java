@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,23 +22,21 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import org.springframework.test.context.TestPropertySource;
-
-@WebMvcTest(ProjectMemberController.class)
-@TestPropertySource(properties = "features.domain-project-member.enabled=true")
+@ExtendWith(MockitoExtension.class)
 public class ProjectMemberControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @Mock
     private ProjectMemberService projectMemberService;
 
-    @MockBean
+    @Mock
     private AuthTokenService authTokenService;
+
+    @InjectMocks
+    private ProjectMemberController projectMemberController;
 
     private UUID projectId;
     private UUID userId;
@@ -45,6 +45,9 @@ public class ProjectMemberControllerTest {
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+        mockMvc = MockMvcBuilders.standaloneSetup(projectMemberController).build();
+
         projectId = UUID.randomUUID();
         userId = UUID.randomUUID();
         token = "valid-test-token";
