@@ -3,9 +3,13 @@ package com.ntdhtcct.service.impl;
 import com.ntdhtcct.common.exception.BadRequestException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.InviteProjectMemberRequest;
+import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.domain.project.ProjectInvitation;
+import com.ntdhtcct.domain.project.ProjectInvitationRepository;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -40,17 +45,20 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectInvitationRepository projectInvitationRepository;
 
     public ProjectMemberServiceImpl(
             ProjectRepository projectRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            ProjectInvitationRepository projectInvitationRepository
     ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.projectInvitationRepository = projectInvitationRepository;
     }
 
     @Override
@@ -131,6 +139,87 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 projectMemberRepository.save(memberToSave);
 
         return ProjectMemberResponse.fromEntity(saved);
+    }
+
+    @Override
+    public ProjectMemberInviteResponse inviteMemberByEmail(
+            UUID projectId,
+            InviteProjectMemberRequest request
+    ) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "PROJECT_NOT_FOUND",
+                                "Không tìm thấy dự án với ID: " + projectId
+                        )
+                );
+
+        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String roleCode = request.getRoleCode().trim().toUpperCase(Locale.ROOT);
+        Role role = roleRepository.findByName(roleCode)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "ROLE_NOT_FOUND",
+                                "Vai trò không tồn tại: " + roleCode
+                        )
+                );
+
+        Optional<User> existingUser = userRepository.findByEmailIgnoreCase(email);
+        if (existingUser.isPresent()) {
+            addMemberToProject(
+                    projectId,
+                    new AddMemberRequest(existingUser.get().getId(), roleCode)
+            );
+            return new ProjectMemberInviteResponse(
+                    "ADDED",
+                    email,
+                    roleCode,
+                    existingUser.get().getId(),
+                    null,
+                    null
+            );
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        Optional<ProjectInvitation> existingInvitation =
+                projectInvitationRepository.findByProjectIdAndEmailIgnoreCaseAndStatus(
+                        projectId,
+                        email,
+                        "PENDING"
+                );
+        if (existingInvitation.isPresent()) {
+            ProjectInvitation invitation = existingInvitation.get();
+            if (invitation.getExpiresAt().isAfter(now)) {
+                throw new BadRequestException(
+                        "INVITATION_ALREADY_PENDING",
+                        "Đã có lời mời đang chờ cho email này"
+                );
+            }
+            invitation.setStatus("EXPIRED");
+            projectInvitationRepository.save(invitation);
+        }
+
+        String token = UUID.randomUUID().toString();
+        OffsetDateTime expiresAt = now.plusDays(7);
+        projectInvitationRepository.save(
+                new ProjectInvitation(
+                        project.getId(),
+                        email,
+                        role.getName(),
+                        token,
+                        "PENDING",
+                        expiresAt
+                )
+        );
+
+        return new ProjectMemberInviteResponse(
+                "INVITED",
+                email,
+                role.getName(),
+                null,
+                token,
+                expiresAt
+        );
     }
 
     @Override

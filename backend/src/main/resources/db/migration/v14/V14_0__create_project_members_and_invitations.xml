@@ -5,8 +5,13 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="V14_0__create_project_members_and_invitations" author="ai-assistant">
-        <!-- Create project_members table -->
+    <changeSet id="V14_0__create_project_members_table" author="ai-assistant">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_members"/>
+            </not>
+        </preConditions>
+
         <createTable tableName="project_members">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
@@ -36,8 +41,15 @@
                                  onDelete="CASCADE"/>
 
         <addUniqueConstraint tableName="project_members" columnNames="project_id, user_id" constraintName="uk_project_members_project_user"/>
+    </changeSet>
 
-        <!-- Create project_invitations table -->
+    <changeSet id="V14_0__create_project_invitations_table" author="ai-assistant">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_invitations"/>
+            </not>
+        </preConditions>
+
         <createTable tableName="project_invitations">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>

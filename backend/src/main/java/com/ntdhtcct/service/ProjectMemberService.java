@@ -1,6 +1,8 @@
 package com.ntdhtcct.service;
 
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.InviteProjectMemberRequest;
+import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 
@@ -16,6 +18,11 @@ public interface ProjectMemberService {
     ProjectMemberResponse addMemberToProject(
             UUID projectId,
             AddMemberRequest request
+    );
+
+    ProjectMemberInviteResponse inviteMemberByEmail(
+            UUID projectId,
+            InviteProjectMemberRequest request
     );
 
     ProjectMemberResponse updateMemberRole(
