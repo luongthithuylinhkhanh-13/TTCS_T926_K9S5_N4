@@ -60,6 +60,13 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.GET, "/api/projects/*/crew-members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.PUT, "/api/projects/*/tasks/*/team-assignment", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.GET, "/api/projects/*/tasks/*/team-assignment/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // S-30 (NTDHTCT-214, NTDHTCT-255, NTDHTCT-256): Hàng đợi đồng bộ nhật ký công trường tự gửi khi có mạng
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/batch-sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

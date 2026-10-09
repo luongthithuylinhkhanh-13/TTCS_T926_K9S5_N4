@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@RestController
+@RestController("rbacProjectMemberController")
 @RequestMapping("/api/projects/{projectId}/members")
 public class ProjectMemberController {
 

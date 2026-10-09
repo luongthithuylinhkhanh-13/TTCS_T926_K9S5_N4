@@ -1,7 +1,7 @@
 package com.ntdhtcct.domain.project;
 
-import com.ntdhtcct.domain.user.User;
-import com.ntdhtcct.domain.user.UserRepository;
+import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

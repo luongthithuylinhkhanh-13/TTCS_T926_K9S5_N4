@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 
-@RestController
+@RestController("invitationProjectMemberController")
 @RequestMapping("/api/projects/{projectId}/members")
 public class ProjectMemberController {
 

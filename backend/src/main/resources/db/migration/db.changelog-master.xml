@@ -80,4 +80,8 @@
 
     <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-30 (NTDHTCT-214): Nhật ký công trường & hàng đợi đồng bộ tự gửi khi có mạng -->
+    <include file="db/migration/v16/V16_0__create_site_diaries_and_sync_queue.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

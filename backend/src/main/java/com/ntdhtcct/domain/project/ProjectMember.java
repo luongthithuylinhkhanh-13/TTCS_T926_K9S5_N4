@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "project_members", uniqueConstraints = {
+@Entity(name = "DomainProjectMember")
+@Table(name = "domain_project_members", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"project_id", "user_id"})
 })
 public class ProjectMember {
