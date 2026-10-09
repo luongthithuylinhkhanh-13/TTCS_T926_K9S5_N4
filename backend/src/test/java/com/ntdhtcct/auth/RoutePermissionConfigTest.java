@@ -46,4 +46,16 @@ class RoutePermissionConfigTest {
 
         assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
     }
+
+    @Test
+    void restrictsProjectMemberInvitationsToProjectManagers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/members/invitations"
+                )
+                .orElseThrow();
+
+        assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
+    }
 }
