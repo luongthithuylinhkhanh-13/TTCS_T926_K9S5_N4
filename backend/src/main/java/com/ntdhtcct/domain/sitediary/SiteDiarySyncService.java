@@ -64,6 +64,10 @@ public class SiteDiarySyncService {
                     request.getClientSyncId(),
                     offlineTime
             );
+            diary.setEngineerCount(request.getEngineerCount());
+            diary.setCrewCount(request.getCrewCount());
+            diary.setCrewDetails(request.getCrewDetails());
+            diary.setWorkingConditions(request.getWorkingConditions());
 
             SiteDiary saved = siteDiaryRepository.save(diary);
             return SiteDiarySyncResult.created(request.getClientSyncId(), saved.getId());
@@ -140,8 +144,12 @@ public class SiteDiarySyncService {
                     diary.setDiaryDate(request.diaryDate());
                     diary.setWeather(request.weather());
                     diary.setTemperature(request.temperature());
+                    diary.setEngineerCount(request.engineerCount());
                     diary.setWorkerCount(request.workerCount());
+                    diary.setCrewCount(request.crewCount());
+                    diary.setCrewDetails(request.crewDetails());
                     diary.setEquipmentStatus(request.equipmentStatus());
+                    diary.setWorkingConditions(request.workingConditions());
                     diary.setWorkSummary(request.workSummary());
                     diary.setIssues(request.issues());
                     return siteDiaryRepository.save(diary);

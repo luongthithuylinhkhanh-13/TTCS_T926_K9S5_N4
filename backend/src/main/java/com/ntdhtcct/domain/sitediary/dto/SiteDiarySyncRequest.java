@@ -21,9 +21,17 @@ public class SiteDiarySyncRequest {
 
     private String temperature;
 
+    private Integer engineerCount;
+
     private Integer workerCount;
 
+    private Integer crewCount;
+
+    private String crewDetails;
+
     private String equipmentStatus;
+
+    private String workingConditions;
 
     @NotBlank(message = "Nội dung thi công không được để trống")
     private String workSummary;
@@ -89,6 +97,14 @@ public class SiteDiarySyncRequest {
         this.temperature = temperature;
     }
 
+    public Integer getEngineerCount() {
+        return engineerCount;
+    }
+
+    public void setEngineerCount(Integer engineerCount) {
+        this.engineerCount = engineerCount;
+    }
+
     public Integer getWorkerCount() {
         return workerCount;
     }
@@ -97,12 +113,36 @@ public class SiteDiarySyncRequest {
         this.workerCount = workerCount;
     }
 
+    public Integer getCrewCount() {
+        return crewCount;
+    }
+
+    public void setCrewCount(Integer crewCount) {
+        this.crewCount = crewCount;
+    }
+
+    public String getCrewDetails() {
+        return crewDetails;
+    }
+
+    public void setCrewDetails(String crewDetails) {
+        this.crewDetails = crewDetails;
+    }
+
     public String getEquipmentStatus() {
         return equipmentStatus;
     }
 
     public void setEquipmentStatus(String equipmentStatus) {
         this.equipmentStatus = equipmentStatus;
+    }
+
+    public String getWorkingConditions() {
+        return workingConditions;
+    }
+
+    public void setWorkingConditions(String workingConditions) {
+        this.workingConditions = workingConditions;
     }
 
     public String getWorkSummary() {

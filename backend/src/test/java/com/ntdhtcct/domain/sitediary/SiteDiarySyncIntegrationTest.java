@@ -208,6 +208,10 @@ public class SiteDiarySyncIntegrationTest {
                 clientSyncId,
                 OffsetDateTime.now()
         );
+        diary.setEngineerCount(3);
+        diary.setCrewCount(4);
+        diary.setCrewDetails("Tổ cốt thép: 8 người\nTổ cốp pha: 6 người");
+        diary.setWorkingConditions("Nắng nóng, mặt bằng khô ráo");
         SiteDiaryResponse response = SiteDiaryResponse.from(diary);
 
         when(siteDiarySyncService.getDiariesByProject(projectId)).thenReturn(List.of(response));
@@ -218,7 +222,11 @@ public class SiteDiarySyncIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].workSummary", equalTo("Gia công cốt thép dầm sàn")))
-                .andExpect(jsonPath("$[0].clientSyncId", equalTo(clientSyncId)));
+                .andExpect(jsonPath("$[0].clientSyncId", equalTo(clientSyncId)))
+                .andExpect(jsonPath("$[0].engineerCount", equalTo(3)))
+                .andExpect(jsonPath("$[0].crewCount", equalTo(4)))
+                .andExpect(jsonPath("$[0].crewDetails", equalTo("Tổ cốt thép: 8 người\nTổ cốp pha: 6 người")))
+                .andExpect(jsonPath("$[0].workingConditions", equalTo("Nắng nóng, mặt bằng khô ráo")));
     }
 
     @Test
@@ -229,8 +237,12 @@ public class SiteDiarySyncIntegrationTest {
                 LocalDate.now(),
                 "Mưa nhẹ",
                 "27°C",
+                2,
                 32,
+                3,
+                "Tổ xây: 10 người",
                 "Máy bơm bê tông",
+                "Mưa làm mặt bằng trơn",
                 "Hoàn thành đổ bê tông sàn tầng 2",
                 "Tạm dừng 30 phút do mưa"
         );
@@ -241,8 +253,12 @@ public class SiteDiarySyncIntegrationTest {
         response.setWorkSummary(request.workSummary());
         response.setWeather(request.weather());
         response.setTemperature(request.temperature());
+        response.setEngineerCount(request.engineerCount());
         response.setWorkerCount(request.workerCount());
+        response.setCrewCount(request.crewCount());
+        response.setCrewDetails(request.crewDetails());
         response.setEquipmentStatus(request.equipmentStatus());
+        response.setWorkingConditions(request.workingConditions());
         response.setIssues(request.issues());
 
         when(siteDiarySyncService.updateDiary(projectId, diaryId, request))
@@ -256,7 +272,10 @@ public class SiteDiarySyncIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", equalTo(diaryId.toString())))
                 .andExpect(jsonPath("$.workSummary", equalTo(request.workSummary())))
-                .andExpect(jsonPath("$.weather", equalTo(request.weather())));
+                .andExpect(jsonPath("$.weather", equalTo(request.weather())))
+                .andExpect(jsonPath("$.engineerCount", equalTo(2)))
+                .andExpect(jsonPath("$.crewDetails", equalTo("Tổ xây: 10 người")))
+                .andExpect(jsonPath("$.workingConditions", equalTo("Mưa làm mặt bằng trơn")));
     }
 
     @Test
@@ -264,7 +283,7 @@ public class SiteDiarySyncIntegrationTest {
     void testUpdateDiaryById_NotFound() throws Exception {
         UUID diaryId = UUID.randomUUID();
         SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
-                LocalDate.now(), null, null, null, null, "Nội dung chỉnh sửa", null
+                LocalDate.now(), null, null, null, null, null, null, null, null, "Nội dung chỉnh sửa", null
         );
         when(siteDiarySyncService.updateDiary(projectId, diaryId, request))
                 .thenReturn(Optional.empty());

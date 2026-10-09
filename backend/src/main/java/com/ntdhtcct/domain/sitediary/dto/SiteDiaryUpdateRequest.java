@@ -10,8 +10,12 @@ public record SiteDiaryUpdateRequest(
         LocalDate diaryDate,
         String weather,
         String temperature,
+        Integer engineerCount,
         Integer workerCount,
+        Integer crewCount,
+        String crewDetails,
         String equipmentStatus,
+        String workingConditions,
         @NotBlank(message = "Nội dung thi công không được để trống")
         String workSummary,
         String issues

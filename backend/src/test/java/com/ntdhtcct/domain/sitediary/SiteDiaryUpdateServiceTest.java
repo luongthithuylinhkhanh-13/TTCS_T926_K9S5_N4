@@ -43,8 +43,12 @@ class SiteDiaryUpdateServiceTest {
                 LocalDate.of(2026, 10, 9),
                 "Mưa nhẹ",
                 "27°C",
+                2,
                 24,
+                3,
+                "Tổ cốt thép: 8 người; tổ cốp pha: 6 người",
                 "Máy bơm",
+                "Mưa làm mặt bằng trơn",
                 "Đổ bê tông móng",
                 "Tạm dừng do mưa"
         );
@@ -61,8 +65,12 @@ class SiteDiaryUpdateServiceTest {
         assertThat(diary.getWorkSummary()).isEqualTo(request.workSummary());
         assertThat(diary.getWeather()).isEqualTo(request.weather());
         assertThat(diary.getTemperature()).isEqualTo(request.temperature());
+        assertThat(diary.getEngineerCount()).isEqualTo(request.engineerCount());
         assertThat(diary.getWorkerCount()).isEqualTo(request.workerCount());
+        assertThat(diary.getCrewCount()).isEqualTo(request.crewCount());
+        assertThat(diary.getCrewDetails()).isEqualTo(request.crewDetails());
         assertThat(diary.getEquipmentStatus()).isEqualTo(request.equipmentStatus());
+        assertThat(diary.getWorkingConditions()).isEqualTo(request.workingConditions());
         assertThat(diary.getIssues()).isEqualTo(request.issues());
         assertThat(diary.getClientSyncId()).isEqualTo("client-sync-1");
         verify(siteDiaryRepository).save(diary);
@@ -78,7 +86,9 @@ class SiteDiaryUpdateServiceTest {
         Optional<?> result = new SiteDiarySyncService(siteDiaryRepository).updateDiary(
                 UUID.randomUUID(),
                 diaryId,
-                new SiteDiaryUpdateRequest(LocalDate.now(), null, null, null, null, "Updated", null)
+                new SiteDiaryUpdateRequest(
+                        LocalDate.now(), null, null, null, null, null, null, null, null, "Updated", null
+                )
         );
 
         assertThat(result).isEmpty();

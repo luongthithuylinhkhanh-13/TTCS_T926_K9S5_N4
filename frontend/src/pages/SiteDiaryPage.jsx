@@ -104,10 +104,14 @@ const SiteDiaryPage = () => {
         diaryDate: values.diaryDate.format('YYYY-MM-DD'),
         weather: values.weather,
         temperature: values.temperature,
+        engineerCount: values.engineerCount,
         workerCount: values.workerCount,
+        crewCount: values.crewCount,
+        crewDetails: values.crewDetails,
         equipmentStatus: values.equipmentStatus,
         workSummary: values.workSummary,
-        issues: values.issues
+        issues: values.issues,
+        workingConditions: values.workingConditions
       };
 
       if (editingDiaryId) {
@@ -164,10 +168,14 @@ const SiteDiaryPage = () => {
       diaryDate: diary.diaryDate ? dayjs(diary.diaryDate) : null,
       weather: diary.weather,
       temperature: diary.temperature,
+      engineerCount: diary.engineerCount,
       workerCount: diary.workerCount,
+      crewCount: diary.crewCount,
+      crewDetails: diary.crewDetails,
       equipmentStatus: diary.equipmentStatus,
       workSummary: diary.workSummary,
-      issues: diary.issues
+      issues: diary.issues,
+      workingConditions: diary.workingConditions
     });
   };
 
@@ -213,8 +221,14 @@ const SiteDiaryPage = () => {
       title: 'Nhân công',
       dataIndex: 'workerCount',
       key: 'workerCount',
-      width: 100,
-      render: count => (count ? `${count} người` : '--')
+      width: 180,
+      render: (_, diary) => (
+        <div>
+          <div>Kỹ sư: {diary.engineerCount ?? '--'}</div>
+          <div>Công nhân: {diary.workerCount ?? '--'}</div>
+          <div>Tổ đội: {diary.crewCount ?? '--'}</div>
+        </div>
+      )
     },
     {
       title: 'Nội dung thi công',
@@ -358,7 +372,7 @@ const SiteDiaryPage = () => {
           loading={loading}
           pagination={{ pageSize: 6, showSizeChanger: true, pageSizeOptions: [6, 10, 20] }}
           size="middle"
-          scroll={{ x: 1080 }}
+          scroll={{ x: 1180 }}
           tableLayout="fixed"
         />
       </Card>
@@ -396,7 +410,7 @@ const SiteDiaryPage = () => {
           }}
         >
           <Row gutter={12}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="diaryDate"
                 label="Ngày ghi nhật ký"
@@ -405,28 +419,48 @@ const SiteDiaryPage = () => {
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item name="weather" label="Thời tiết">
                 <Input placeholder="Nắng, mưa, râm mát..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="temperature" label="Nhiệt độ">
+                <Input placeholder="Ví dụ: 32°C" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={12}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="temperature" label="Nhiệt độ">
-                <Input placeholder="Ví dụ: 32°C" />
+            <Col xs={24} sm={8}>
+              <Form.Item name="engineerCount" label="Số kỹ sư">
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="workerCount" label="Số nhân công">
-                <InputNumber min={0} style={{ width: '100%' }} />
+            <Col xs={24} sm={8}>
+              <Form.Item name="workerCount" label="Số công nhân">
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="crewCount" label="Số tổ đội">
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="equipmentStatus" label="Máy móc và thiết bị">
-            <Input placeholder="Ví dụ: 2 máy đào, 1 cẩu tháp hoạt động bình thường" />
+          <Form.Item name="crewDetails" label="Tổ đội và quân số từng tổ">
+            <TextArea
+              rows={2}
+              placeholder={'Mỗi dòng ghi một tổ, ví dụ:\nTổ cốt thép: 8 người\nTổ cốp pha: 6 người'}
+            />
+          </Form.Item>
+
+          <Form.Item name="equipmentStatus" label="Danh mục máy móc, thiết bị huy động">
+            <TextArea
+              rows={3}
+              placeholder={'Mỗi dòng ghi thiết bị, số lượng và tình trạng, ví dụ:\nMáy đào: 2 chiếc - hoạt động bình thường\nCẩu tháp: 1 chiếc - bảo trì'}
+            />
           </Form.Item>
 
           <Form.Item
@@ -435,6 +469,13 @@ const SiteDiaryPage = () => {
             rules={[{ required: true, message: 'Vui lòng nhập nội dung thi công' }]}
           >
             <TextArea rows={3} placeholder="Ghi lại các công việc đã thực hiện trong ngày..." />
+          </Form.Item>
+
+          <Form.Item name="workingConditions" label="Điều kiện ảnh hưởng đến thi công">
+            <TextArea
+              rows={2}
+              placeholder="Ví dụ: mưa làm nền trơn, gió lớn, thiếu ánh sáng..."
+            />
           </Form.Item>
 
           <Form.Item name="issues" label="Vướng mắc và an toàn lao động">
@@ -481,8 +522,21 @@ const SiteDiaryPage = () => {
             )}
             <div><Text strong>Ngày ghi: </Text>{dayjs(detailDiary.diaryDate).format('DD/MM/YYYY')}</div>
             <div><Text strong>Thời tiết: </Text>{detailDiary.weather || 'Chưa ghi nhận'} {detailDiary.temperature ? `(${detailDiary.temperature})` : ''}</div>
-            <div><Text strong>Số nhân công: </Text>{detailDiary.workerCount ?? 'Chưa ghi nhận'}</div>
-            <div><Text strong>Máy móc & thiết bị: </Text>{detailDiary.equipmentStatus || 'Chưa ghi nhận'}</div>
+            <div><Text strong>Số kỹ sư: </Text>{detailDiary.engineerCount ?? 'Chưa ghi nhận'}</div>
+            <div><Text strong>Số công nhân: </Text>{detailDiary.workerCount ?? 'Chưa ghi nhận'}</div>
+            <div><Text strong>Số tổ đội: </Text>{detailDiary.crewCount ?? 'Chưa ghi nhận'}</div>
+            <div>
+              <Text strong>Tổ đội và quân số từng tổ:</Text>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.crewDetails || 'Chưa ghi nhận'}</div>
+            </div>
+            <div>
+              <Text strong>Danh mục máy móc, thiết bị:</Text>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.equipmentStatus || 'Chưa ghi nhận'}</div>
+            </div>
+            <div>
+              <Text strong>Điều kiện ảnh hưởng đến thi công:</Text>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.workingConditions || 'Chưa ghi nhận'}</div>
+            </div>
             <div>
               <Text strong>Nội dung thi công:</Text>
               <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.workSummary}</div>
