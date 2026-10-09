@@ -4,6 +4,7 @@ import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
 import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
 import { useLocale } from '../utils/LocaleContext';
+import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
 
 const ProgressPage = () => {
   const { t } = useLocale();

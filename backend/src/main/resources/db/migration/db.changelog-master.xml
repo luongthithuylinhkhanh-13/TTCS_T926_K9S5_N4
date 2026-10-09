@@ -67,6 +67,7 @@
     <include file="db/migration/v14/V14_0__create_wbs_item_predecessors.xml"
              relativeToChangelogFile="false"/>
     <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
+    
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
 
