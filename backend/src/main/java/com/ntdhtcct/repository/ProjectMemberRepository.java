@@ -11,7 +11,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
+import org.springframework.context.annotation.Primary;
+
+@Primary
+@Repository("projectMemberRepository")
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
     @Query("SELECT pm.project FROM ProjectMember pm WHERE pm.user.id = :userId AND pm.status = 'ACTIVE'")
