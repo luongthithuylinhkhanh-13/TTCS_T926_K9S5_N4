@@ -10,9 +10,11 @@ import {
   EyeOutlined,
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useLocale } from '../../utils/LocaleContext';
 
 const WbsTreeRow = ({
   node,
@@ -26,20 +28,21 @@ const WbsTreeRow = ({
   onEditNode,
   onDeleteNode
 }) => {
+  const { t } = useLocale();
   const hasChildren = node.children && node.children.length > 0;
 
   // Status mapping helper
   const renderStatusTag = (status) => {
     switch (status) {
       case 'completed':
-        return <Tag color="success">Hoàn thành</Tag>;
+        return <Tag color="success">{t('Hoàn thành')}</Tag>;
       case 'in_progress':
-        return <Tag color="processing">Đang thực hiện</Tag>;
+        return <Tag color="processing">{t('Đang thực hiện')}</Tag>;
       case 'paused':
-        return <Tag color="warning">Tạm dừng</Tag>;
+        return <Tag color="warning">{t('Tạm dừng')}</Tag>;
       case 'not_started':
       default:
-        return <Tag color="default">Chưa bắt đầu</Tag>;
+        return <Tag color="default">{t('Chưa bắt đầu')}</Tag>;
     }
   };
 
@@ -64,19 +67,19 @@ const WbsTreeRow = ({
     {
       key: 'view',
       icon: <EyeOutlined />,
-      label: 'Xem chi tiết',
+      label: t('Xem chi tiết'),
       onClick: () => onViewDetails(node)
     },
     {
       key: 'add_child',
       icon: <PlusOutlined />,
-      label: 'Thêm công việc con',
+      label: t('Thêm công việc con'),
       onClick: () => onAddChild(node)
     },
     {
       key: 'edit',
       icon: <EditOutlined />,
-      label: 'Chỉnh sửa',
+      label: t('Chỉnh sửa'),
       onClick: () => onEditNode(node)
     },
     {
@@ -85,7 +88,7 @@ const WbsTreeRow = ({
     {
       key: 'delete',
       icon: <DeleteOutlined />,
-      label: 'Xóa',
+      label: t('Xóa'),
       danger: true,
       onClick: () => onDeleteNode(node)
     }
@@ -129,18 +132,29 @@ const WbsTreeRow = ({
 
       {/* NGƯỜI PHỤ TRÁCH COLUMN */}
       <td className="tree-cell">
-        {node.assignee ? (
-          <div className="assignee-box">
-            <div className="assignee-avatar">
-              {node.assignee.initials || 'NV'}
+        <div className="assignee-column">
+          {node.assignee ? (
+            <div className="assignee-box">
+              <div className="assignee-avatar">
+                {node.assignee.initials || 'NV'}
+              </div>
+              <span className="assignee-name">{node.assignee.name}</span>
             </div>
-            <span className="assignee-name">{node.assignee.name}</span>
-          </div>
-        ) : (
-          <span style={{ color: '#94A3B8', fontSize: 13, italic: 'true' }}>
-            {node.type === 'task' ? 'Chưa phân công' : '--'}
-          </span>
-        )}
+          ) : node.type === 'task' ? (
+            !node.assignedTeamName && (
+              <span style={{ color: '#94A3B8', fontSize: 13, fontStyle: 'italic' }}>
+                {t('Chưa phân công')}
+              </span>
+            )
+          ) : (
+            <span style={{ color: '#94A3B8', fontSize: 13 }}>--</span>
+          )}
+          {node.assignedTeamName && (
+            <Tag color="blue" className="assigned-team-tag">
+              <TeamOutlined /> {node.assignedTeamName}
+            </Tag>
+          )}
+        </div>
       </td>
 
       {/* PLANNED START COLUMN */}

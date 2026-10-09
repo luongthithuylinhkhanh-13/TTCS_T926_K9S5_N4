@@ -58,6 +58,10 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getId()
                                     : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName(),
                             authToken.getToken(),
                             authToken.getExpiresAt()
                     )
@@ -236,7 +240,11 @@ public class AuthController {
                             user.getEmail(),
                             user.getRole() != null
                                     ? user.getRole().getId()
-                                    : null
+                                    : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName()
                     )
             );
 
@@ -248,6 +256,43 @@ public class AuthController {
                             e.getMessage()
                     )
             );
+        }
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMe(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @Valid @RequestBody ProfileUpdateRequest request
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(false, "Token không hợp lệ hoặc không được cung cấp")
+            );
+        }
+
+        try {
+            UUID userId = authTokenService.getUserIdFromToken(authorization.substring(7));
+            User user = userService.updateProfile(
+                    userId,
+                    request.fullName(),
+                    request.email(),
+                    request.currentPassword(),
+                    request.newPassword()
+            );
+            return ResponseEntity.ok(new MeResponse(
+                    true,
+                    "Cập nhật thông tin cá nhân thành công",
+                    user.getId(),
+                    user.getEmail(),
+                    user.getRole() != null ? user.getRole().getId() : null,
+                    user.getRole() != null ? user.getRole().getName() : null,
+                    user.getFullName()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(new ErrorResponse(false, e.getMessage()));
         }
     }
 
@@ -293,12 +338,31 @@ public class AuthController {
     ) {
     }
 
+    public record ProfileUpdateRequest(
+            @NotBlank(message = "Họ và tên không được để trống")
+            @Size(max = 255, message = "Họ và tên không được vượt quá 255 ký tự")
+            String fullName,
+
+            @NotBlank(message = "Email không được để trống")
+            @Email(message = "Email không đúng định dạng")
+            @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
+            String email,
+
+            @NotBlank(message = "Vui lòng nhập mật khẩu hiện tại")
+            String currentPassword,
+
+            String newPassword
+    ) {
+    }
+
     public record LoginResponse(
             boolean success,
             String message,
             UUID userId,
             String email,
             UUID roleId,
+            String roleName,
+            String fullName,
             String token,
             OffsetDateTime expiresAt
     ) {
@@ -309,7 +373,9 @@ public class AuthController {
             String message,
             UUID userId,
             String email,
-            UUID roleId
+            UUID roleId,
+            String roleName,
+            String fullName
     ) {
     }
 

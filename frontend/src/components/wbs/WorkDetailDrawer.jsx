@@ -1,5 +1,6 @@
 import TaskDependencySection from './TaskDependencySection';
 import CategoryTaskSection from './CategoryTaskSection';
+import TeamAssignmentSection from './TeamAssignmentSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -14,6 +15,7 @@ import {
   ApartmentOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useLocale } from '../../utils/LocaleContext';
 
 const WorkDetailDrawer = ({
   visible,
@@ -24,21 +26,23 @@ const WorkDetailDrawer = ({
   onAddChild,
   onEditNode,
   onDeleteNode,
+  onTeamAssigned,
   allTasks = []
 }) => {
+  const { t } = useLocale();
   if (!node) return null;
 
   const renderStatusTag = (status) => {
     switch (status) {
       case 'completed':
-        return <Tag color="success" style={{ borderRadius: 6, fontWeight: 600 }}>Hoàn thành</Tag>;
+        return <Tag color="success" style={{ borderRadius: 6, fontWeight: 600 }}>{t('Hoàn thành')}</Tag>;
       case 'in_progress':
-        return <Tag color="processing" style={{ borderRadius: 6, fontWeight: 600 }}>Đang thực hiện</Tag>;
+        return <Tag color="processing" style={{ borderRadius: 6, fontWeight: 600 }}>{t('Đang thực hiện')}</Tag>;
       case 'paused':
-        return <Tag color="warning" style={{ borderRadius: 6, fontWeight: 600 }}>Tạm dừng</Tag>;
+        return <Tag color="warning" style={{ borderRadius: 6, fontWeight: 600 }}>{t('Tạm dừng')}</Tag>;
       case 'not_started':
       default:
-        return <Tag color="default" style={{ borderRadius: 6, fontWeight: 600 }}>Chưa bắt đầu</Tag>;
+        return <Tag color="default" style={{ borderRadius: 6, fontWeight: 600 }}>{t('Chưa bắt đầu')}</Tag>;
     }
   };
 
@@ -60,7 +64,7 @@ const WorkDetailDrawer = ({
     const start = dayjs(node.startDate);
     const end = dayjs(node.endDate);
     const diff = end.diff(start, 'day') + 1;
-    return diff > 0 ? `${diff} ngày` : '--';
+    return diff > 0 ? `${diff} ${t('ngày')}` : '--';
   };
 
   const progressVal = node.progressPercent ?? node.progress ?? 0;
@@ -79,7 +83,7 @@ const WorkDetailDrawer = ({
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ApartmentOutlined style={{ color: '#2563EB', fontSize: 18 }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#172B4D' }}>Chi tiết công việc</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#172B4D' }}>{t('Chi tiết công việc')}</span>
         </div>
       }
       placement="right"
@@ -111,12 +115,12 @@ const WorkDetailDrawer = ({
         <div className="drawer-section">
           <div className="drawer-section-title">
             <ClockCircleOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            TIẾN ĐỘ THI CÔNG
+            {t('TIẾN ĐỘ THI CÔNG')}
           </div>
           <div className="drawer-progress-card">
             <div className="drawer-progress-labels">
-              <span>Đã thực hiện: <strong style={{ color: progressColor, fontSize: 18 }}>{progressVal}%</strong></span>
-              <span style={{ color: '#94A3B8', fontSize: 13 }}>Còn lại: {100 - progressVal}%</span>
+              <span>{t('Đã thực hiện')}: <strong style={{ color: progressColor, fontSize: 18 }}>{progressVal}%</strong></span>
+              <span style={{ color: '#94A3B8', fontSize: 13 }}>{t('Còn lại')}: {100 - progressVal}%</span>
             </div>
             <Progress
               percent={progressVal}
@@ -132,18 +136,18 @@ const WorkDetailDrawer = ({
         <div className="drawer-section">
           <div className="drawer-section-title">
             <FileTextOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            KEY DETAILS
+            {t('KEY DETAILS')}
           </div>
           <div className="drawer-info-grid">
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Priority</span>
+              <span className="drawer-info-label">{t('Priority')}</span>
               <div style={{ marginTop: 4 }}>
                 {renderPriorityTag(node.priority || 'Medium')}
               </div>
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Người phụ trách</span>
+              <span className="drawer-info-label">{t('Người phụ trách')}</span>
               {node.assignee ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <Avatar
@@ -155,12 +159,12 @@ const WorkDetailDrawer = ({
                   <span className="drawer-info-value">{node.assignee.name}</span>
                 </div>
               ) : (
-                <span className="drawer-info-empty">Chưa phân công</span>
+                <span className="drawer-info-empty">{t('Chưa phân công')}</span>
               )}
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày bắt đầu kế hoạch</span>
+              <span className="drawer-info-label">{t('Ngày bắt đầu kế hoạch')}</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#64748B' }} />
                 {node.startDate ? dayjs(node.startDate).format('DD/MM/YYYY') : '--'}
@@ -168,7 +172,7 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày kết thúc kế hoạch</span>
+              <span className="drawer-info-label">{t('Ngày kết thúc kế hoạch')}</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#64748B' }} />
                 {node.endDate ? dayjs(node.endDate).format('DD/MM/YYYY') : '--'}
@@ -176,7 +180,7 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày bắt đầu thực tế</span>
+              <span className="drawer-info-label">{t('Ngày bắt đầu thực tế')}</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#0f766e' }} />
                 {node.actualStartDate ? dayjs(node.actualStartDate).format('DD/MM/YYYY') : '--'}
@@ -184,7 +188,7 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Ngày kết thúc thực tế</span>
+              <span className="drawer-info-label">{t('Ngày kết thúc thực tế')}</span>
               <span className="drawer-info-value">
                 <CalendarOutlined style={{ marginRight: 5, color: '#0f766e' }} />
                 {node.actualEndDate ? dayjs(node.actualEndDate).format('DD/MM/YYYY') : '--'}
@@ -192,20 +196,26 @@ const WorkDetailDrawer = ({
             </div>
 
             <div className="drawer-info-item">
-              <span className="drawer-info-label">Thời lượng</span>
+              <span className="drawer-info-label">{t('Thời lượng')}</span>
               <span className="drawer-info-value" style={{ fontWeight: 700 }}>{getDurationDays()}</span>
             </div>
           </div>
         </div>
 
+        <TeamAssignmentSection
+          projectId={projectId}
+          task={node}
+          onAssigned={onTeamAssigned}
+        />
+
         {/* === DESCRIPTION SECTION === */}
         <div className="drawer-section">
           <div className="drawer-section-title">
             <FileTextOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            DESCRIPTION
+            {t('DESCRIPTION')}
           </div>
           <div className="drawer-description">
-            {node.description || <span className="drawer-info-empty">Chưa có mô tả</span>}
+            {node.description || <span className="drawer-info-empty">{t('Chưa có mô tả')}</span>}
           </div>
         </div>
 
@@ -214,20 +224,20 @@ const WorkDetailDrawer = ({
           <div className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>
               <ApartmentOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-              SUBTASKS
+              {t('SUBTASKS')}
             </span>
             <span style={{ color: '#64748B', fontSize: 12, fontWeight: 600 }}>
-              {Array.isArray(node.children) ? node.children.length : 0} items
+              {Array.isArray(node.children) ? node.children.length : 0} {t('items')}
             </span>
           </div>
 
           {Array.isArray(node.children) && node.children.length > 0 ? (
             <div style={{ border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 0.9fr 1fr', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: '#475569', fontSize: 12 }}>
-                <div style={{ padding: '10px 12px' }}>Work</div>
-                <div style={{ padding: '10px 12px' }}>Pri...</div>
-                <div style={{ padding: '10px 12px' }}>Ass...</div>
-                <div style={{ padding: '10px 12px' }}>Status</div>
+                <div style={{ padding: '10px 12px' }}>{t('Work')}</div>
+                <div style={{ padding: '10px 12px' }}>{t('Priority')}</div>
+                <div style={{ padding: '10px 12px' }}>{t('Assignee')}</div>
+                <div style={{ padding: '10px 12px' }}>{t('Status')}</div>
               </div>
 
               {node.children.map((child) => (
@@ -257,7 +267,7 @@ const WorkDetailDrawer = ({
             </div>
           ) : (
             <div className="drawer-empty-images">
-              <span>Chưa có công việc con</span>
+              <span>{t('Chưa có công việc con')}</span>
             </div>
           )}
         </div>
@@ -266,7 +276,7 @@ const WorkDetailDrawer = ({
         <div className="drawer-section">
           <div className="drawer-section-title">
             <PictureOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-            HÌNH ẢNH HIỆN TRƯỜNG
+            {t('HÌNH ẢNH HIỆN TRƯỜNG')}
           </div>
           {node.images && node.images.length > 0 ? (
             <Image.PreviewGroup>
@@ -281,7 +291,7 @@ const WorkDetailDrawer = ({
                         width="100%"
                         height={110}
                         style={{ objectFit: 'cover', borderRadius: 8, display: 'block' }}
-                        fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='110' viewBox='0 0 120 110'%3E%3Crect width='120' height='110' fill='%23F1F5F9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394A3B8' font-size='11'%3EKhông có ảnh%3C/text%3E%3C/svg%3E"
+                        fallback={`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='110' viewBox='0 0 120 110'%3E%3Crect width='120' height='110' fill='%23F1F5F9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394A3B8' font-size='11'%3E${encodeURIComponent(t('Không có ảnh'))}%3C/text%3E%3C/svg%3E`}
                       />
                       <div className="drawer-image-caption">{caption}</div>
                     </div>
@@ -292,7 +302,7 @@ const WorkDetailDrawer = ({
           ) : (
             <div className="drawer-empty-images">
               <PictureOutlined style={{ fontSize: 28, color: '#CBD5E1', marginBottom: 8 }} />
-              <span>Chưa có hình ảnh hiện trường</span>
+              <span>{t('Chưa có hình ảnh hiện trường')}</span>
             </div>
           )}
         </div>
@@ -302,7 +312,7 @@ const WorkDetailDrawer = ({
           <div className="drawer-section">
             <div className="drawer-section-title">
               <ApartmentOutlined style={{ marginRight: 6, color: '#2563EB' }} />
-              CÔNG VIỆC CON ({node.children.length})
+              {t('CÔNG VIỆC CON')} ({node.children.length})
             </div>
             <List
               size="small"
@@ -339,7 +349,7 @@ const WorkDetailDrawer = ({
           onClick={() => onAddChild(node)}
           size="small"
         >
-          Thêm công việc con
+          {t('Thêm công việc con')}
         </Button>
         <Space>
           <Button
@@ -348,7 +358,7 @@ const WorkDetailDrawer = ({
             size="small"
             onClick={() => onEditNode(node)}
           >
-            Chỉnh sửa
+            {t('Chỉnh sửa')}
           </Button>
           <Button
             danger
@@ -356,7 +366,7 @@ const WorkDetailDrawer = ({
             size="small"
             onClick={() => onDeleteNode(node)}
           >
-            Xóa
+            {t('Xóa')}
           </Button>
         </Space>
       </div>

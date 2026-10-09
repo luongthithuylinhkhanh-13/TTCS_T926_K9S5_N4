@@ -1,35 +1,35 @@
 package com.ntdhtcct.domain.user;
 
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(4)
-@ConditionalOnProperty(
-        prefix = "spring.datasource",
-        name = "driver-class-name",
-        havingValue = "org.h2.Driver"
-)
 public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 
+    private final Environment environment;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
 
     public LocalDemoProjectMemberSeeder(
+            Environment environment,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             RoleRepository roleRepository,
             UserRepository userRepository
     ) {
+        this.environment = environment;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.roleRepository = roleRepository;
@@ -38,20 +38,40 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        var demoUser = userRepository.findByEmailIgnoreCase("test@test.com");
-        var adminRole = roleRepository.findByName("ADMIN");
+        boolean isH2 = "org.h2.Driver".equals(
+                environment.getProperty("spring.datasource.driver-class-name")
+        );
+        boolean isLocalDemoProfile = environment.acceptsProfiles(
+                Profiles.of("local", "demo")
+        );
+        if (!isH2 && !isLocalDemoProfile) {
+            return;
+        }
 
-        if (demoUser.isEmpty() || adminRole.isEmpty()) {
+        var demoUser = userRepository.findByEmailIgnoreCase("test@test.com");
+        var adminUser = userRepository.findByEmailIgnoreCase("lanc5676@gmail.com");
+        var adminRole = roleRepository.findByName("PROJECT_MANAGER");
+
+        if (adminRole.isEmpty()) {
             return;
         }
 
         projectRepository.findAll().forEach(project -> {
-            if (!projectMemberRepository.existsByProjectIdAndUserIdAndStatus(
-                    project.getId(), demoUser.get().getId(), "ACTIVE")) {
-                projectMemberRepository.save(
-                        new ProjectMember(project, demoUser.get(), adminRole.get())
-                );
-            }
+            demoUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
+            adminUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
         });
+    }
+
+    private void upsertAdminMember(
+            Project project,
+            com.ntdhtcct.entity.User user,
+            com.ntdhtcct.entity.Role adminRole
+    ) {
+        ProjectMember member = projectMemberRepository
+                .findByProjectIdAndUserId(project.getId(), user.getId())
+                .orElseGet(() -> new ProjectMember(project, user, adminRole));
+        member.setRole(adminRole);
+        member.setStatus("ACTIVE");
+        projectMemberRepository.save(member);
     }
 }

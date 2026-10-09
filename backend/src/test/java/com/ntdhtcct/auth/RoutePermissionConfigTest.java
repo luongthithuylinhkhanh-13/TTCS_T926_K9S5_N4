@@ -34,4 +34,16 @@ class RoutePermissionConfigTest {
 
         assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
     }
+
+    @Test
+    void restrictsCrewReassignmentToProjectManagers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.PUT.name(),
+                        "/api/projects/123/tasks/456/team-assignment"
+                )
+                .orElseThrow();
+
+        assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
+    }
 }
