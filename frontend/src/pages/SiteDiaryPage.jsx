@@ -40,6 +40,9 @@ const SiteDiaryPage = () => {
   const [diaries, setDiaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [online, setOnline] = useState(() => (
+    typeof navigator === 'undefined' || !('onLine' in navigator) || navigator.onLine
+  ));
   const [editingDiaryId, setEditingDiaryId] = useState(null);
   const [detailDiary, setDetailDiary] = useState(null);
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
@@ -77,6 +80,16 @@ const SiteDiaryPage = () => {
   useEffect(() => {
     loadDiaries();
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    const updateOnlineStatus = () => setOnline(navigator.onLine);
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
 
   // Lắng nghe sự kiện đồng bộ để tự động làm mới danh sách
   useEffect(() => {
@@ -298,6 +311,15 @@ const SiteDiaryPage = () => {
   return (
     <div style={{ padding: '24px', width: '100%', maxWidth: '1440px', margin: '0 auto', boxSizing: 'border-box' }}>
       {/* Tiêu đề */}
+      {!online && (
+        <Alert
+          type="warning"
+          showIcon
+          title="Đang ngoại tuyến"
+          description="Bạn vẫn có thể tạo nhật ký. Nội dung sẽ được lưu trên thiết bị và tự đồng bộ khi có mạng."
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <div
         style={{
           display: 'flex',
