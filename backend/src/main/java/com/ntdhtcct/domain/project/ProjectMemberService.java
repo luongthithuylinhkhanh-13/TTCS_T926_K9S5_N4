@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Service
+@Service("domainProjectMemberService")
 public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
