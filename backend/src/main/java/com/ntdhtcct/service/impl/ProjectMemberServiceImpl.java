@@ -252,4 +252,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
         return ProjectMemberResponse.fromEntity(member);
     }
+
+    @Override
+    public boolean hasAccess(UUID projectId, UUID userId) {
+        return projectMemberRepository.existsByProjectIdAndUserIdAndStatus(
+                projectId,
+                userId,
+                "ACTIVE"
+        );
+    }
 }

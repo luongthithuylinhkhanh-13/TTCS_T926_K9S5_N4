@@ -14,6 +14,9 @@ import java.util.UUID;
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
+    @Query("SELECT pm.project FROM ProjectMember pm WHERE pm.user.id = :userId AND pm.status = 'ACTIVE'")
+    List<Project> findActiveProjectsByUserId(@Param("userId") UUID userId);
+
     Optional<ProjectMember> findByProjectIdAndUserId(
             UUID projectId,
             UUID userId
@@ -28,14 +31,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     List<ProjectMember> findByProjectId(UUID projectId);
 
     List<ProjectMember> findByUserId(UUID userId);
-
-    @Query("""
-        SELECT pm.project
-        FROM ProjectMember pm
-        WHERE pm.user.id = :userId
-          AND pm.status = 'ACTIVE'
-    """)
-    List<Project> findActiveProjectsByUserId(@Param("userId") UUID userId);
 
     boolean existsByProjectIdAndUserIdAndStatus(
             UUID projectId,

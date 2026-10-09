@@ -17,7 +17,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18
+        image: postgres:16
         env:
           POSTGRES_DB: construction_management
           POSTGRES_USER: postgres
@@ -97,26 +97,22 @@ jobs:
       - name: Start Staging with Docker Compose
         run: |
           docker compose -f docker-compose.staging.yml up -d
-          sleep 20
           docker compose -f docker-compose.staging.yml ps
 
       - name: Verify Staging System Accessibility
         run: |
-          echo "Waiting for Staging Backend to become accessible..."
-          READY=false
-          for i in $(seq 1 30); do
-            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5432 || echo "000")
-            echo "Attempt $i: Response code received: $RESPONSE_CODE"
-            if [ "$RESPONSE_CODE" != "000" ] && [ "$RESPONSE_CODE" != "000000" ]; then
-              READY=true
+          echo "Waiting for Staging Backend to be ready..."
+          MAX_RETRIES=18
+          RETRY_INTERVAL=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_RETRIES - Response code: $RESPONSE_CODE"
+            if [ "$RESPONSE_CODE" != "000" ]; then
               echo "Staging backend is accessible with status $RESPONSE_CODE!"
-              break
+              exit 0
             fi
-            sleep 2
+            sleep $RETRY_INTERVAL
           done
-
-          if [ "$READY" != "true" ]; then
-            echo "Failed to connect to Staging! Showing container logs:"
-            docker compose logs
-            exit 1
-          fi
+          echo "Failed to connect to Staging after $MAX_RETRIES attempts!"
+          docker compose -f docker-compose.staging.yml logs backend
+          exit 1
