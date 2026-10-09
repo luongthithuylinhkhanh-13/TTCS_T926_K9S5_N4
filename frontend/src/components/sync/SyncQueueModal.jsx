@@ -144,7 +144,7 @@ const SyncQueueModal = ({ open, onClose, onSyncNow, isSyncing }) => {
       ]}
     >
       <div style={{ marginBottom: '12px', fontSize: '13px', color: '#595959' }}>
-        Khi thiết bị mất kết nối mạng, các thao tác tạo mới và cập nhật sẽ được lưu an toàn vào hàng đợi ngoại tuyến. 
+        Khi thiết bị mất kết nối mạng, các thao tác tạo mới và cập nhật sẽ được lưu an toàn vào hàng đợi ngoại tuyến.
         Hệ thống sẽ <strong>tự động gửi lên máy chủ</strong> ngay khi có mạng trở lại.
       </div>
 

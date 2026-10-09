@@ -8,5 +8,9 @@ import java.util.UUID;
 public interface ProjectInvitationRepository extends JpaRepository<ProjectInvitation, UUID> {
     List<ProjectInvitation> findByProjectId(UUID projectId);
     Optional<ProjectInvitation> findByToken(String token);
-    Optional<ProjectInvitation> findByProjectIdAndEmailAndStatus(UUID projectId, String email, String status);
+    Optional<ProjectInvitation> findByProjectIdAndEmailIgnoreCaseAndStatus(
+            UUID projectId,
+            String email,
+            String status
+    );
 }

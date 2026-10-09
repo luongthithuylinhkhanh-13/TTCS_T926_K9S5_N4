@@ -295,7 +295,6 @@ public class AuthController {
             return ResponseEntity.status(401).body(new ErrorResponse(false, e.getMessage()));
         }
     }
-
     /**
      * =========================
      * REQUEST / RESPONSE

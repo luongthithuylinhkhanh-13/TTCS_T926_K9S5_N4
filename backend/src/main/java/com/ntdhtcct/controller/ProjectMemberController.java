@@ -3,6 +3,8 @@ package com.ntdhtcct.controller;
 import com.ntdhtcct.auth.annotation.RequireProjectRole;
 import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.InviteProjectMemberRequest;
+import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 import com.ntdhtcct.service.ProjectMemberService;
@@ -48,6 +50,25 @@ public class ProjectMemberController {
                                 response
                         )
                 );
+    }
+
+    @PostMapping("/invitations")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    public ResponseEntity<ApiResponse<ProjectMemberInviteResponse>> inviteMember(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody InviteProjectMemberRequest request) {
+
+        ProjectMemberInviteResponse response =
+                projectMemberService.inviteMemberByEmail(projectId, request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(
+                        "ADDED".equals(response.status())
+                                ? "Người dùng đã được thêm vào dự án"
+                                : "Lời mời đã được tạo",
+                        response
+                ));
     }
 
     /**

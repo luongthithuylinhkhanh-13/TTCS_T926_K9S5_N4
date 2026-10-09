@@ -5,9 +5,14 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="V14_0__create_project_members_and_invitations" author="ai-assistant">
-        <!-- Create domain_project_members table -->
-        <createTable tableName="domain_project_members">
+    <changeSet id="V14_0__create_project_members_table" author="ai-assistant">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_members"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="project_members">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -25,19 +30,26 @@
             </column>
         </createTable>
 
-        <addForeignKeyConstraint baseTableName="domain_project_members" baseColumnNames="project_id"
+        <addForeignKeyConstraint baseTableName="project_members" baseColumnNames="project_id"
                                  referencedTableName="projects" referencedColumnNames="id"
-                                 constraintName="fk_domain_project_members_project_id"
+                                 constraintName="fk_project_members_project_id"
                                  onDelete="CASCADE"/>
 
-        <addForeignKeyConstraint baseTableName="domain_project_members" baseColumnNames="user_id"
+        <addForeignKeyConstraint baseTableName="project_members" baseColumnNames="user_id"
                                  referencedTableName="users" referencedColumnNames="id"
-                                 constraintName="fk_domain_project_members_user_id"
+                                 constraintName="fk_project_members_user_id"
                                  onDelete="CASCADE"/>
 
-        <addUniqueConstraint tableName="domain_project_members" columnNames="project_id, user_id" constraintName="uk_domain_project_members_project_user"/>
+        <addUniqueConstraint tableName="project_members" columnNames="project_id, user_id" constraintName="uk_project_members_project_user"/>
+    </changeSet>
 
-        <!-- Create project_invitations table -->
+    <changeSet id="V14_0__create_project_invitations_table" author="ai-assistant">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_invitations"/>
+            </not>
+        </preConditions>
+
         <createTable tableName="project_invitations">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>

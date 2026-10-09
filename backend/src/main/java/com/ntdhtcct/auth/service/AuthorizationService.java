@@ -85,9 +85,13 @@ public class AuthorizationService {
                 );
 
         if (activeRoleOpt.isEmpty()) {
-            throw new ForbiddenException(
-                    "Người dùng không phải là thành viên của dự án này"
-            );
+            if (canViewAllProjects(userId)) {
+                    activeRoleOpt = Optional.of(globalProjectRole);
+            } else {
+                throw new ForbiddenException(
+                        "Người dùng không phải là thành viên của dự án này"
+                );
+            }
         }
 
         String userRole = activeRoleOpt.get();
@@ -103,6 +107,14 @@ public class AuthorizationService {
                 if (allowedRole != null
                         && allowedRole.trim().equalsIgnoreCase(userRole)) {
                     return userRole;
+                }
+            }
+            // Allow global viewer to access VIEWER-only routes
+            if (canViewAllProjects(userId)) {
+                for (String allowedRole : requiredRoles) {
+                    if ("VIEWER".equalsIgnoreCase(allowedRole)) {
+                        return "VIEWER";
+                    }
                 }
             }
         }
