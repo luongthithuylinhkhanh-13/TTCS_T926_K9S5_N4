@@ -33,7 +33,7 @@ class TasksMigrationTest {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
             Liquibase liquibase = new Liquibase(
-                    "db/migration/v13/V13_0__create_tasks_table.xml",
+                    "db/migration/v13/V13_1__create_tasks_table.xml",
                     new ClassLoaderResourceAccessor(),
                     database
             );

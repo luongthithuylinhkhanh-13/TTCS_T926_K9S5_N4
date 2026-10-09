@@ -20,7 +20,10 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.test.context.TestPropertySource;
+
 @WebMvcTest(ProjectMemberController.class)
+@TestPropertySource(properties = "features.domain-project-member.enabled=true")
 public class ProjectMemberControllerTest {
 
     @Autowired

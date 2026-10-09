@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 @RestController("invitationProjectMemberController")
+@ConditionalOnProperty(name = "features.domain-project-member.enabled", havingValue = "true", matchIfMissing = false)
 @RequestMapping("/api/projects/{projectId}/members")
 public class ProjectMemberController {
 
