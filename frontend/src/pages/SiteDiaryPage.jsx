@@ -11,7 +11,7 @@ import {
   Row,
   Col,
   Alert,
-  Switch,
+  Modal,
   notification,
   Select,
   Typography,
@@ -20,18 +20,15 @@ import {
 import {
   BookOutlined,
   CloudUploadOutlined,
-  WifiOutlined,
-  DisconnectOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  EyeOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
-import { submitSiteDiary, getSiteDiaries } from '../services/siteDiaryApi';
-import syncQueueService from '../services/syncQueueService';
-import autoSyncService from '../services/autoSyncService';
-import SyncQueueStatusBar from '../components/sync/SyncQueueStatusBar';
+import { submitSiteDiary, getSiteDiaries, updateSiteDiary } from '../services/siteDiaryApi';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -43,7 +40,9 @@ const SiteDiaryPage = () => {
   const [diaries, setDiaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [simulateOffline, setSimulateOffline] = useState(false);
+  const [editingDiaryId, setEditingDiaryId] = useState(null);
+  const [detailDiary, setDetailDiary] = useState(null);
+  const [diaryModalOpen, setDiaryModalOpen] = useState(false);
 
   // Tải danh sách dự án
   useEffect(() => {
@@ -111,23 +110,14 @@ const SiteDiaryPage = () => {
         issues: values.issues
       };
 
-      // Nếu đang bật cờ giả lập offline
-      if (simulateOffline) {
-        const queueItem = syncQueueService.enqueue({
-          projectId: selectedProjectId,
-          entityType: 'SITE_DIARY',
-          action: 'CREATE',
-          endpoint: `/api/projects/${selectedProjectId}/site-diaries/sync`,
-          method: 'POST',
-          payload,
-          title: `Nhật ký ${payload.diaryDate} (Mô phỏng ngoại tuyến)`
-        });
-
-        notification.info({
-          message: 'Đã đưa vào hàng đợi ngoại tuyến (T-70)',
-          description: `Đang giả lập mất mạng. Bản ghi được lưu cục bộ. Khi tắt giả lập hoặc có mạng, hệ thống sẽ tự động gửi (T-71).`,
+      if (editingDiaryId) {
+        await updateSiteDiary(selectedProjectId, editingDiaryId, payload);
+        notification.success({
+          message: 'Đã cập nhật nhật ký',
+          description: 'Nội dung nhật ký đã được cập nhật trên máy chủ.',
           placement: 'bottomRight'
         });
+        setEditingDiaryId(null);
       } else {
         const result = await submitSiteDiary(selectedProjectId, payload);
         if (result.isOfflineQueued) {
@@ -147,7 +137,8 @@ const SiteDiaryPage = () => {
 
       form.resetFields();
       form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
-      loadDiaries();
+      setDiaryModalOpen(false);
+      await loadDiaries();
     } catch (err) {
       notification.error({
         message: 'Lỗi ghi nhật ký',
@@ -156,6 +147,48 @@ const SiteDiaryPage = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const startEditingDiary = diary => {
+    if (diary._isPendingSync) {
+      notification.info({
+        message: 'Nhật ký chưa đồng bộ',
+        description: 'Hãy đồng bộ nhật ký lên máy chủ trước khi chỉnh sửa.'
+      });
+      return;
+    }
+    setDetailDiary(null);
+    setEditingDiaryId(diary.id);
+    setDiaryModalOpen(true);
+    form.setFieldsValue({
+      diaryDate: diary.diaryDate ? dayjs(diary.diaryDate) : null,
+      weather: diary.weather,
+      temperature: diary.temperature,
+      workerCount: diary.workerCount,
+      equipmentStatus: diary.equipmentStatus,
+      workSummary: diary.workSummary,
+      issues: diary.issues
+    });
+  };
+
+  const cancelEditingDiary = () => {
+    setEditingDiaryId(null);
+    setDiaryModalOpen(false);
+    form.resetFields();
+    form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+  };
+
+  const openNewDiary = () => {
+    setEditingDiaryId(null);
+    form.resetFields();
+    form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+    setDiaryModalOpen(true);
+  };
+
+  const handleProjectChange = projectId => {
+    cancelEditingDiary();
+    setDetailDiary(null);
+    setSelectedProjectId(projectId);
   };
 
   const columns = [
@@ -187,9 +220,20 @@ const SiteDiaryPage = () => {
       title: 'Nội dung thi công',
       dataIndex: 'workSummary',
       key: 'workSummary',
+      width: 420,
       render: (text, r) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{text}</div>
+        <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+          <div
+            style={{
+              fontWeight: 500,
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 3,
+              overflow: 'hidden'
+            }}
+          >
+            {text}
+          </div>
           {r.equipmentStatus && (
             <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
               Thiết bị: {r.equipmentStatus}
@@ -204,29 +248,42 @@ const SiteDiaryPage = () => {
       )
     },
     {
-      title: 'Trạng thái đồng bộ (S-30)',
+      title: 'Đồng bộ',
       key: 'syncStatus',
       width: 200,
       render: (_, r) => {
         if (r._isPendingSync) {
           return (
             <Tag icon={<ClockCircleOutlined />} color="warning">
-              Chờ đồng bộ ngoại tuyến (T-70)
+              Chờ đồng bộ
             </Tag>
           );
         }
         return (
           <Tag icon={<CheckCircleOutlined />} color="success">
-            Đã đồng bộ máy chủ (T-71)
+            Đã đồng bộ
           </Tag>
         );
       }
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 130,
+      render: (_, diary) => (
+        <Button
+          icon={<EyeOutlined />}
+          onClick={() => setDetailDiary(diary)}
+        >
+          Chi tiết
+        </Button>
+      )
     }
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Tiêu đề & Thanh trạng thái mạng */}
+    <div style={{ padding: '24px', width: '100%', maxWidth: '1440px', margin: '0 auto', boxSizing: 'border-box' }}>
+      {/* Tiêu đề */}
       <div
         style={{
           display: 'flex',
@@ -239,182 +296,204 @@ const SiteDiaryPage = () => {
       >
         <div>
           <Title level={2} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BookOutlined style={{ color: '#1890ff' }} /> Nhật ký công trường (E-05 / S-30)
+            <BookOutlined style={{ color: '#1890ff' }} /> Nhật ký thi công
           </Title>
           <Text type="secondary">
-            Hàng đợi đồng bộ tự gửi khi có mạng (NTDHTCT-214: T-70 & T-71)
+            Theo dõi công việc thi công hằng ngày theo từng dự án.
           </Text>
         </div>
-
-        <Space>
-          <SyncQueueStatusBar />
-        </Space>
       </div>
 
-      {/* Thanh công cụ kiểm thử / Chọn dự án */}
+      {/* Chọn dự án và thao tác nhật ký */}
       <Card size="small" style={{ marginBottom: '20px', background: '#fafafa' }}>
-        <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={8}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Text strong>Dự án:</Text>
+        <Row gutter={[16, 12]} align="middle">
+          <Col xs={24} md={9} lg={10}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <Text strong style={{ flexShrink: 0 }}>Dự án:</Text>
               <Select
                 value={selectedProjectId}
-                onChange={setSelectedProjectId}
-                style={{ flex: 1 }}
+                onChange={handleProjectChange}
+                style={{ flex: 1, minWidth: 0 }}
                 options={projects.map(p => ({ label: `${p.code} - ${p.name}`, value: p.id }))}
                 placeholder="Chọn dự án..."
+                showSearch
+                optionFilterProp="label"
               />
             </div>
           </Col>
 
-          <Col xs={24} sm={12} md={16} style={{ textAlign: 'right' }}>
-            <Space wrap>
-              {/* Công tắc giả lập Offline để kiểm thử T-70 và T-71 */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: simulateOffline ? '#fff1f0' : '#f0f5ff',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${simulateOffline ? '#ffa39e' : '#adc6ff'}`
-                }}
-              >
-                {simulateOffline ? <DisconnectOutlined style={{ color: '#ff4d4f' }} /> : <WifiOutlined style={{ color: '#1890ff' }} />}
-                <Text style={{ fontSize: '13px' }}>
-                  Giả lập mất mạng (Offline Test):
-                </Text>
-                <Switch
-                  checked={simulateOffline}
-                  onChange={checked => {
-                    setSimulateOffline(checked);
-                    if (!checked) {
-                      // Khi tắt giả lập -> kích hoạt tự động gửi ngay (T-71)
-                      autoSyncService.syncQueueNow();
-                    }
-                  }}
-                />
-              </div>
-
+          <Col xs={24} md={15} lg={14}>
+            <Space wrap style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button icon={<ReloadOutlined />} onClick={loadDiaries}>
                 Làm mới
+              </Button>
+              <Button
+                type="primary"
+                icon={<CloudUploadOutlined />}
+                onClick={openNewDiary}
+                disabled={!selectedProjectId}
+              >
+                Tạo nhật ký
               </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      <Row gutter={24}>
-        {/* Form ghi nhật ký */}
-        <Col xs={24} lg={10}>
-          <Card
-            title={
-              <Space>
-                <CloudUploadOutlined style={{ color: '#1890ff' }} />
-                <span>Ghi nhật ký thi công (Hỗ trợ Offline)</span>
-              </Space>
-            }
-            bordered
-          >
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              initialValues={{
-                diaryDate: dayjs(),
-                weather: 'Nắng',
-                temperature: '31°C',
-                workerCount: 35
-              }}
-            >
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item
-                    name="diaryDate"
-                    label="Ngày ghi nhật ký"
-                    rules={[{ required: true, message: 'Vui lòng chọn ngày' }]}
-                  >
-                    <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="weather" label="Thời tiết">
-                    <Input placeholder="Nắng, mưa, râm mát..." />
-                  </Form.Item>
-                </Col>
-              </Row>
+      <Card
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span>Lịch sử nhật ký</span>
+            <Text type="secondary" style={{ fontSize: '13px' }}>
+              Tổng cộng: {diaries.length} bản ghi
+            </Text>
+          </div>
+        }
+        style={{ width: '100%' }}
+      >
+        <Table
+          dataSource={diaries}
+          columns={columns}
+          rowKey={r => r.clientSyncId || r.id}
+          loading={loading}
+          pagination={{ pageSize: 6, showSizeChanger: true, pageSizeOptions: [6, 10, 20] }}
+          size="middle"
+          scroll={{ x: 1080 }}
+          tableLayout="fixed"
+        />
+      </Card>
 
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item name="temperature" label="Nhiệt độ">
-                    <Input placeholder="Ví dụ: 32°C" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="workerCount" label="Số nhân công">
-                    <InputNumber min={0} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item name="equipmentStatus" label="Máy móc & thiết bị">
-                <Input placeholder="Ví dụ: 2 máy đào, 1 cẩu tháp vận hành bình thường" />
-              </Form.Item>
-
+      <Modal
+        title={
+          <Space>
+            {editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
+            <span>{editingDiaryId ? 'Chỉnh sửa nhật ký' : 'Tạo nhật ký thi công'}</span>
+          </Space>
+        }
+        open={diaryModalOpen}
+        onCancel={cancelEditingDiary}
+        footer={null}
+        width={720}
+        forceRender
+      >
+        {editingDiaryId && (
+          <Alert
+            type="info"
+            showIcon
+            message="Cần có kết nối mạng để cập nhật nhật ký."
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          initialValues={{
+            diaryDate: dayjs(),
+            weather: 'Nắng',
+            temperature: '31°C',
+            workerCount: 35
+          }}
+        >
+          <Row gutter={12}>
+            <Col xs={24} sm={12}>
               <Form.Item
-                name="workSummary"
-                label="Nội dung thi công trong ngày"
-                rules={[{ required: true, message: 'Vui lòng nhập nội dung thi công' }]}
+                name="diaryDate"
+                label="Ngày ghi nhật ký"
+                rules={[{ required: true, message: 'Vui lòng chọn ngày' }]}
               >
-                <TextArea
-                  rows={3}
-                  placeholder="Ghi nhận các công việc hoàn thành trong ca làm việc..."
-                />
+                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
-
-              <Form.Item name="issues" label="Vướng mắc / An toàn lao động">
-                <TextArea rows={2} placeholder="Sự cố, gián đoạn hoặc ghi chú an toàn (nếu có)..." />
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="weather" label="Thời tiết">
+                <Input placeholder="Nắng, mưa, râm mát..." />
               </Form.Item>
+            </Col>
+          </Row>
 
-              <Button
-                type="primary"
-                htmlType="submit"
-                block
-                size="large"
-                loading={submitting}
-                icon={<CloudUploadOutlined />}
-              >
-                Lưu nhật ký (Tự động chuyển hàng đợi nếu Offline)
-              </Button>
-            </Form>
-          </Card>
-        </Col>
+          <Row gutter={12}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="temperature" label="Nhiệt độ">
+                <Input placeholder="Ví dụ: 32°C" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="workerCount" label="Số nhân công">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Danh sách nhật ký */}
-        <Col xs={24} lg={14}>
-          <Card
-            title={
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Lịch sử nhật ký & Trạng thái đồng bộ</span>
-                <Text type="secondary" style={{ fontSize: '13px' }}>
-                  Tổng: {diaries.length} bản ghi
-                </Text>
-              </div>
-            }
-            bordered
+          <Form.Item name="equipmentStatus" label="Máy móc và thiết bị">
+            <Input placeholder="Ví dụ: 2 máy đào, 1 cẩu tháp hoạt động bình thường" />
+          </Form.Item>
+
+          <Form.Item
+            name="workSummary"
+            label="Nội dung thi công trong ngày"
+            rules={[{ required: true, message: 'Vui lòng nhập nội dung thi công' }]}
           >
-            <Table
-              dataSource={diaries}
-              columns={columns}
-              rowKey={r => r.clientSyncId || r.id}
-              loading={loading}
-              pagination={{ pageSize: 6 }}
-              size="middle"
-            />
-          </Card>
-        </Col>
-      </Row>
+            <TextArea rows={3} placeholder="Ghi lại các công việc đã thực hiện trong ngày..." />
+          </Form.Item>
+
+          <Form.Item name="issues" label="Vướng mắc và an toàn lao động">
+            <TextArea rows={2} placeholder="Ghi sự cố, gián đoạn hoặc lưu ý về an toàn (nếu có)..." />
+          </Form.Item>
+
+          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={cancelEditingDiary}>Hủy</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={submitting}
+              icon={editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
+            >
+              {editingDiaryId ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
+            </Button>
+          </Space>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Chi tiết nhật ký công trường"
+        open={Boolean(detailDiary)}
+        onCancel={() => setDetailDiary(null)}
+        footer={[
+          <Button key="close" onClick={() => setDetailDiary(null)}>
+            Đóng
+          </Button>,
+          <Button
+            key="edit"
+            type="primary"
+            icon={<EditOutlined />}
+            disabled={detailDiary?._isPendingSync}
+            onClick={() => startEditingDiary(detailDiary)}
+          >
+            Chỉnh sửa
+          </Button>
+        ]}
+      >
+        {detailDiary && (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            {detailDiary._isPendingSync && (
+              <Text type="warning">Nhật ký đang chờ đồng bộ, hiện chưa thể chỉnh sửa.</Text>
+            )}
+            <div><Text strong>Ngày ghi: </Text>{dayjs(detailDiary.diaryDate).format('DD/MM/YYYY')}</div>
+            <div><Text strong>Thời tiết: </Text>{detailDiary.weather || 'Chưa ghi nhận'} {detailDiary.temperature ? `(${detailDiary.temperature})` : ''}</div>
+            <div><Text strong>Số nhân công: </Text>{detailDiary.workerCount ?? 'Chưa ghi nhận'}</div>
+            <div><Text strong>Máy móc & thiết bị: </Text>{detailDiary.equipmentStatus || 'Chưa ghi nhận'}</div>
+            <div>
+              <Text strong>Nội dung thi công:</Text>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.workSummary}</div>
+            </div>
+            <div>
+              <Text strong>Vướng mắc / an toàn:</Text>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.issues || 'Không có'}</div>
+            </div>
+          </Space>
+        )}
+      </Modal>
     </div>
   );
 };

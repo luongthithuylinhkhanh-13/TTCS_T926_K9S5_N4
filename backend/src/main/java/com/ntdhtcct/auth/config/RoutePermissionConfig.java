@@ -70,6 +70,7 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries/sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries/batch-sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

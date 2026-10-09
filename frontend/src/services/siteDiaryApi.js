@@ -83,6 +83,14 @@ export const submitSiteDiary = async (projectId, diaryData) => {
   }
 };
 
+export const updateSiteDiary = async (projectId, diaryId, diaryData) => {
+  const response = await apiClient.put(
+    `/api/projects/${projectId}/site-diaries/${diaryId}`,
+    diaryData
+  );
+  return response.data;
+};
+
 /**
  * Lấy danh sách nhật ký công trường, gộp các bản ghi đang chờ đồng bộ trong hàng đợi
  */

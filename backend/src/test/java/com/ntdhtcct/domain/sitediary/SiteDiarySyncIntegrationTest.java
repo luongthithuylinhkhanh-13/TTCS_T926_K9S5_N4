@@ -8,6 +8,7 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -31,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -216,5 +219,70 @@ public class SiteDiarySyncIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].workSummary", equalTo("Gia công cốt thép dầm sàn")))
                 .andExpect(jsonPath("$[0].clientSyncId", equalTo(clientSyncId)));
+    }
+
+    @Test
+    @DisplayName("TC-S21-UPDATE-01: Cập nhật nội dung nhật ký theo dự án")
+    void testUpdateDiaryById() throws Exception {
+        UUID diaryId = UUID.randomUUID();
+        SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
+                LocalDate.now(),
+                "Mưa nhẹ",
+                "27°C",
+                32,
+                "Máy bơm bê tông",
+                "Hoàn thành đổ bê tông sàn tầng 2",
+                "Tạm dừng 30 phút do mưa"
+        );
+        SiteDiaryResponse response = new SiteDiaryResponse();
+        response.setId(diaryId);
+        response.setProjectId(projectId);
+        response.setDiaryDate(request.diaryDate());
+        response.setWorkSummary(request.workSummary());
+        response.setWeather(request.weather());
+        response.setTemperature(request.temperature());
+        response.setWorkerCount(request.workerCount());
+        response.setEquipmentStatus(request.equipmentStatus());
+        response.setIssues(request.issues());
+
+        when(siteDiarySyncService.updateDiary(projectId, diaryId, request))
+                .thenReturn(Optional.of(response));
+
+        mockMvc.perform(put("/api/projects/{projectId}/site-diaries/{diaryId}", projectId, diaryId)
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-User-Id", engineerUserId.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(diaryId.toString())))
+                .andExpect(jsonPath("$.workSummary", equalTo(request.workSummary())))
+                .andExpect(jsonPath("$.weather", equalTo(request.weather())));
+    }
+
+    @Test
+    @DisplayName("TC-S21-UPDATE-02: Không cập nhật nhật ký không thuộc dự án")
+    void testUpdateDiaryById_NotFound() throws Exception {
+        UUID diaryId = UUID.randomUUID();
+        SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
+                LocalDate.now(), null, null, null, null, "Nội dung chỉnh sửa", null
+        );
+        when(siteDiarySyncService.updateDiary(projectId, diaryId, request))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/api/projects/{projectId}/site-diaries/{diaryId}", projectId, diaryId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("TC-S21-UPDATE-03: Từ chối cập nhật khi thiếu ngày hoặc nội dung")
+    void testUpdateDiaryById_InvalidRequest() throws Exception {
+        mockMvc.perform(put("/api/projects/{projectId}/site-diaries/{diaryId}", projectId, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"diaryDate":null,"workSummary":" "}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 }

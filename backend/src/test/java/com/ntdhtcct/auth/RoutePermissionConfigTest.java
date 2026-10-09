@@ -58,4 +58,17 @@ class RoutePermissionConfigTest {
 
         assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
     }
+
+    @Test
+    void allowsSiteEngineersToUpdateSiteDiariesButNotWorkers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.PUT.name(),
+                        "/api/projects/123/site-diaries/456"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
 }
