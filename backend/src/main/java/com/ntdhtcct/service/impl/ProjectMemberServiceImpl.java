@@ -20,6 +20,7 @@ import com.ntdhtcct.repository.UserRepository;
 import com.ntdhtcct.service.ProjectMemberService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,8 @@ import java.util.stream.Collectors;
  * T-04.4: Triển khai logic gán và cập nhật Role
  * cho User trong Project.
  */
-@Service
+@Primary
+@Service("projectMemberService")
 @Transactional
 public class ProjectMemberServiceImpl implements ProjectMemberService {
 
@@ -340,5 +342,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 );
 
         return ProjectMemberResponse.fromEntity(member);
+    }
+
+    @Override
+    public boolean hasAccess(UUID projectId, UUID userId) {
+        return projectMemberRepository.existsByProjectIdAndUserIdAndStatus(
+                projectId,
+                userId,
+                "ACTIVE"
+        );
     }
 }

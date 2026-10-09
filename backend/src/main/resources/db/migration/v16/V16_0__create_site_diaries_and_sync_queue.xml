@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        S-30 (NTDHTCT-214): Hàng đợi đồng bộ tự gửi khi có mạng
+        Subtasks:
+          - NTDHTCT-255 (T-70): Tạo hàng đợi cho dữ liệu chưa đồng bộ
+          - NTDHTCT-256 (T-71): Tự động gửi dữ liệu lên máy chủ khi kết nối mạng trở lại
+    -->
+    <changeSet id="V16.0-create-site-diaries" author="NTDHTCT-214">
+        <createTable tableName="site_diaries">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reporter_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="diary_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="weather" type="VARCHAR(100)"/>
+            <column name="temperature" type="VARCHAR(50)"/>
+            <column name="worker_count" type="INTEGER"/>
+            <column name="equipment_status" type="TEXT"/>
+            <column name="work_summary" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issues" type="TEXT"/>
+            <column name="client_sync_id" type="VARCHAR(100)">
+                <constraints unique="true" nullable="true"/>
+            </column>
+            <column name="sync_status" type="VARCHAR(50)" defaultValue="SYNCED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offline_created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="site_diaries"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_site_diaries_project"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="site_diaries"
+            baseColumnNames="reporter_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_site_diaries_reporter"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="site_diaries" indexName="idx_site_diaries_project_id">
+            <column name="project_id"/>
+        </createIndex>
+
+        <createIndex tableName="site_diaries" indexName="idx_site_diaries_diary_date">
+            <column name="diary_date"/>
+        </createIndex>
+
+        <createIndex tableName="site_diaries" indexName="idx_site_diaries_client_sync_id">
+            <column name="client_sync_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="site_diaries"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

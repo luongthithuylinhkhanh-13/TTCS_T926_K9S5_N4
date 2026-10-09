@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/wbsApi';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLocale } from '../../utils/LocaleContext';
+import SyncQueueStatusBar from '../sync/SyncQueueStatusBar';
 
 const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }) => {
   const { t } = useLocale();
@@ -98,6 +99,8 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
             <BellOutlined />
           </div>
         </Badge>
+
+        <SyncQueueStatusBar />
 
         <div style={{ width: 1, height: 24, backgroundColor: '#E6EAF0' }} />
 

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:16
     container_name: construction-staging-postgres
     restart: always
     environment:
@@ -38,8 +38,34 @@ services:
     networks:
       - staging-network
 
+  postgres-backup:
+    image: postgres:18
+    container_name: construction-staging-postgres-backup
+    restart: always
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - chown postgres:postgres /backups && exec gosu postgres /bin/sh /backup.sh
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${DB_NAME:-construction_staging}
+      PGUSER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-2911}
+      BACKUP_TIME_UTC: ${BACKUP_TIME_UTC:-19:00}
+    volumes:
+      - ./database/scripts/backup.sh:/backup.sh:ro
+      - ./database/scripts/restore.sh:/restore.sh:ro
+      - staging_postgres_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - staging-network
+
 volumes:
   staging_postgres_data:
+  staging_postgres_backups:
 
 networks:
   staging-network:
