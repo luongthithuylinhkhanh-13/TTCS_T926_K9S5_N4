@@ -83,6 +83,14 @@ export const submitSiteDiary = async (projectId, diaryData) => {
   }
 };
 
+export const updateSiteDiary = async (projectId, diaryId, diaryData) => {
+  const response = await apiClient.put(
+    `/api/projects/${projectId}/site-diaries/${diaryId}`,
+    diaryData
+  );
+  return response.data;
+};
+
 /**
  * Lấy danh sách nhật ký công trường, gộp các bản ghi đang chờ đồng bộ trong hàng đợi
  */
@@ -106,10 +114,14 @@ export const getSiteDiaries = async projectId => {
       diaryDate: i.payload.diaryDate,
       weather: i.payload.weather,
       temperature: i.payload.temperature,
+      engineerCount: i.payload.engineerCount,
       workerCount: i.payload.workerCount,
+      crewCount: i.payload.crewCount,
+      crewDetails: i.payload.crewDetails,
       equipmentStatus: i.payload.equipmentStatus,
       workSummary: i.payload.workSummary,
       issues: i.payload.issues,
+      workingConditions: i.payload.workingConditions,
       syncStatus: i.status === 'FAILED' ? 'Lỗi đồng bộ' : 'Chờ đồng bộ',
       _isPendingSync: true,
       _retryCount: i.retryCount,

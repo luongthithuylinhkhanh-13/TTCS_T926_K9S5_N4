@@ -85,4 +85,8 @@
     <!-- S-30 (NTDHTCT-214): Nhật ký công trường & hàng đợi đồng bộ tự gửi khi có mạng -->
     <include file="db/migration/v16/V16_0__create_site_diaries_and_sync_queue.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-22 (T-59, T-60): Nhân lực, tổ đội và điều kiện thi công -->
+    <include file="db/migration/v17/V17_0__extend_site_diary_daily_conditions.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
