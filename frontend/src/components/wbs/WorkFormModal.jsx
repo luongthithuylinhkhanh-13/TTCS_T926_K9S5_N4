@@ -15,7 +15,8 @@ const WorkFormModal = ({
   parentOptions = [],
   taskOptions = [],
   isEdit = false,
-  confirmLoading = false
+  confirmLoading = false,
+  editConflict = false
 }) => {
   const { t } = useLocale();
   const [form] = Form.useForm();
@@ -111,8 +112,16 @@ const WorkFormModal = ({
       cancelText={t('Hủy')}
       destroyOnClose
       confirmLoading={confirmLoading}
-      okButtonProps={{ disabled: actualDatesInvalid || progressInvalid || confirmLoading }}
+      okButtonProps={{ disabled: actualDatesInvalid || progressInvalid || confirmLoading || editConflict }}
     >
+      {editConflict && (
+        <Alert
+          type="warning"
+          showIcon
+          message={t('Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.')}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <div style={{ marginBottom: 16, color: '#667085', fontSize: 13 }}>
         {isEdit 
           ? t('Cập nhật thông tin chi tiết và tiến độ cho công việc WBS')

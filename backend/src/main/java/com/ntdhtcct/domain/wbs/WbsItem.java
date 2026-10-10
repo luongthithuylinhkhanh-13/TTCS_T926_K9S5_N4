@@ -14,6 +14,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -140,6 +141,10 @@ public class WbsItem {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     public WbsItem() {
     }
@@ -428,6 +433,14 @@ public class WbsItem {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Double getTotalVolume() {

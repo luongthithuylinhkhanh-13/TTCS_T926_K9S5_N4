@@ -7,6 +7,7 @@ import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.auth.service.AuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -196,6 +197,9 @@ public class WbsController {
             return ResponseEntity.ok(
                     wbsService.update(projectId, itemId, item)
             );
+        } catch (WbsConflictException | ObjectOptimisticLockingFailureException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponse(false, e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(
                     new ApiResponse(false, e.getMessage())

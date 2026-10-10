@@ -133,6 +133,7 @@ const translations = {
   'Cập nhật công việc thành công': 'Task updated successfully',
   'Thêm công việc thành công': 'Task added successfully',
   'Không thể cập nhật công việc': 'Unable to update task',
+  'Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.': 'This task was updated by someone else. Close and reopen the form to review the latest data. Your unsaved changes were not applied.',
   'Không thể thêm công việc': 'Unable to add task',
   'Đang tải dự án...': 'Loading projects...',
   'Đã xuất dữ liệu WBS': 'WBS data exported',

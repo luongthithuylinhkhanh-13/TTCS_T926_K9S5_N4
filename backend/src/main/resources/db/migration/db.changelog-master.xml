@@ -89,4 +89,8 @@
     <!-- S-22 (T-59, T-60): Nhân lực, tổ đội và điều kiện thi công -->
     <include file="db/migration/v17/V17_0__extend_site_diary_daily_conditions.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- T-74/T-75: Detect concurrent edits to WBS items -->
+    <include file="db/migration/v18/V18_0__add_wbs_item_version.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

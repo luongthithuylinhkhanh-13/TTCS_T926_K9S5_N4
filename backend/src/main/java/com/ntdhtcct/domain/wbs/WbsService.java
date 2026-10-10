@@ -176,6 +176,10 @@ public class WbsService {
 
         WbsItem item = requireItem(projectId, itemId);
 
+        if (request.getVersion() == null || !request.getVersion().equals(item.getVersion())) {
+            throw new WbsConflictException("Công việc đã được người khác cập nhật. Hãy tải lại dữ liệu mới nhất trước khi sửa tiếp.");
+        }
+
         if ("task".equalsIgnoreCase(request.getType())
                 && (request.getDuration() == null || request.getDuration() <= 0)) {
             throw new IllegalArgumentException("Thời lượng thực hiện phải lớn hơn 0");

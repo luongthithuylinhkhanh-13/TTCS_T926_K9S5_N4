@@ -115,6 +115,7 @@ class WbsServiceDurationTest {
         existing.setProjectId(projectId);
         existing.setType("task");
         existing.setDuration(1);
+        existing.setVersion(0L);
         when(wbsItemRepository.findById(itemId)).thenReturn(Optional.of(existing));
         when(wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId))
                 .thenReturn(List.of(), List.of());
@@ -123,6 +124,7 @@ class WbsServiceDurationTest {
         request.setName("Task");
         request.setType("task");
         request.setDuration(1);
+        request.setVersion(0L);
         request.setProgressPercent(45);
         request.setActualStartDate(LocalDate.parse("2026-10-09"));
         request.setActualEndDate(LocalDate.parse("2026-10-10"));
@@ -133,5 +135,23 @@ class WbsServiceDurationTest {
         assertThat(existing.getActualEndDate()).isEqualTo(LocalDate.parse("2026-10-10"));
         assertThat(existing.getProgress()).isEqualTo(45);
         assertThat(existing.getProgressPercent()).isEqualTo(45);
+    }
+
+    @Test
+    void rejectsUpdateWhenItemVersionIsStale() {
+        UUID itemId = UUID.randomUUID();
+        WbsItem existing = new WbsItem();
+        existing.setProjectId(projectId);
+        existing.setVersion(2L);
+        when(wbsItemRepository.findById(itemId)).thenReturn(Optional.of(existing));
+
+        WbsItem request = new WbsItem();
+        request.setVersion(1L);
+
+        assertThatThrownBy(() -> service.update(projectId, itemId, request))
+                .isInstanceOf(WbsConflictException.class)
+                .hasMessageContaining("đã được người khác cập nhật");
+
+        verify(wbsItemRepository, never()).save(existing);
     }
 }

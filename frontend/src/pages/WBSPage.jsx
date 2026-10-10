@@ -112,6 +112,7 @@ const normalizeFormData = (formData) => {
   const assignee = formData.assignee || {};
 
   return {
+    version: formData.version,
     wbsCode: formData.wbsCode,
     name: formData.name,
     type: formData.type,
@@ -246,6 +247,8 @@ const WBSPage = () => {
     modalInitialValues,
     setModalInitialValues
   ] = useState(null);
+
+  const [editConflict, setEditConflict] = useState(false);
 
   const [
     submitting,
@@ -621,6 +624,7 @@ const WBSPage = () => {
     }
 
     setModalIsEdit(false);
+    setEditConflict(false);
 
     if (parent) {
       setModalInitialValues({
@@ -643,6 +647,7 @@ const WBSPage = () => {
 
   const handleOpenEditModal = node => {
     setModalIsEdit(true);
+    setEditConflict(false);
 
     setModalInitialValues({
       ...node,
@@ -796,6 +801,15 @@ const WBSPage = () => {
           selectedProjectId
         );
       } catch (error) {
+        if (error.status === 409) {
+          setEditConflict(true);
+          await loadWbs(selectedProjectId);
+          message.warning(
+            t('Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.')
+          );
+          return;
+        }
+
         message.error(
           error.message ||
           (
@@ -1161,6 +1175,10 @@ const WBSPage = () => {
 
         confirmLoading={
           submitting
+        }
+
+        editConflict={
+          editConflict
         }
       />
 
