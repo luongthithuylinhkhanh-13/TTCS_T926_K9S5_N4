@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthUser, logoutUser } from '../utils/auth';
+import { getAuthUser, logoutUser } from '../utils/auth.js';
 
 const apiClient = axios.create({
   baseURL: '/',

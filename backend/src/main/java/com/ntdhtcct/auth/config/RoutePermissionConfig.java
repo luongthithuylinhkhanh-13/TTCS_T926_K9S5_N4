@@ -57,8 +57,10 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.PUT, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
-        // S-23 (T-61): Diary entries
+        // S-23 (T-61, T-62): Diary entries & Image uploads
         addRule(HttpMethod.POST, "/api/projects/*/diary-entries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images/*/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

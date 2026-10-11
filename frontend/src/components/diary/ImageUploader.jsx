@@ -1,34 +1,43 @@
 import React, { useEffect, useRef } from 'react';
-import { Upload, Button, Card, Typography, Space, Tooltip } from 'antd';
-import { InboxOutlined, DeleteOutlined, FileImageOutlined } from '@ant-design/icons';
+import { Upload, Button, Card, Typography, Space, Tooltip, Tag, Progress } from 'antd';
+import {
+  InboxOutlined,
+  DeleteOutlined,
+  FileImageOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  SyncOutlined,
+} from '@ant-design/icons';
 import { formatFileSize, createQueueItem, revokeQueueItem, revokeAllQueueItems } from '../../utils/imageQueueUtils.js';
 
 const { Dragger } = Upload;
 const { Text } = Typography;
 
 /**
- * Component T-61: Chọn nhiều ảnh, hiển thị preview thumbnail, tên file, kích thước, và xóa khỏi hàng đợi.
- * Bảo đảm thu hồi Object URL khi xóa và khi component unmount.
+ * Component T-62: Chọn nhiều ảnh, nén hiển thị, theo dõi trạng thái hai giai đoạn (Display & Original),
+ * retry độc lập từng giai đoạn, dọn dẹp object URL an toàn.
  */
 export default function ImageUploader({
   items = [],
   onChange,
+  onRetryDisplay,
+  onRetryOriginal,
   disabled = false,
   maxCount = 20,
 }) {
-  // Lưu tham chiếu danh sách items hiện thời để dọn dẹp khi unmount
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
   useEffect(() => {
     return () => {
-      // Khi component unmount, thu hồi tất cả preview URL đang hoạt động
+      // Thu hồi toàn bộ preview URL khi component unmount
       revokeAllQueueItems(itemsRef.current);
     };
   }, []);
 
-  const handleBeforeUpload = (file, fileList) => {
-    // Ngăn Ant Design tự động gửi HTTP POST
+  const handleBeforeUpload = () => {
+    // Ngăn chặn form submit hoặc upload ngầm tự động
     return false;
   };
 
@@ -54,6 +63,43 @@ export default function ImageUploader({
     }
   };
 
+  const renderStatusBadge = (stageName, status, error, onRetry) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Tag icon={<CheckCircleOutlined />} color="success" style={{ margin: 0, fontSize: '10px' }}>
+            {stageName}: Xong
+          </Tag>
+        );
+      case 'uploading':
+        return (
+          <Tag icon={<SyncOutlined spin />} color="processing" style={{ margin: 0, fontSize: '10px' }}>
+            {stageName}: Đang tải...
+          </Tag>
+        );
+      case 'failed':
+        return (
+          <Tooltip title={error || 'Tải lên thất bại'}>
+            <Tag
+              icon={<CloseCircleOutlined />}
+              color="error"
+              style={{ margin: 0, fontSize: '10px', cursor: onRetry ? 'pointer' : 'default' }}
+              onClick={onRetry}
+            >
+              {stageName}: Lỗi {onRetry && <ReloadOutlined style={{ marginLeft: 2 }} />}
+            </Tag>
+          </Tooltip>
+        );
+      case 'idle':
+      default:
+        return (
+          <Tag color="default" style={{ margin: 0, fontSize: '10px' }}>
+            {stageName}: Chờ tải
+          </Tag>
+        );
+    }
+  };
+
   return (
     <div className="diary-image-uploader" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <Dragger
@@ -72,7 +118,7 @@ export default function ImageUploader({
           Nhấp hoặc kéo thả ảnh vào khu vực này để chọn
         </p>
         <p className="ant-upload-hint" style={{ color: '#8c8c8c', fontSize: '12px', margin: 0 }}>
-          Hỗ trợ định dạng JPEG, PNG, WebP (Tối đa {maxCount} ảnh).
+          Hỗ trợ định dạng JPEG, PNG, WebP (Tối đa {maxCount} ảnh, dung lượng gốc tối đa 20 MiB/ảnh).
         </p>
       </Dragger>
 
@@ -81,7 +127,7 @@ export default function ImageUploader({
           className="image-queue-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
             gap: '12px',
           }}
         >
@@ -90,12 +136,12 @@ export default function ImageUploader({
               key={item.clientImageId}
               hoverable
               size="small"
-              styles={{ body: { padding: '8px' } }}
+              styles={{ body: { padding: '10px' } }}
               style={{ position: 'relative', overflow: 'hidden' }}
               cover={
                 <div
                   style={{
-                    height: '100px',
+                    height: '110px',
                     backgroundColor: '#f0f0f0',
                     display: 'flex',
                     alignItems: 'center',
@@ -119,17 +165,15 @@ export default function ImageUploader({
                 </div>
               }
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <Tooltip title={item.name}>
-                  <Text
-                    ellipsis
-                    style={{ fontSize: '12px', fontWeight: 500 }}
-                  >
+                  <Text ellipsis style={{ fontSize: '12px', fontWeight: 500 }}>
                     {item.name}
                   </Text>
                 </Tooltip>
-                <Space orientation="horizontal" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text orientation="secondary" orientationstyle={{ fontSize: '11px', color: '#8c8c8c' }}>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: '11px', color: '#8c8c8c' }}>
                     {formatFileSize(item.size)}
                   </Text>
                   <Button
@@ -137,11 +181,35 @@ export default function ImageUploader({
                     danger
                     size="small"
                     icon={<DeleteOutlined />}
-                    disabled={disabled}
+                    disabled={disabled || item.displayStatus === 'uploading' || item.originalStatus === 'uploading'}
                     onClick={() => handleRemove(item.clientImageId)}
                     title="Xóa ảnh khỏi hàng đợi"
                   />
-                </Space>
+                </div>
+
+                {/* Trạng thái hai giai đoạn: Hiển thị & Ảnh gốc */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {renderStatusBadge(
+                      'Hiển thị',
+                      item.displayStatus,
+                      item.displayError,
+                      onRetryDisplay && item.displayStatus === 'failed'
+                        ? () => onRetryDisplay(item)
+                        : null
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {renderStatusBadge(
+                      'Ảnh gốc',
+                      item.originalStatus,
+                      item.originalError,
+                      onRetryOriginal && item.originalStatus === 'failed'
+                        ? () => onRetryOriginal(item)
+                        : null
+                    )}
+                  </div>
+                </div>
               </div>
             </Card>
           ))}

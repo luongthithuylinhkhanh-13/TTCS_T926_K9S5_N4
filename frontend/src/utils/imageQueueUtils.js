@@ -40,6 +40,12 @@ export function createQueueItem(file, createObjectURLFn = (f) => URL.createObjec
     size: file.size,
     type: file.type,
     previewUrl,
+    displayStatus: 'idle', // 'idle' | 'uploading' | 'completed' | 'failed'
+    originalStatus: 'idle', // 'idle' | 'uploading' | 'completed' | 'failed'
+    displayError: null,
+    originalError: null,
+    displayProgress: 0,
+    originalProgress: 0,
   };
 }
 

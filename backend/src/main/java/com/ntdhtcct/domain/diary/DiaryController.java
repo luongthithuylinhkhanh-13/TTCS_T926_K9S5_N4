@@ -5,15 +5,23 @@ import com.ntdhtcct.auth.context.UserSecurityContext;
 import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.domain.diary.dto.CreateDiaryEntryRequest;
 import com.ntdhtcct.domain.diary.dto.DiaryEntryResponse;
+import com.ntdhtcct.domain.diary.dto.DiaryImageResponse;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -37,5 +45,61 @@ public class DiaryController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Tạo nhật ký công trường thành công", response));
+    }
+
+    @PostMapping("/{entryId}/images/display")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
+    public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadDisplayImage(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId,
+            @RequestParam("clientImageId") String clientImageId,
+            @RequestParam("filename") String filename,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        DiaryImageResponse response =
+                diaryService.uploadDisplayImage(projectId, entryId, clientImageId, filename, file);
+        return ResponseEntity.ok(ApiResponse.ok("Tải ảnh hiển thị thành công", response));
+    }
+
+    @PostMapping("/{entryId}/images/original")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
+    public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadOriginalImage(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId,
+            @RequestParam("clientImageId") String clientImageId,
+            @RequestParam("filename") String filename,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        DiaryImageResponse response =
+                diaryService.uploadOriginalImage(projectId, entryId, clientImageId, filename, file);
+        return ResponseEntity.ok(ApiResponse.ok("Tải ảnh gốc thành công", response));
+    }
+
+    @GetMapping("/{entryId}/images/{imageId}/display")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
+    public ResponseEntity<Resource> getDisplayImage(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId,
+            @PathVariable UUID imageId,
+            @RequestParam(value = "thumb", defaultValue = "false") boolean isThumb
+    ) {
+        Resource resource = diaryService.getDisplayImageResource(projectId, entryId, imageId, isThumb);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(resource);
+    }
+
+    @GetMapping("/{entryId}/images/{imageId}/original")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
+    public ResponseEntity<Resource> getOriginalImage(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId,
+            @PathVariable UUID imageId
+    ) {
+        Resource resource = diaryService.getOriginalImageResource(projectId, entryId, imageId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"original_" + imageId + "\"")
+                .body(resource);
     }
 }
