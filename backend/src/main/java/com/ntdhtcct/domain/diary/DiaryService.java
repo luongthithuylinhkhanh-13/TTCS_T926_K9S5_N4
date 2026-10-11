@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -198,6 +199,18 @@ public class DiaryService {
 
         Path filePath = fileStorageService.loadFile(image.getOriginalPath());
         return new FileSystemResource(filePath);
+    }
+
+    /**
+     * T-63: Lấy danh sách ảnh của mục nhật ký (sắp xếp theo sort_order và created_at).
+     */
+    @Transactional(readOnly = true)
+    public List<DiaryImageResponse> getDiaryImages(UUID projectId, UUID entryId) {
+        validateEntryBelongsToProject(projectId, entryId);
+        return diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(entryId)
+                .stream()
+                .map(this::toImageResponse)
+                .toList();
     }
 
     private void validateEntryBelongsToProject(UUID projectId, UUID entryId) {

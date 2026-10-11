@@ -63,3 +63,27 @@ export async function uploadOriginalImage(projectId, entryId, clientImageId, fil
   );
   return response.data?.data || response.data;
 }
+
+/**
+ * T-63: Lấy danh sách ảnh thuộc mục nhật ký.
+ * @param {string} projectId
+ * @param {string} entryId
+ */
+export async function getDiaryImages(projectId, entryId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/diary-entries/${entryId}/images`);
+  return response.data?.data || response.data;
+}
+
+/**
+ * T-63: Sinh URL xem ảnh hiển thị (hoặc thumbnail).
+ */
+export function getDisplayImageUrl(projectId, entryId, imageId, isThumb = false) {
+  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/display${isThumb ? '?thumb=true' : ''}`;
+}
+
+/**
+ * T-63: Sinh URL tải ảnh gốc HD.
+ */
+export function getOriginalImageUrl(projectId, entryId, imageId) {
+  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/original`;
+}

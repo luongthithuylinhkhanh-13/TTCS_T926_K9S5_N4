@@ -222,4 +222,25 @@ class DiaryServiceTest {
                 diaryService.getOriginalImageResource(wrongProjectId, entryId, UUID.randomUUID())
         );
     }
+
+    @Test
+    void getDiaryImages_ReturnsOrderedImageList() {
+        DiaryImage img1 = new DiaryImage(entryId, "img-1", "p1.jpg", "image/jpeg");
+        img1.setId(UUID.randomUUID());
+        img1.setDisplayStatus("COMPLETED");
+
+        DiaryImage img2 = new DiaryImage(entryId, "img-2", "p2.jpg", "image/jpeg");
+        img2.setId(UUID.randomUUID());
+        img2.setDisplayStatus("COMPLETED");
+
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(entryId))
+                .thenReturn(java.util.List.of(img1, img2));
+
+        java.util.List<DiaryImageResponse> list = diaryService.getDiaryImages(projectId, entryId);
+
+        assertThat(list).hasSize(2);
+        assertThat(list.get(0).clientImageId()).isEqualTo("img-1");
+        assertThat(list.get(1).clientImageId()).isEqualTo("img-2");
+    }
 }

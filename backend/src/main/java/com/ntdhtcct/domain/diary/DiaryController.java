@@ -102,4 +102,14 @@ public class DiaryController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"original_" + imageId + "\"")
                 .body(resource);
     }
+
+    @GetMapping("/{entryId}/images")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
+    public ResponseEntity<ApiResponse<java.util.List<DiaryImageResponse>>> getDiaryImages(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId
+    ) {
+        java.util.List<DiaryImageResponse> images = diaryService.getDiaryImages(projectId, entryId);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách ảnh thành công", images));
+    }
 }
