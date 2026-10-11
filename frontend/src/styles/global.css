@@ -222,6 +222,13 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
   }
 
+  .header-right > .pwa-install-button {
+    display: inline-flex;
+    gap: 4px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
   .page-header {
     flex-direction: column;
     gap: 16px;

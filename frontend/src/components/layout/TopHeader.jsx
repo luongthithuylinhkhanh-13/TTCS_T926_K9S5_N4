@@ -10,6 +10,7 @@ import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/wbsApi';
+import InstallAppButton from '../pwa/InstallAppButton';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLocale } from '../../utils/LocaleContext';
 import SyncQueueStatusBar from '../sync/SyncQueueStatusBar';
@@ -84,6 +85,8 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
       </div>
 
       <div className="header-right">
+        <InstallAppButton />
+
         <div 
           className="header-icon-btn" 
           onClick={() => message.info(t('Tìm kiếm nhanh (Demo UI)'))}
