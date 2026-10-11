@@ -180,6 +180,7 @@ const MilestoneAlertSection = ({ projectId }) => {
   ];
 
   return (
+    <div id="milestones" className="milestone-section">
     <Card
       title={
         <Space>
@@ -340,6 +341,7 @@ const MilestoneAlertSection = ({ projectId }) => {
         </Form>
       </Modal>
     </Card>
+    </div>
   );
 };
 

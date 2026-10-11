@@ -110,6 +110,7 @@ public class MilestoneIntegrationTest {
         );
 
         mockMvc.perform(post("/api/projects/" + project.getId() + "/milestones")
+                        .header("X-User-Id", managerUser.getId())
                         .header("Authorization", bearerToken(managerUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -160,6 +161,7 @@ public class MilestoneIntegrationTest {
         milestoneRepository.save(milestone);
 
         mockMvc.perform(get("/api/projects/" + project.getId() + "/milestones/warnings")
+                        .header("X-User-Id", managerUser.getId())
                         .header("Authorization", bearerToken(managerUser)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))

@@ -54,9 +54,12 @@
     <include file="db/migration/v12/V12_0__require_duration_for_tasks.xml"
              relativeToChangelogFile="false"/>
 
-    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
+    <!-- Tạo bảng tasks / task_dependencies trước -->
+    <include file="db/migration/v13/V13_1__create_tasks_table.xml"
              relativeToChangelogFile="false"/>
-    <include file="db/migration/v13/V13_0__create_tasks_table.xml"
+
+    <!-- Thêm cột / sửa đổi bảng sau -->
+    <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
              relativeToChangelogFile="false"/>
 
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
@@ -66,8 +69,30 @@
              relativeToChangelogFile="false"/>
 
     <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
+
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
 
-</databaseChangeLog>
+    <!-- T-51, T-52, T-53: Báo cáo hằng ngày -->
+    <include file="db/migration/v13/V13_0__add_wbs_columns_and_daily_reports.xml"
+             relativeToChangelogFile="false"/>
 
+    <!-- T-54, T-55: Quản lý thành viên dự án -->
+    <include file="db/migration/v14/V14_0__create_project_members_and_invitations.xml"
+             relativeToChangelogFile="false"/>
+
+    <include file="db/migration/v15/V15_0__crew_task_assignments.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-30 (NTDHTCT-214): Nhật ký công trường & hàng đợi đồng bộ tự gửi khi có mạng -->
+    <include file="db/migration/v16/V16_0__create_site_diaries_and_sync_queue.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-22 (T-59, T-60): Nhân lực, tổ đội và điều kiện thi công -->
+    <include file="db/migration/v17/V17_0__extend_site_diary_daily_conditions.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- T-74/T-75: Detect concurrent edits to WBS items -->
+    <include file="db/migration/v18/V18_0__add_wbs_item_version.xml"
+             relativeToChangelogFile="false"/>
+</databaseChangeLog>

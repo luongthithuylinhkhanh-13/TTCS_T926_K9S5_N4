@@ -92,7 +92,7 @@ class TaskDependencyGraphServiceTest {
 
         assertEquals(expectedTaskIds, graph.getNodes().keySet());
         com.ntdhtcct.domain.TaskDependency graphDependency =
-                graph.getOutgoingDependencies(predecessorId).getFirst();
+                graph.getOutgoingDependencies(predecessorId).get(0);
         assertEquals(predecessorId, graphDependency.getPredecessorId());
         assertEquals(successorId, graphDependency.getSuccessorId());
         assertEquals(DependencyType.FS, graphDependency.getDependencyType());

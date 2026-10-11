@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,10 +25,13 @@ class WbsServiceDurationTest {
 
     private final WbsItemRepository wbsItemRepository = mock(WbsItemRepository.class);
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
-        private final CpmEngine cpmEngine = new CpmEngine();
+    private final ProjectMemberRepository projectMemberRepository =
+            mock(ProjectMemberRepository.class);
+    private final CpmEngine cpmEngine = new CpmEngine();
     private final WbsService service = new WbsService(
             wbsItemRepository,
             projectRepository,
+            projectMemberRepository,
             cpmEngine
     );
     private final UUID projectId = UUID.randomUUID();
@@ -73,6 +77,22 @@ class WbsServiceDurationTest {
     }
 
     @Test
+    void rejectsActualEndDateWithoutActualStartDate() {
+        WbsItem item = new WbsItem();
+        item.setWbsCode("1.1");
+        item.setName("Task");
+        item.setDuration(1);
+        item.setActualStartDate(null);
+        item.setActualEndDate(LocalDate.parse("2026-10-10"));
+
+        assertThatThrownBy(() -> service.createTask(projectId, item))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế");
+
+        verify(wbsItemRepository, never()).save(item);
+    }
+
+    @Test
     void rejectsActualEndDateBeforeActualStartDate() {
         WbsItem item = new WbsItem();
         item.setWbsCode("1.1");
@@ -95,6 +115,7 @@ class WbsServiceDurationTest {
         existing.setProjectId(projectId);
         existing.setType("task");
         existing.setDuration(1);
+        existing.setVersion(0L);
         when(wbsItemRepository.findById(itemId)).thenReturn(Optional.of(existing));
         when(wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId))
                 .thenReturn(List.of(), List.of());
@@ -103,6 +124,7 @@ class WbsServiceDurationTest {
         request.setName("Task");
         request.setType("task");
         request.setDuration(1);
+        request.setVersion(0L);
         request.setProgressPercent(45);
         request.setActualStartDate(LocalDate.parse("2026-10-09"));
         request.setActualEndDate(LocalDate.parse("2026-10-10"));
@@ -113,5 +135,23 @@ class WbsServiceDurationTest {
         assertThat(existing.getActualEndDate()).isEqualTo(LocalDate.parse("2026-10-10"));
         assertThat(existing.getProgress()).isEqualTo(45);
         assertThat(existing.getProgressPercent()).isEqualTo(45);
+    }
+
+    @Test
+    void rejectsUpdateWhenItemVersionIsStale() {
+        UUID itemId = UUID.randomUUID();
+        WbsItem existing = new WbsItem();
+        existing.setProjectId(projectId);
+        existing.setVersion(2L);
+        when(wbsItemRepository.findById(itemId)).thenReturn(Optional.of(existing));
+
+        WbsItem request = new WbsItem();
+        request.setVersion(1L);
+
+        assertThatThrownBy(() -> service.update(projectId, itemId, request))
+                .isInstanceOf(WbsConflictException.class)
+                .hasMessageContaining("đã được người khác cập nhật");
+
+        verify(wbsItemRepository, never()).save(existing);
     }
 }

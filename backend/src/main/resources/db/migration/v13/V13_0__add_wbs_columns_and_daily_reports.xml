@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V13_0__add_wbs_columns_and_daily_reports" author="ai-assistant">
+        <!-- Add columns to wbs_items -->
+        <addColumn tableName="wbs_items">
+            <column name="total_volume" type="FLOAT" defaultValueNumeric="0"/>
+            <column name="unit" type="VARCHAR(50)"/>
+        </addColumn>
+
+        <!-- Create daily_reports table -->
+        <createTable tableName="daily_reports">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="wbs_item_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reporter_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="report_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reported_volume" type="FLOAT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="daily_reports" baseColumnNames="wbs_item_id"
+                                 referencedTableName="wbs_items" referencedColumnNames="id"
+                                 constraintName="fk_daily_reports_wbs_item_id"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="daily_reports" baseColumnNames="reporter_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_daily_reports_reporter_id"/>
+    </changeSet>
+
+</databaseChangeLog>

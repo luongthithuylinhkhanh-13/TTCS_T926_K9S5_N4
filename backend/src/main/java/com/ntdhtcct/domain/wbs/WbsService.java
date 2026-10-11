@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,20 +18,27 @@ public class WbsService {
 
     private final WbsItemRepository wbsItemRepository;
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final CpmEngine cpmEngine;
 
     public WbsService(
             WbsItemRepository wbsItemRepository,
             ProjectRepository projectRepository,
+            ProjectMemberRepository projectMemberRepository,
             CpmEngine cpmEngine
     ) {
         this.wbsItemRepository = wbsItemRepository;
         this.projectRepository = projectRepository;
+        this.projectMemberRepository = projectMemberRepository;
         this.cpmEngine = cpmEngine;
     }
 
     public List<Project> getProjects() {
         return projectRepository.findAll();
+    }
+
+    public List<Project> getProjectsForUser(UUID userId) {
+        return projectMemberRepository.findActiveProjectsByUserId(userId);
     }
 
     public List<WbsItem> getWbsByProject(UUID projectId) {
@@ -141,6 +149,8 @@ public class WbsService {
         validatePredecessors(projectId, null, item.getPredecessorIds());
 
         item.setProjectId(projectId);
+        item.setAssignedTeamMemberId(null);
+        item.setAssignedTeamName(null);
 
         if (item.getType() == null || item.getType().isBlank()) {
             item.setType(item.getParentId() == null ? "phase" : "task");
@@ -165,6 +175,10 @@ public class WbsService {
         requireProject(projectId);
 
         WbsItem item = requireItem(projectId, itemId);
+
+        if (request.getVersion() == null || !request.getVersion().equals(item.getVersion())) {
+            throw new WbsConflictException("Công việc đã được người khác cập nhật. Hãy tải lại dữ liệu mới nhất trước khi sửa tiếp.");
+        }
 
         if ("task".equalsIgnoreCase(request.getType())
                 && (request.getDuration() == null || request.getDuration() <= 0)) {
@@ -224,6 +238,11 @@ public class WbsService {
     }
 
     private void validateActualProgress(WbsItem item) {
+        if (item.getActualEndDate() != null && item.getActualStartDate() == null) {
+            throw new IllegalArgumentException(
+                    "Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế"
+            );
+        }
         if (item.getActualStartDate() != null
                 && item.getActualEndDate() != null
                 && item.getActualEndDate().isBefore(item.getActualStartDate())) {

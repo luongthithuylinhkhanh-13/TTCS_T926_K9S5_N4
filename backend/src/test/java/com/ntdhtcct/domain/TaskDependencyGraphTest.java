@@ -32,8 +32,8 @@ class TaskDependencyGraphTest {
 
         assertEquals(List.of(dependency), graph.getOutgoingDependencies(predecessorId));
         assertEquals(List.of(dependency), graph.getIncomingDependencies(successorId));
-        assertEquals(DependencyType.SS, graph.getOutgoingDependencies(predecessorId).getFirst().getDependencyType());
-        assertEquals(-2, graph.getOutgoingDependencies(predecessorId).getFirst().getLagDays());
+        assertEquals(DependencyType.SS, graph.getOutgoingDependencies(predecessorId).get(0).getDependencyType());
+        assertEquals(-2, graph.getOutgoingDependencies(predecessorId).get(0).getLagDays());
     }
 
     @Test

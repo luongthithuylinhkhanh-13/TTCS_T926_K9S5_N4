@@ -5,7 +5,8 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="V13.0-create-tasks" author="NTDHTCT-133">
+    <!-- 1. Tạo bảng tasks -->
+    <changeSet id="V13.1-create-tasks" author="NTDHTCT-133">
         <createTable tableName="tasks">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
@@ -50,4 +51,5 @@
             <dropTable tableName="tasks"/>
         </rollback>
     </changeSet>
+
 </databaseChangeLog>

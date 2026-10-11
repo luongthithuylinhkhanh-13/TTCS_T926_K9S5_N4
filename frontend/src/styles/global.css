@@ -22,6 +22,59 @@
   --transition-normal: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html[data-theme='dark'] {
+  --bg-color: #111827;
+  --card-bg: #1f2937;
+  --border-color: #374151;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --dark-navy: #f3f4f6;
+}
+
+html[data-theme='dark'] body,
+html[data-theme='dark'] .app-layout {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+}
+
+html[data-theme='dark'] .top-header,
+html[data-theme='dark'] .ant-card,
+html[data-theme='dark'] .ant-modal-content,
+html[data-theme='dark'] .ant-modal-header,
+html[data-theme='dark'] .ant-dropdown .ant-dropdown-menu {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+html[data-theme='dark'] .top-header,
+html[data-theme='dark'] .ant-card,
+html[data-theme='dark'] .ant-modal-content {
+  border-color: var(--border-color);
+}
+
+html[data-theme='dark'] .header-user-dropdown span,
+html[data-theme='dark'] .ant-modal-title,
+html[data-theme='dark'] .ant-form-item-label > label,
+html[data-theme='dark'] .ant-dropdown-menu-title-content,
+html[data-theme='dark'] .page-content h1,
+html[data-theme='dark'] .page-content h2,
+html[data-theme='dark'] .page-content h3 {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme='dark'] .tree-table-wrapper,
+html[data-theme='dark'] .tree-table,
+html[data-theme='dark'] .tree-table tbody tr,
+html[data-theme='dark'] .tree-table tbody td {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+html[data-theme='dark'] .tree-table-header th {
+  background: #273449;
+  color: var(--text-primary);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
