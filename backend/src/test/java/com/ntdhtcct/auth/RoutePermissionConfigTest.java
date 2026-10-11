@@ -34,4 +34,17 @@ class RoutePermissionConfigTest {
 
         assertThat(roles).containsExactly("ADMIN", "PROJECT_MANAGER");
     }
+
+    @Test
+    void allowsEngineersAndManagersToCreateDiaryEntries() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/diary-entries"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
 }

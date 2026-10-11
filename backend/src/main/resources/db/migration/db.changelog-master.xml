@@ -68,5 +68,9 @@
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
 
+    <!-- S-23 (E-05): Nhật ký công trường và ảnh đính kèm -->
+    <include file="db/migration/v16/V16_0__create_diary_tables.xml"
+             relativeToChangelogFile="false"/>
+
 </databaseChangeLog>
 
