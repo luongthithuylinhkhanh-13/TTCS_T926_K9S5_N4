@@ -10,6 +10,7 @@ import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/wbsApi';
+import InstallAppButton from '../pwa/InstallAppButton';
 
 const TopHeader = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
@@ -60,6 +61,8 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
       </div>
 
       <div className="header-right">
+        <InstallAppButton />
+
         <div 
           className="header-icon-btn" 
           onClick={() => message.info('Tìm kiếm nhanh (Demo UI)')}

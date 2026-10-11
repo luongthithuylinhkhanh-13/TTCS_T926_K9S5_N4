@@ -3,6 +3,7 @@ import { Form, Input, Button, Checkbox, Alert } from 'antd';
 import { MailOutlined, LockOutlined, LoginOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { setAuthUser } from '../../utils/auth';
+import InstallAppButton from '../pwa/InstallAppButton';
 
 const LoginForm = () => {
   const [mode, setMode] = useState('login');
@@ -232,6 +233,7 @@ const LoginForm = () => {
           {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
         </Button>
       </div>
+      <InstallAppButton className="pwa-install-login" block />
     </div>
   );
 };
