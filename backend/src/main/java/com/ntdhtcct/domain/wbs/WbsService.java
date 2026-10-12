@@ -165,6 +165,11 @@ public class WbsService {
             item.setStatus("not_started");
         }
 
+        validateVolumeAndUnitPrice(item);
+        if (item.getUnit() != null) {
+            item.setUnit(item.getUnit().trim());
+        }
+
         WbsItem saved = wbsItemRepository.save(item);
         recalculateCpm(projectId);
         return saved;
@@ -218,6 +223,11 @@ public class WbsService {
         item.setPredecessorIds(request.getPredecessorIds());
         item.setDescription(request.getDescription());
         item.setImage(request.getImage());
+
+        validateVolumeAndUnitPrice(request);
+        item.setTotalVolume(request.getTotalVolume());
+        item.setUnit(request.getUnit() != null ? request.getUnit().trim() : null);
+        item.setUnitPrice(request.getUnitPrice());
 
         WbsItem saved = wbsItemRepository.save(item);
         recalculateCpm(projectId);
@@ -332,5 +342,22 @@ public class WbsService {
         List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
         cpmEngine.calculate(items);
         wbsItemRepository.saveAll(items);
+    }
+
+    private void validateVolumeAndUnitPrice(WbsItem item) {
+        if (item.getTotalVolume() != null && item.getTotalVolume() < 0) {
+            throw new IllegalArgumentException("Khối lượng công việc không được âm");
+        }
+        if (item.getUnitPrice() != null && item.getUnitPrice() < 0) {
+            throw new IllegalArgumentException("Đơn giá không được âm");
+        }
+        if (item.getUnit() != null && item.getUnit().length() > 50) {
+            throw new IllegalArgumentException("Đơn vị tính không được vượt quá 50 ký tự");
+        }
+        if (item.getTotalVolume() != null && item.getTotalVolume() > 0) {
+            if (item.getUnit() == null || item.getUnit().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng nhập đơn vị tính khi đã khai báo khối lượng");
+            }
+        }
     }
 }

@@ -73,6 +73,9 @@ public class WbsItem {
     @Column(name = "unit", length = 50)
     private String unit;
 
+    @Column(name = "unit_price")
+    private Double unitPrice;
+
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -457,5 +460,31 @@ public class WbsItem {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public Double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(Double unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    @JsonProperty("quantity")
+    public Double getQuantity() {
+        return totalVolume;
+    }
+
+    @JsonProperty("quantity")
+    public void setQuantity(Double quantity) {
+        this.totalVolume = quantity;
+    }
+
+    @JsonProperty("totalPrice")
+    public Double getTotalPrice() {
+        if (totalVolume != null && unitPrice != null) {
+            return Math.round(totalVolume * unitPrice * 100.0) / 100.0;
+        }
+        return null;
     }
 }

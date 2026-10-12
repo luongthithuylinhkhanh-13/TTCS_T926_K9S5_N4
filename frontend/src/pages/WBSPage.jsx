@@ -147,6 +147,11 @@ const normalizeFormData = (formData) => {
 
     description: formData.description || '',
 
+    quantity: formData.quantity == null && formData.totalVolume == null ? null : Number(formData.quantity ?? formData.totalVolume),
+    totalVolume: formData.quantity == null && formData.totalVolume == null ? null : Number(formData.totalVolume ?? formData.quantity),
+    unit: formData.unit ? formData.unit.trim() : null,
+    unitPrice: formData.unitPrice == null ? null : Number(formData.unitPrice),
+
     image:
       formData.image ||
       formData.images?.[0] ||
