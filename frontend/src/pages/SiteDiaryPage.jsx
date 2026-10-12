@@ -24,20 +24,32 @@ import {
   ClockCircleOutlined,
   ReloadOutlined,
   EyeOutlined,
-  EditOutlined
+  EditOutlined,
+  LockOutlined,
+  UnlockOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
-import { submitSiteDiary, getSiteDiaries, updateSiteDiary } from '../services/siteDiaryApi';
+import {
+  submitSiteDiary,
+  getSiteDiaries,
+  updateSiteDiary,
+  lockSiteDiaryDate,
+  unlockSiteDiaryDate,
+  getProjectDiaryLocks
+} from '../services/siteDiaryApi';
+import { isProjectManager } from '../utils/permissions';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const SiteDiaryPage = () => {
   const [form] = Form.useForm();
+  const [lockForm] = Form.useForm();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [diaries, setDiaries] = useState([]);
+  const [locks, setLocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [online, setOnline] = useState(() => (
@@ -46,6 +58,9 @@ const SiteDiaryPage = () => {
   const [editingDiaryId, setEditingDiaryId] = useState(null);
   const [detailDiary, setDetailDiary] = useState(null);
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
+  const [lockModalOpen, setLockModalOpen] = useState(false);
+  const [lockModalMode, setLockModalMode] = useState('LOCK'); // 'LOCK' | 'UNLOCK'
+  const [lockActionSubmitting, setLockActionSubmitting] = useState(false);
 
   // Tải danh sách dự án
   useEffect(() => {
@@ -63,13 +78,28 @@ const SiteDiaryPage = () => {
     fetchProjects();
   }, []);
 
+  // Tải danh sách khóa sổ theo dự án
+  const loadLocks = async () => {
+    if (!selectedProjectId) return;
+    try {
+      const lockList = await getProjectDiaryLocks(selectedProjectId);
+      setLocks(lockList);
+    } catch (err) {
+      console.error('Lỗi tải danh sách khóa sổ:', err);
+    }
+  };
+
   // Tải nhật ký khi chọn dự án
   const loadDiaries = async () => {
     if (!selectedProjectId) return;
     setLoading(true);
     try {
-      const data = await getSiteDiaries(selectedProjectId);
+      const [data, lockList] = await Promise.all([
+        getSiteDiaries(selectedProjectId),
+        getProjectDiaryLocks(selectedProjectId)
+      ]);
       setDiaries(data);
+      setLocks(lockList);
     } catch (err) {
       console.error('Lỗi tải nhật ký:', err);
     } finally {
@@ -277,7 +307,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Đồng bộ',
       key: 'syncStatus',
-      width: 200,
+      width: 150,
       render: (_, r) => {
         if (r._isPendingSync) {
           return (
@@ -289,6 +319,29 @@ const SiteDiaryPage = () => {
         return (
           <Tag icon={<CheckCircleOutlined />} color="success">
             Đã đồng bộ
+          </Tag>
+        );
+      }
+    },
+    {
+      title: 'Khóa sổ',
+      key: 'lockStatus',
+      width: 150,
+      render: (_, r) => {
+        const dateStr = r.diaryDate ? dayjs(r.diaryDate).format('YYYY-MM-DD') : null;
+        const lockRecord = locks.find(l => l.lockDate === dateStr);
+        const isLocked = lockRecord?.locked || lockRecord?.status === 'LOCKED';
+
+        if (isLocked) {
+          return (
+            <Tag icon={<LockOutlined />} color="error">
+              Đã khóa sổ
+            </Tag>
+          );
+        }
+        return (
+          <Tag icon={<UnlockOutlined />} color="default">
+            Mở
           </Tag>
         );
       }
@@ -363,6 +416,35 @@ const SiteDiaryPage = () => {
               <Button icon={<ReloadOutlined />} onClick={loadDiaries}>
                 Làm mới
               </Button>
+              {isProjectManager() && (
+                <>
+                  <Button
+                    icon={<LockOutlined />}
+                    danger
+                    onClick={() => {
+                      setLockModalMode('LOCK');
+                      lockForm.resetFields();
+                      lockForm.setFieldsValue({ lockDate: dayjs() });
+                      setLockModalOpen(true);
+                    }}
+                    disabled={!selectedProjectId}
+                  >
+                    Khóa sổ
+                  </Button>
+                  <Button
+                    icon={<UnlockOutlined />}
+                    onClick={() => {
+                      setLockModalMode('UNLOCK');
+                      lockForm.resetFields();
+                      lockForm.setFieldsValue({ lockDate: dayjs() });
+                      setLockModalOpen(true);
+                    }}
+                    disabled={!selectedProjectId}
+                  >
+                    Mở khóa sổ
+                  </Button>
+                </>
+              )}
               <Button
                 type="primary"
                 icon={<CloudUploadOutlined />}
@@ -569,6 +651,95 @@ const SiteDiaryPage = () => {
             </div>
           </Space>
         )}
+      </Modal>
+
+      {/* Modal Khóa / Mở khóa sổ (T-64) */}
+      <Modal
+        title={
+          <Space>
+            {lockModalMode === 'LOCK' ? <LockOutlined style={{ color: '#ff4d4f' }} /> : <UnlockOutlined style={{ color: '#52c41a' }} />}
+            <span>{lockModalMode === 'LOCK' ? 'Khóa sổ nhật ký theo ngày' : 'Mở khóa sổ nhật ký theo ngày'}</span>
+          </Space>
+        }
+        open={lockModalOpen}
+        onCancel={() => {
+          setLockModalOpen(false);
+          lockForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={lockForm}
+          layout="vertical"
+          onFinish={async values => {
+            if (!selectedProjectId) return;
+            setLockActionSubmitting(true);
+            try {
+              const dateStr = values.lockDate.format('YYYY-MM-DD');
+              if (lockModalMode === 'LOCK') {
+                await lockSiteDiaryDate(selectedProjectId, dateStr, values.reason);
+                notification.success({
+                  message: 'Khóa sổ thành công',
+                  description: `Đã khóa sổ nhật ký ngày ${values.lockDate.format('DD/MM/YYYY')}.`
+                });
+              } else {
+                await unlockSiteDiaryDate(selectedProjectId, dateStr, values.reason);
+                notification.success({
+                  message: 'Mở khóa sổ thành công',
+                  description: `Đã mở khóa sổ nhật ký ngày ${values.lockDate.format('DD/MM/YYYY')}.`
+                });
+              }
+              setLockModalOpen(false);
+              lockForm.resetFields();
+              await loadDiaries();
+            } catch (err) {
+              notification.error({
+                message: lockModalMode === 'LOCK' ? 'Lỗi khóa sổ' : 'Lỗi mở khóa sổ',
+                description: err.response?.data?.message || err.message
+              });
+            } finally {
+              setLockActionSubmitting(false);
+            }
+          }}
+          initialValues={{ lockDate: dayjs() }}
+        >
+          <Form.Item
+            name="lockDate"
+            label="Ngày áp dụng"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày' }]}
+          >
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label={lockModalMode === 'LOCK' ? 'Lý do khóa sổ' : 'Lý do mở khóa sổ'}
+            rules={[{ required: lockModalMode === 'UNLOCK', message: 'Vui lòng nhập lý do' }]}
+          >
+            <TextArea
+              rows={3}
+              placeholder={
+                lockModalMode === 'LOCK'
+                  ? 'Ví dụ: Đã chốt số liệu và kiểm toán khối lượng thi công ngày...'
+                  : 'Ví dụ: Cần bổ sung quân số hoặc khắc phục sai lệch báo cáo...'
+              }
+            />
+          </Form.Item>
+
+          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={() => setLockModalOpen(false)}>Hủy</Button>
+            <Button
+              type="primary"
+              danger={lockModalMode === 'LOCK'}
+              htmlType="submit"
+              loading={lockActionSubmitting}
+              icon={lockModalMode === 'LOCK' ? <LockOutlined /> : <UnlockOutlined />}
+            >
+              {lockModalMode === 'LOCK' ? 'Xác nhận khóa sổ' : 'Xác nhận mở khóa'}
+            </Button>
+          </Space>
+        </Form>
       </Modal>
     </div>
   );

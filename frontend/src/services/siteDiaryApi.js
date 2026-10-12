@@ -139,3 +139,49 @@ export const getSiteDiaries = async projectId => {
 export const triggerManualSync = () => {
   return autoSyncService.syncQueueNow();
 };
+
+/**
+ * T-64: Khóa sổ nhật ký công trường theo ngày
+ */
+export const lockSiteDiaryDate = async (projectId, lockDate, reason) => {
+  const response = await apiClient.post(
+    `/api/projects/${projectId}/site-diaries/locks`,
+    { lockDate, reason }
+  );
+  return response.data;
+};
+
+/**
+ * T-64: Mở khóa sổ nhật ký công trường theo ngày
+ */
+export const unlockSiteDiaryDate = async (projectId, lockDate, reason) => {
+  const response = await apiClient.post(
+    `/api/projects/${projectId}/site-diaries/unlocks`,
+    { lockDate, reason }
+  );
+  return response.data;
+};
+
+/**
+ * T-64: Lấy danh sách tất cả các ngày đã thiết lập khóa/mở khóa sổ của dự án
+ */
+export const getProjectDiaryLocks = async projectId => {
+  try {
+    const response = await apiClient.get(`/api/projects/${projectId}/site-diaries/locks`);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (err) {
+    console.warn('[SiteDiary] Không thể tải danh sách khóa sổ:', err.message);
+    return [];
+  }
+};
+
+/**
+ * T-64: Tra cứu trạng thái khóa sổ của một ngày cụ thể
+ */
+export const getDiaryLockStatus = async (projectId, date) => {
+  const response = await apiClient.get(
+    `/api/projects/${projectId}/site-diaries/locks/status`,
+    { params: { date } }
+  );
+  return response.data;
+};

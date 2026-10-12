@@ -99,4 +99,8 @@
     <!-- S-35 (NTDHTCT-219, T-80, T-81, T-82): Khai báo khối lượng, đơn vị tính và đơn giá -->
     <include file="db/migration/v19/V19_0__add_quantity_unit_price_to_tasks_and_wbs.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-24 (T-64): Khóa sổ nhật ký công trường theo ngày -->
+    <include file="db/migration/v20/V20_0__create_site_diary_locks_table.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

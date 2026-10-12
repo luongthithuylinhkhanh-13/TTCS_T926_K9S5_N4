@@ -48,6 +48,9 @@ public class SiteDiarySyncIntegrationTest {
     private SiteDiarySyncService siteDiarySyncService;
 
     @Mock
+    private SiteDiaryLockService siteDiaryLockService;
+
+    @Mock
     private AuthTokenService authTokenService;
 
     @InjectMocks
@@ -303,5 +306,135 @@ public class SiteDiarySyncIntegrationTest {
                                 {"diaryDate":null,"workSummary":" "}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("TC-LOCK-01: T-64 - Khóa sổ nhật ký theo ngày thành công")
+    void testLockDiaryDate_Success() throws Exception {
+        LocalDate lockDate = LocalDate.now();
+        UUID lockId = UUID.randomUUID();
+        when(authTokenService.getUserIdFromToken(token)).thenReturn(engineerUserId);
+
+        when(siteDiaryLockService.lockDate(eq(projectId), eq(engineerUserId), eq(lockDate), eq("Khóa sổ nghiệm thu")))
+                .thenReturn(new com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockResponse(
+                        lockId,
+                        projectId,
+                        lockDate,
+                        "LOCKED",
+                        true,
+                        engineerUserId,
+                        OffsetDateTime.now(),
+                        "Khóa sổ nghiệm thu",
+                        null,
+                        null,
+                        null,
+                        OffsetDateTime.now(),
+                        OffsetDateTime.now()
+                ));
+
+        mockMvc.perform(post("/api/projects/{projectId}/site-diaries/locks", projectId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "lockDate": "%s",
+                                    "reason": "Khóa sổ nghiệm thu"
+                                }
+                                """.formatted(lockDate)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(lockId.toString())))
+                .andExpect(jsonPath("$.status", equalTo("LOCKED")))
+                .andExpect(jsonPath("$.locked", equalTo(true)))
+                .andExpect(jsonPath("$.lockReason", equalTo("Khóa sổ nghiệm thu")));
+    }
+
+    @Test
+    @DisplayName("TC-LOCK-02: T-64 - Mở khóa sổ nhật ký theo ngày thành công")
+    void testUnlockDiaryDate_Success() throws Exception {
+        LocalDate lockDate = LocalDate.now();
+        UUID lockId = UUID.randomUUID();
+        when(authTokenService.getUserIdFromToken(token)).thenReturn(engineerUserId);
+
+        when(siteDiaryLockService.unlockDate(eq(projectId), eq(engineerUserId), eq(lockDate), eq("Bổ sung dữ liệu")))
+                .thenReturn(new com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockResponse(
+                        lockId,
+                        projectId,
+                        lockDate,
+                        "UNLOCKED",
+                        false,
+                        engineerUserId,
+                        OffsetDateTime.now(),
+                        "Lý do cũ",
+                        engineerUserId,
+                        OffsetDateTime.now(),
+                        "Bổ sung dữ liệu",
+                        OffsetDateTime.now(),
+                        OffsetDateTime.now()
+                ));
+
+        mockMvc.perform(post("/api/projects/{projectId}/site-diaries/unlocks", projectId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "lockDate": "%s",
+                                    "reason": "Bổ sung dữ liệu"
+                                }
+                                """.formatted(lockDate)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", equalTo("UNLOCKED")))
+                .andExpect(jsonPath("$.locked", equalTo(false)))
+                .andExpect(jsonPath("$.unlockReason", equalTo("Bổ sung dữ liệu")));
+    }
+
+    @Test
+    @DisplayName("TC-LOCK-03: T-64 - Lấy danh sách ngày đã khóa và tra cứu trạng thái ngày")
+    void testGetLocksAndStatus() throws Exception {
+        LocalDate lockDate = LocalDate.now();
+        UUID lockId = UUID.randomUUID();
+
+        when(siteDiaryLockService.getProjectLocks(projectId))
+                .thenReturn(List.of(new com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockResponse(
+                        lockId,
+                        projectId,
+                        lockDate,
+                        "LOCKED",
+                        true,
+                        engineerUserId,
+                        OffsetDateTime.now(),
+                        "Khóa sổ",
+                        null,
+                        null,
+                        null,
+                        OffsetDateTime.now(),
+                        OffsetDateTime.now()
+                )));
+
+        mockMvc.perform(get("/api/projects/{projectId}/site-diaries/locks", projectId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].status", equalTo("LOCKED")));
+
+        when(siteDiaryLockService.getLockStatus(projectId, lockDate))
+                .thenReturn(Optional.of(new com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockResponse(
+                        lockId,
+                        projectId,
+                        lockDate,
+                        "LOCKED",
+                        true,
+                        engineerUserId,
+                        OffsetDateTime.now(),
+                        "Khóa sổ",
+                        null,
+                        null,
+                        null,
+                        OffsetDateTime.now(),
+                        OffsetDateTime.now()
+                )));
+
+        mockMvc.perform(get("/api/projects/{projectId}/site-diaries/locks/status", projectId)
+                        .param("date", lockDate.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locked", equalTo(true)));
     }
 }
