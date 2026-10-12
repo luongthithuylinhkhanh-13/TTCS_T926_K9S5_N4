@@ -24,15 +24,15 @@ public class DailyReportService {
         WbsItem wbsItem = wbsItemRepository.findById(request.getWbsItemId())
                 .orElseThrow(() -> new IllegalArgumentException("WbsItem not found"));
 
-        if (wbsItem.getTotalVolume() == null || wbsItem.getTotalVolume() == 0) {
-            throw new IllegalArgumentException("Cannot report volume: Total volume is not set for this task");
-        }
+        validateReportedVolume(wbsItem, request.getReportedVolume());
 
-        Double cumulativeVolume = dailyReportRepository.getCumulativeVolumeByWbsItemId(wbsItem.getId());
-        if (cumulativeVolume + request.getReportedVolume() > wbsItem.getTotalVolume()) {
-            throw new IllegalArgumentException("Cảnh báo vượt khối lượng! Khối lượng lũy kế (" + 
-                    (cumulativeVolume + request.getReportedVolume()) + ") vượt quá tổng khối lượng (" + 
-                    wbsItem.getTotalVolume() + ")");
+        Double cumulativeVolume = getApprovedVolume(wbsItem.getId());
+        Double nextCumulativeVolume = cumulativeVolume + request.getReportedVolume();
+
+        if (nextCumulativeVolume > wbsItem.getTotalVolume()) {
+            throw new IllegalArgumentException("Cảnh báo vượt khối lượng! Khối lượng lũy kế (" +
+                    formatVolume(nextCumulativeVolume) + ") vượt quá tổng khối lượng (" +
+                    formatVolume(wbsItem.getTotalVolume()) + ")");
         }
 
         DailyReport report = new DailyReport(
@@ -45,8 +45,7 @@ public class DailyReportService {
 
         report = dailyReportRepository.save(report);
 
-        // Update progress of wbsItem
-        double newProgress = ((cumulativeVolume + request.getReportedVolume()) / wbsItem.getTotalVolume()) * 100;
+        double newProgress = ((nextCumulativeVolume) / wbsItem.getTotalVolume()) * 100;
         wbsItem.setProgress((int) Math.round(newProgress));
         wbsItemRepository.save(wbsItem);
 
@@ -55,14 +54,58 @@ public class DailyReportService {
 
     @Transactional(readOnly = true)
     public List<DailyReportResponse> getReportsForTask(UUID wbsItemId) {
+        Double approvedVolume = getApprovedVolume(wbsItemId);
+        Double remainingVolume = getRemainingVolume(wbsItemId);
+
         return dailyReportRepository.findByWbsItemIdOrderByReportDateDesc(wbsItemId)
                 .stream()
-                .map(DailyReportResponse::new)
+                .map(report -> new DailyReportResponse(report, approvedVolume, remainingVolume))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Double getApprovedVolume(UUID wbsItemId) {
+        Double cumulative = dailyReportRepository.getCumulativeVolumeByWbsItemId(wbsItemId);
+        return cumulative == null ? 0.0 : cumulative;
+    }
+
+    @Transactional(readOnly = true)
+    public Double getRemainingVolume(UUID wbsItemId) {
+        WbsItem wbsItem = wbsItemRepository.findById(wbsItemId)
+                .orElseThrow(() -> new IllegalArgumentException("WbsItem not found"));
+
+        if (wbsItem.getTotalVolume() == null) {
+            return null;
+        }
+
+        double approvedVolume = getApprovedVolume(wbsItemId);
+        return Math.max(0.0, wbsItem.getTotalVolume() - approvedVolume);
     }
 
     @Transactional(readOnly = true)
     public List<WbsItem> getAssignedTasksForCaptain(UUID captainId, LocalDate date) {
         return wbsItemRepository.findAssignedTasksByDate(captainId.toString(), date);
+    }
+
+    private void validateReportedVolume(WbsItem wbsItem, Double reportedVolume) {
+        if (wbsItem.getTotalVolume() == null || wbsItem.getTotalVolume() == 0) {
+            throw new IllegalArgumentException("Cannot report volume: Total volume is not set for this task");
+        }
+        if (reportedVolume == null) {
+            throw new IllegalArgumentException("Khối lượng nghiệm thu không được để trống");
+        }
+        if (reportedVolume < 0) {
+            throw new IllegalArgumentException("Khối lượng nghiệm thu không được âm");
+        }
+    }
+
+    private String formatVolume(Double value) {
+        if (value == null) {
+            return "0";
+        }
+        if (Math.abs(value - Math.rint(value)) < 1e-9) {
+            return String.format("%.0f", value);
+        }
+        return String.format("%.2f", value).replaceAll("\\.?0+$", "");
     }
 }
