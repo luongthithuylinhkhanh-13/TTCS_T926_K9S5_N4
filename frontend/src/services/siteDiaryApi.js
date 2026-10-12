@@ -3,9 +3,9 @@
  * Tích hợp chế độ ngoại tuyến (Offline Mode) và hàng đợi tự động đồng bộ (S-30).
  */
 
-import apiClient from './apiClient';
-import syncQueueService, { generateUUID } from './syncQueueService';
-import autoSyncService from './autoSyncService';
+import apiClient from './apiClient.js';
+import syncQueueService, { generateUUID } from './syncQueueService.js';
+import autoSyncService from './autoSyncService.js';
 
 /**
  * Tạo mới hoặc xếp vào hàng đợi ngoại tuyến nếu mất mạng (T-70, T-71)
