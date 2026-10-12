@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { syncQueueService, generateUUID } from '../src/services/syncQueueService.js';
+import apiClient from '../src/services/apiClient.js';
+import autoSyncService from '../src/services/autoSyncService.js';
+import { submitSiteDiary } from '../src/services/siteDiaryApi.js';
 
 // Mock localStorage cho môi trường Node test
 class LocalStorageMock {
@@ -22,6 +25,7 @@ class LocalStorageMock {
 }
 
 globalThis.localStorage = new LocalStorageMock();
+globalThis.sessionStorage = globalThis.localStorage;
 if (typeof globalThis.window === 'undefined') {
   globalThis.window = {
     localStorage: globalThis.localStorage,
@@ -239,6 +243,66 @@ test('TC-S29-02: Không báo lưu thành công nếu thiết bị không ghi đ�
   } finally {
     localStorage.setItem = originalSetItem;
     console.error = originalError;
+    Object.defineProperty(globalThis.navigator, 'onLine', {
+      value: true,
+      configurable: true,
+      writable: true
+    });
+    syncQueueService.clearAll();
+  }
+});
+
+test('TC-S34: Ghi 20 nhật ký khi mất mạng và đồng bộ đầy đủ khi kết nối trở lại', async () => {
+  syncQueueService.clearAll();
+  const originalAdapter = apiClient.defaults.adapter;
+  const requests = [];
+  Object.defineProperty(globalThis.navigator, 'onLine', {
+    value: false,
+    configurable: true,
+    writable: true
+  });
+  apiClient.defaults.adapter = async config => {
+    requests.push(config);
+    return {
+      data: { success: true },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config
+    };
+  };
+
+  try {
+    const submissions = [];
+    for (let index = 1; index <= 20; index++) {
+      submissions.push(await submitSiteDiary('project-s34', {
+        diaryDate: `2026-10-${String(index).padStart(2, '0')}`,
+        workSummary: `Nhật ký S-34 mục ${index}`
+      }));
+    }
+
+    assert.ok(submissions.every(result => result.success && result.isOfflineQueued));
+    assert.equal(syncQueueService.getPendingItems().length, 20);
+    assert.equal(new Set(submissions.map(result => result.clientSyncId)).size, 20);
+
+    Object.defineProperty(globalThis.navigator, 'onLine', {
+      value: true,
+      configurable: true,
+      writable: true
+    });
+    const syncResult = await autoSyncService.syncQueueNow();
+
+    assert.equal(syncResult.total, 20);
+    assert.equal(syncResult.successCount, 20);
+    assert.equal(syncResult.failCount, 0);
+    assert.equal(requests.length, 20);
+    assert.deepEqual(
+      new Set(requests.map(request => JSON.parse(request.data).clientSyncId)),
+      new Set(submissions.map(result => result.clientSyncId))
+    );
+    assert.equal(syncQueueService.getQueue().length, 0);
+  } finally {
+    apiClient.defaults.adapter = originalAdapter;
     Object.defineProperty(globalThis.navigator, 'onLine', {
       value: true,
       configurable: true,

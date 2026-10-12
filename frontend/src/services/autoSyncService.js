@@ -5,8 +5,8 @@
  *   - NTDHTCT-256: T-71 – Tự động gửi dữ liệu lên máy chủ khi kết nối mạng trở lại
  */
 
-import apiClient from './apiClient';
-import syncQueueService from './syncQueueService';
+import apiClient from './apiClient.js';
+import syncQueueService from './syncQueueService.js';
 
 class AutoSyncService {
   constructor() {
