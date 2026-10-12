@@ -6,6 +6,7 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncStatusResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -98,6 +99,15 @@ public class SiteDiaryController {
     public ResponseEntity<List<SiteDiaryResponse>> getDiaries(@PathVariable UUID projectId) {
         List<SiteDiaryResponse> list = siteDiarySyncService.getDiariesByProject(projectId);
         return ResponseEntity.ok(list);
+    }
+
+    /**
+     * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký của dự án.
+     */
+    @GetMapping("/sync-status")
+    public ResponseEntity<SiteDiarySyncStatusResponse> getSyncStatus(@PathVariable UUID projectId) {
+        SiteDiarySyncStatusResponse status = siteDiarySyncService.getProjectSyncStatus(projectId);
+        return ResponseEntity.ok(status);
     }
 
     /**

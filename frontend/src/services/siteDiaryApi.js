@@ -103,9 +103,9 @@ export const getSiteDiaries = async projectId => {
     console.warn('[SiteDiary] Không thể tải từ máy chủ, lấy từ bộ nhớ đệm:', err.message);
   }
 
-  // Lấy các bản ghi đang chờ đồng bộ từ hàng đợi local
+  // Lấy các bản ghi đang chờ đồng bộ từ hàng đợi local (bao gồm PENDING, SYNCING, FAILED)
   const pendingItems = syncQueueService
-    .getPendingItems()
+    .getQueue()
     .filter(i => i.projectId === projectId && i.entityType === 'SITE_DIARY')
     .map(i => ({
       id: i.id,
@@ -122,15 +122,43 @@ export const getSiteDiaries = async projectId => {
       workSummary: i.payload.workSummary,
       issues: i.payload.issues,
       workingConditions: i.payload.workingConditions,
-      syncStatus: i.status === 'FAILED' ? 'Lỗi đồng bộ' : 'Chờ đồng bộ',
+      syncStatus: i.status === 'FAILED' ? 'Lỗi đồng bộ' : i.status === 'SYNCING' ? 'Đang đồng bộ' : 'Chưa đồng bộ',
+      rawSyncStatus: i.status || 'PENDING',
       _isPendingSync: true,
-      _retryCount: i.retryCount,
+      _retryCount: i.retryCount || 0,
       _lastError: i.lastError,
       offlineCreatedAt: i.payload.offlineCreatedAt
     }));
 
+  const formattedServerList = serverList.map(item => ({
+    ...item,
+    syncStatus: (!item.syncStatus || item.syncStatus === 'SYNCED') ? 'Đã đồng bộ' : item.syncStatus,
+    rawSyncStatus: 'SYNCED',
+    _isPendingSync: false
+  }));
+
   // Gộp bản ghi chờ gửi lên đầu danh sách
-  return [...pendingItems, ...serverList];
+  return [...pendingItems, ...formattedServerList];
+};
+
+/**
+ * T-73 (NTDHTCT-258): Đếm số lượng mục nhật ký đang chờ đồng bộ của một dự án
+ */
+export const getPendingSiteDiaryCount = (projectId = null) => {
+  return syncQueueService.getPendingCount(projectId);
+};
+
+/**
+ * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký từ máy chủ
+ */
+export const getSiteDiarySyncStatus = async projectId => {
+  try {
+    const res = await apiClient.get(`/api/projects/${projectId}/site-diaries/sync-status`);
+    return res.data;
+  } catch (err) {
+    console.warn('[SiteDiary] Không thể lấy trạng thái đồng bộ từ máy chủ:', err.message);
+    return null;
+  }
 };
 
 /**
@@ -139,3 +167,4 @@ export const getSiteDiaries = async projectId => {
 export const triggerManualSync = () => {
   return autoSyncService.syncQueueNow();
 };
+

@@ -5,6 +5,7 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncStatusResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -155,5 +156,18 @@ public class SiteDiarySyncService {
                     return siteDiaryRepository.save(diary);
                 })
                 .map(SiteDiaryResponse::from);
+    }
+
+    /**
+     * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký của dự án.
+     */
+    @Transactional(readOnly = true)
+    public SiteDiarySyncStatusResponse getProjectSyncStatus(UUID projectId) {
+        long total = siteDiaryRepository.countByProjectId(projectId);
+        long synced = siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "SYNCED");
+        long pending = siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "PENDING");
+        Optional<SiteDiary> latest = siteDiaryRepository.findFirstByProjectIdOrderByUpdatedAtDesc(projectId);
+        OffsetDateTime lastSync = latest.map(SiteDiary::getUpdatedAt).orElse(null);
+        return new SiteDiarySyncStatusResponse(projectId, total, synced, pending, lastSync);
     }
 }
