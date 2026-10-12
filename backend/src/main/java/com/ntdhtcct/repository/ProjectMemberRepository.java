@@ -1,6 +1,7 @@
 package com.ntdhtcct.repository;
 
 import com.ntdhtcct.entity.ProjectMember;
+import com.ntdhtcct.domain.project.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,8 +11,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
+import org.springframework.context.annotation.Primary;
+
+@Primary
+@Repository("projectMemberRepository")
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
+
+    @Query("SELECT pm.project FROM ProjectMember pm WHERE pm.user.id = :userId AND pm.status = 'ACTIVE'")
+    List<Project> findActiveProjectsByUserId(@Param("userId") UUID userId);
 
     Optional<ProjectMember> findByProjectIdAndUserId(
             UUID projectId,

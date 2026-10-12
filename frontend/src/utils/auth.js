@@ -19,6 +19,14 @@ export const setAuthUser = (user, remember = false) => {
   }
 };
 
+export const updateAuthUser = updates => {
+  const current = getAuthUser();
+  if (!current) return;
+
+  const remember = Boolean(localStorage.getItem(AUTH_KEY));
+  setAuthUser({ ...current, ...updates }, remember);
+};
+
 /**
  * Lấy thông tin người dùng đã đăng nhập.
  * Kiểm tra cả localStorage và sessionStorage.

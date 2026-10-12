@@ -46,31 +46,20 @@ public class AuthTokenService {
                     authTokenRepository.save(authToken);
                 });
     }
-
     public boolean isTokenValid(String token) {
-
         return authTokenRepository
                 .findByTokenAndRevokedFalse(token)
                 .map(authToken ->
-                        authToken.getExpiresAt()
-                                .isAfter(OffsetDateTime.now())
+                        authToken.getExpiresAt().isAfter(OffsetDateTime.now())
                 )
                 .orElse(false);
     }
 
     public UUID getUserIdFromToken(String token) {
-
         return authTokenRepository
                 .findByTokenAndRevokedFalse(token)
-                .filter(authToken ->
-                        authToken.getExpiresAt()
-                                .isAfter(OffsetDateTime.now())
-                )
+                .filter(authToken -> authToken.getExpiresAt().isAfter(OffsetDateTime.now()))
                 .map(AuthToken::getUserId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Token không hợp lệ hoặc đã hết hạn"
-                        )
-                );
+                .orElse(null);
     }
 }

@@ -103,7 +103,8 @@ public class DiaryService {
                 stored.fileSize(),
                 stored.thumbnailPath(),
                 stored.width(),
-                stored.height()
+                stored.height(),
+                java.time.OffsetDateTime.now()
         );
 
         if (updatedRows == 0) {
@@ -144,7 +145,8 @@ public class DiaryService {
                 image.getId(),
                 attemptId,
                 stored.originalPath(),
-                stored.fileSize()
+                stored.fileSize(),
+                java.time.OffsetDateTime.now()
         );
 
         if (updatedRows == 0) {

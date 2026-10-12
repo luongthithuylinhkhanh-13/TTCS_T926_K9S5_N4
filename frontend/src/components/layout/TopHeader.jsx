@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { 
   MenuFoldOutlined, 
   MenuUnfoldOutlined, 
@@ -10,40 +10,83 @@ import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/wbsApi';
+import InstallAppButton from '../pwa/InstallAppButton';
+import ProfileSettingsModal from './ProfileSettingsModal';
+import { useLocale } from '../../utils/LocaleContext';
+import SyncQueueStatusBar from '../sync/SyncQueueStatusBar';
 
-const TopHeader = ({ collapsed, setCollapsed }) => {
+const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }) => {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
+  const [user, setUser] = useState(getAuthUser);
+  const [modalMode, setModalMode] = useState(null);
+  const displayName = user?.fullName || user?.email || t('Tài khoản');
+  const initials = displayName
+    .split(/[\s.@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join('');
+
+  const handleProfileUpdated = useCallback(profile => {
+    setUser(current => ({ ...current, ...profile }));
+  }, []);
+
   const getBreadcrumbItems = () => {
     switch (location.pathname) {
       case '/dashboard':
         return [
-          { title: 'Trang chủ' },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Dashboard</span> }
+          { title: t('Trang chủ') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dashboard')}</span> }
         ];
       case '/projects':
         return [
-          { title: 'Trang chủ' },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Dự án</span> }
+          { title: t('Trang chủ') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dự án')}</span> }
         ];
       case '/progress':
         return [
-          { title: 'Trang chủ' },
-          { title: 'Dự án' },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Tiến độ</span> }
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Tiến độ')}</span> }
+        ];
+      case '/progress/milestones':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Mốc tiến độ')}</span> }
+        ];
+      case '/working-calendar':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Lịch làm việc')}</span> }
         ];
       case '/tasks':
         return [
-          { title: 'Trang chủ' },
-          { title: 'Dự án' },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Công việc</span> }
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc')}</span> }
+        ];
+      case '/assigned-tasks':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc đã giao')}</span> }
+        ];
+      case '/site-diary':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Nhật ký công trường')}</span> }
         ];
       case '/wbs':
       default:
         return [
-          { title: 'Trang chủ' },
-          { title: 'Dự án' },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>Cơ cấu công việc</span> }
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Cơ cấu công việc')}</span> }
         ];
     }
   };
@@ -56,18 +99,18 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
         message.warning(error.message || 'Không thể thu hồi phiên trên máy chủ');
       }
       logoutUser();
-      message.info('Đã đăng xuất tài khoản');
+      message.info(t('Đã đăng xuất tài khoản'));
       navigate('/login');
-    } else {
-      message.info('Chức năng demo');
+    } else if (key === 'profile' || key === 'settings') {
+      setModalMode(key);
     }
   };
 
   const userMenuItems = [
-    { key: 'profile', label: 'Thông tin cá nhân' },
-    { key: 'settings', label: 'Cài đặt hệ thống' },
+    { key: 'profile', label: t('Thông tin cá nhân') },
+    { key: 'settings', label: t('Cài đặt hệ thống') },
     { type: 'divider' },
-    { key: 'logout', label: 'Đăng xuất', danger: true },
+    { key: 'logout', label: t('Đăng xuất'), danger: true },
   ];
 
   return (
@@ -76,7 +119,7 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
         <div 
           className="collapse-toggle-btn"
           onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          title={collapsed ? t('Mở rộng sidebar') : t('Thu gọn sidebar')}
         >
           {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
         </div>
@@ -85,9 +128,11 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
       </div>
 
       <div className="header-right">
+        <InstallAppButton />
+
         <div 
           className="header-icon-btn" 
-          onClick={() => message.info('Tìm kiếm nhanh (Demo UI)')}
+          onClick={() => message.info(t('Tìm kiếm nhanh (Demo UI)'))}
         >
           <SearchOutlined />
         </div>
@@ -95,24 +140,36 @@ const TopHeader = ({ collapsed, setCollapsed }) => {
         <Badge count={3} offset={[-2, 4]}>
           <div 
             className="header-icon-btn" 
-            onClick={() => message.info('Thông báo hệ thống (Demo UI)')}
+            onClick={() => message.info(t('Thông báo hệ thống (Demo UI)'))}
           >
             <BellOutlined />
           </div>
         </Badge>
 
+        <SyncQueueStatusBar />
+
         <div style={{ width: 1, height: 24, backgroundColor: '#E6EAF0' }} />
 
         <Dropdown menu={{ items: userMenuItems, onClick: handleDropdownClick }} trigger={['click']}>
           <div className="header-user-dropdown">
-            <Avatar style={{ backgroundColor: '#2563EB', fontWeight: 600 }}>QT</Avatar>
+            <Avatar style={{ backgroundColor: '#2563EB', fontWeight: 600 }}>
+              {initials || 'U'}
+            </Avatar>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
-              {user?.fullName || 'Quản trị viên'}
+                {displayName}
             </span>
             <DownOutlined style={{ fontSize: 10, color: '#667085' }} />
           </div>
         </Dropdown>
       </div>
+      <ProfileSettingsModal
+        open={modalMode !== null}
+        mode={modalMode}
+        preferences={preferences}
+        onPreferencesChange={onPreferencesChange}
+        onClose={() => setModalMode(null)}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </header>
   );
 };

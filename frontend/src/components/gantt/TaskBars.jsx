@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import {
   TIMELINE_CONFIG,
@@ -31,6 +31,7 @@ const TaskBars = ({
   className = '',
   style = {},
 }) => {
+  const patternId = useId().replace(/:/g, '');
   const rowHeight = config?.ROW_HEIGHT ?? TIMELINE_CONFIG.ROW_HEIGHT;
   const totalTasks = tasks.length;
   const totalHeight = Math.max(rowHeight, totalTasks * rowHeight);
@@ -86,6 +87,29 @@ const TaskBars = ({
         aria-label="Thân biểu đồ Gantt"
       >
         {/* 1. Background Grid Lines */}
+        <defs>
+          <pattern
+            id={`${patternId}-critical`}
+            width="8"
+            height="8"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(135)"
+          >
+            <rect width="8" height="8" fill="#fee2e2" />
+            <rect width="3" height="8" fill="#dc2626" />
+          </pattern>
+          <pattern
+            id={`${patternId}-critical-progress`}
+            width="8"
+            height="8"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(135)"
+          >
+            <rect width="8" height="8" fill="#dc2626" />
+            <rect width="3" height="8" fill="#fee2e2" />
+          </pattern>
+        </defs>
+
         <g className="gantt-grid-layer" aria-hidden="true">
           {/* Vertical date gridlines */}
           {ticks.map((tick) => (
@@ -218,9 +242,17 @@ const TaskBars = ({
               .filter(Boolean)
               .join(' ');
 
-            const barFill = isCritical ? '#fee2e2' : isDelayedStart ? '#fef3c7' : '#dbeafe';
+            const barFill = isCritical
+              ? `url(#${patternId}-critical)`
+              : isDelayedStart
+                ? '#fef3c7'
+                : '#dbeafe';
             const barStroke = isCritical ? '#dc2626' : isDelayedStart ? '#d97706' : '#2563eb';
-            const progressFill = isCritical ? '#dc2626' : isDelayedStart ? '#d97706' : '#2563eb';
+            const progressFill = isCritical
+              ? `url(#${patternId}-critical-progress)`
+              : isDelayedStart
+                ? '#d97706'
+                : '#2563eb';
 
             const barNode = (
               <g

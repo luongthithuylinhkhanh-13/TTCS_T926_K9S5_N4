@@ -20,6 +20,7 @@ import WbsTreeTable from '../components/wbs/WbsTreeTable';
 import WorkDetailDrawer from '../components/wbs/WorkDetailDrawer';
 import WorkFormModal from '../components/wbs/WorkFormModal';
 import EmptyWbs from '../components/wbs/EmptyWbs';
+import { useLocale } from '../utils/LocaleContext';
 
 import {
   calculateStats,
@@ -52,6 +53,9 @@ const mapApiItem = (item) => ({
         initials: item.assigneeInitials
       }
     : null,
+
+  assignedTeamMemberId: item.assignedTeamMemberId || null,
+  assignedTeamName: item.assignedTeamName || null,
 
   images: item.image ? [item.image] : [],
 
@@ -108,6 +112,7 @@ const normalizeFormData = (formData) => {
   const assignee = formData.assignee || {};
 
   return {
+    version: formData.version,
     wbsCode: formData.wbsCode,
     name: formData.name,
     type: formData.type,
@@ -150,6 +155,7 @@ const normalizeFormData = (formData) => {
 };
 
 const WBSPage = () => {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // =========================================================
@@ -243,6 +249,8 @@ const WBSPage = () => {
     setModalInitialValues
   ] = useState(null);
 
+  const [editConflict, setEditConflict] = useState(false);
+
   const [
     submitting,
     setSubmitting
@@ -297,7 +305,7 @@ const WBSPage = () => {
     } catch (error) {
       setPageError(
         error.message ||
-        'Không thể tải danh sách dự án'
+        t('Không thể tải danh sách dự án')
       );
     } finally {
       setLoadingProjects(false);
@@ -342,7 +350,7 @@ const WBSPage = () => {
 
       setPageError(
         error.message ||
-        'Không thể tải dữ liệu WBS'
+        t('Không thể tải dữ liệu WBS')
       );
     } finally {
       setLoadingWbs(false);
@@ -468,7 +476,7 @@ const WBSPage = () => {
     );
 
     message.info(
-      'Đã mở rộng tất cả các nhánh cây WBS'
+      t('Đã mở rộng tất cả các nhánh cây WBS')
     );
   };
 
@@ -476,7 +484,7 @@ const WBSPage = () => {
     setExpandedKeys([]);
 
     message.info(
-      'Đã thu gọn tất cả cây WBS'
+      t('Đã thu gọn tất cả cây WBS')
     );
   };
 
@@ -492,7 +500,7 @@ const WBSPage = () => {
   const handleExport = () => {
     if (!currentProject) {
       message.warning(
-        'Chưa có dự án để xuất dữ liệu'
+        t('Chưa có dự án để xuất dữ liệu')
       );
       return;
     }
@@ -536,17 +544,17 @@ const WBSPage = () => {
     flatten(rawTreeNodes);
 
     const headers = [
-      'Cấp',
-      'Mã WBS',
-      'Tên công việc',
-      'Loại',
-      'Người phụ trách',
-      'Trạng thái',
-      'Tiến độ thực tế (%)',
-      'Ngày bắt đầu kế hoạch',
-      'Ngày kết thúc kế hoạch',
-      'Ngày bắt đầu thực tế',
-      'Ngày kết thúc thực tế'
+      t('Cấp'),
+      t('Mã WBS'),
+      t('Tên công việc'),
+      t('Loại'),
+      t('Người phụ trách'),
+      t('Trạng thái'),
+      t('Tiến độ thực tế (%)'),
+      t('Ngày bắt đầu kế hoạch'),
+      t('Ngày kết thúc kế hoạch'),
+      t('Ngày bắt đầu thực tế'),
+      t('Ngày kết thúc thực tế')
     ];
 
     const escapeCsv = value =>
@@ -601,7 +609,7 @@ const WBSPage = () => {
     URL.revokeObjectURL(url);
 
     message.success(
-      'Đã xuất dữ liệu WBS'
+      t('Đã xuất dữ liệu WBS')
     );
   };
 
@@ -623,12 +631,13 @@ const WBSPage = () => {
   ) => {
     if (!selectedProjectId) {
       message.warning(
-        'Vui lòng chọn dự án'
+        t('Vui lòng chọn dự án')
       );
       return;
     }
 
     setModalIsEdit(false);
+    setEditConflict(false);
 
     if (parent) {
       setModalInitialValues({
@@ -651,6 +660,7 @@ const WBSPage = () => {
 
   const handleOpenEditModal = node => {
     setModalIsEdit(true);
+    setEditConflict(false);
 
     setModalInitialValues({
       ...node,
@@ -675,7 +685,7 @@ const WBSPage = () => {
         node.children.length > 0;
 
       Modal.confirm({
-        title: 'Xóa công việc?',
+        title: t('Xóa công việc?'),
 
         icon: (
           <ExclamationCircleOutlined
@@ -688,8 +698,8 @@ const WBSPage = () => {
         content: (
           <div>
             <p>
-              Bạn có chắc chắn muốn
-              xóa công việc{' '}
+              {t('Bạn có chắc chắn muốn')}
+              {' '}{t('xóa công việc')}{' '}
               <strong>
                 "{node.name}"
               </strong>
@@ -704,18 +714,15 @@ const WBSPage = () => {
                   marginTop: 8
                 }}
               >
-                ⚠️ Công việc này có
-                công việc con. Toàn bộ
-                công việc con cũng sẽ
-                bị xóa.
+                {t('⚠️ Công việc này có công việc con. Toàn bộ công việc con cũng sẽ bị xóa.')}
               </div>
             )}
           </div>
         ),
 
-        okText: 'Xóa công việc',
+        okText: t('Xóa công việc'),
         okType: 'danger',
-        cancelText: 'Hủy',
+        cancelText: t('Hủy'),
 
         async onOk() {
           try {
@@ -737,12 +744,12 @@ const WBSPage = () => {
             );
 
             message.success(
-              'Xóa công việc thành công'
+              t('Xóa công việc thành công')
             );
           } catch (error) {
             message.error(
               error.message ||
-              'Không thể xóa công việc'
+              t('Không thể xóa công việc')
             );
 
             throw error;
@@ -759,7 +766,7 @@ const WBSPage = () => {
     async formData => {
       if (!selectedProjectId) {
         message.error(
-          'Chưa chọn dự án'
+          t('Chưa chọn dự án')
         );
         return;
       }
@@ -777,7 +784,7 @@ const WBSPage = () => {
 
           if (!itemId) {
             throw new Error(
-              'Không xác định được công việc cần cập nhật'
+              t('Không xác định được công việc cần cập nhật')
             );
           }
 
@@ -788,7 +795,7 @@ const WBSPage = () => {
           );
 
           message.success(
-            'Cập nhật công việc thành công'
+            t('Cập nhật công việc thành công')
           );
         } else {
           await createWbsItem(
@@ -797,7 +804,7 @@ const WBSPage = () => {
           );
 
           message.success(
-            'Thêm công việc thành công'
+            t('Thêm công việc thành công')
           );
         }
 
@@ -807,12 +814,21 @@ const WBSPage = () => {
           selectedProjectId
         );
       } catch (error) {
+        if (error.status === 409) {
+          setEditConflict(true);
+          await loadWbs(selectedProjectId);
+          message.warning(
+            t('Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.')
+          );
+          return;
+        }
+
         message.error(
           error.message ||
           (
             modalIsEdit
-              ? 'Không thể cập nhật công việc'
-              : 'Không thể thêm công việc'
+              ? t('Không thể cập nhật công việc')
+              : t('Không thể thêm công việc')
           )
         );
       } finally {
@@ -916,7 +932,7 @@ const WBSPage = () => {
       >
         <Spin
           size="large"
-          tip="Đang tải dự án..."
+          tip={t('Đang tải dự án...')}
         />
       </div>
     );
@@ -933,14 +949,11 @@ const WBSPage = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            Cây cơ cấu công việc
+            {t('Cây cơ cấu công việc')}
           </h1>
 
           <p className="page-subtitle">
-            Quản lý và theo dõi cấu trúc
-            phân rã công việc
-            (Work Breakdown Structure)
-            của dự án
+            {t('Quản lý và theo dõi cấu trúc phân rã công việc (Work Breakdown Structure) của dự án')}
           </p>
         </div>
 
@@ -950,7 +963,7 @@ const WBSPage = () => {
             onClick={handleExport}
             disabled={!currentProject}
           >
-            Xuất dữ liệu
+            {t('Xuất dữ liệu')}
           </Button>
 
           <Button
@@ -959,7 +972,7 @@ const WBSPage = () => {
             onClick={() => handleOpenAddModal(null)}
             disabled={!currentProject}
           >
-            + Thêm công việc
+            + {t('Thêm công việc')}
           </Button>
         </div>
       </div>
@@ -970,7 +983,7 @@ const WBSPage = () => {
           type="error"
           showIcon
           closable
-          message="Không thể tải dữ liệu"
+          message={t('Không thể tải dữ liệu')}
           description={pageError}
           style={{
             marginBottom: 16
@@ -1000,7 +1013,7 @@ const WBSPage = () => {
           <div className="wbs-card-title-box">
 
             <span className="wbs-card-title">
-              Cơ cấu phân rã công việc
+              {t('Cơ cấu phân rã công việc')}
             </span>
 
             <span className="wbs-card-subtitle">
@@ -1108,6 +1121,7 @@ const WBSPage = () => {
         visible={drawerVisible}
         projectId={selectedProjectId}
         allTasks={flatTaskList}
+        onTeamAssigned={() => loadWbs(selectedProjectId)}
 
         onClose={() =>
           setDrawerVisible(false)
@@ -1174,6 +1188,10 @@ const WBSPage = () => {
 
         confirmLoading={
           submitting
+        }
+
+        editConflict={
+          editConflict
         }
       />
 

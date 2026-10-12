@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Card, Tag, Progress, Avatar, Image } from 'antd';
 import dayjs from 'dayjs';
 import { BranchesOutlined, UserOutlined } from '@ant-design/icons';
+import { useLocale } from '../../utils/LocaleContext';
 
 /*
  * Hiển thị trạng thái dự án theo dữ liệu backend.
@@ -44,6 +45,7 @@ const formatDate = (date) => {
 };
 
 const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) => {
+  const { t } = useLocale();
   if (!project) {
     return null;
   }
@@ -57,14 +59,14 @@ const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) 
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
 
-  let projectTime = 'Chưa cập nhật';
+  let projectTime = t('Chưa cập nhật');
 
   if (startDate && endDate) {
     projectTime = `${startDate} - ${endDate}`;
   } else if (startDate) {
-    projectTime = `Từ ${startDate}`;
+    projectTime = `${t('Từ ')}${startDate}`;
   } else if (endDate) {
-    projectTime = `Đến ${endDate}`;
+    projectTime = `${t('Đến ')}${endDate}`;
   }
 
   const progress = Number(project.progress ?? 0);
@@ -101,17 +103,17 @@ const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) 
 
             <div className="project-hero-meta">
               <span>
-                Trạng thái:
+                {t('Trạng thái:')}
               </span>
 
               <Tag color={status.color}>
-                {status.label}
+                {t(status.label)}
               </Tag>
             </div>
 
             <div className="project-hero-meta">
               <span>
-                Thời gian:
+                {t('Thời gian:')}
               </span>
 
               <strong>
@@ -130,7 +132,7 @@ const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) 
 
           <div className="project-hero-progress">
             <span>
-              Tiến độ
+              {t('Tiến độ')}
             </span>
 
             <Progress
@@ -150,7 +152,7 @@ const ProjectHeroCard = ({ project, onShowCriticalPath, criticalPathDisabled }) 
             onClick={onShowCriticalPath}
             disabled={criticalPathDisabled}
           >
-            Xem đường găng
+            {t('Xem đường găng')}
           </Button>
         </div>
 

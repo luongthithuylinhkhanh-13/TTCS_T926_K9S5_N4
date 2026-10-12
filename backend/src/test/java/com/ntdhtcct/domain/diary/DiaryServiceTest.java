@@ -173,14 +173,14 @@ class DiaryServiceTest {
 
         // Giả lập attempt cũ không match vì đã có attempt mới hơn can thiệp
         when(diaryImageRepository.updateDisplayCompletedIfAttemptMatches(
-                eq(image.getId()), any(), any(), any(), any(), any(), any()))
+                eq(image.getId()), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(0);
         when(diaryImageRepository.findById(image.getId())).thenReturn(Optional.of(image));
 
         DiaryImageResponse response = diaryService.uploadDisplayImage(projectId, entryId, "img-1", "photo.jpg", file);
 
         assertThat(response).isNotNull();
-        verify(diaryImageRepository).updateDisplayCompletedIfAttemptMatches(eq(image.getId()), any(), any(), any(), any(), any(), any());
+        verify(diaryImageRepository).updateDisplayCompletedIfAttemptMatches(eq(image.getId()), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

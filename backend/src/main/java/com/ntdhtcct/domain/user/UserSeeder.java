@@ -29,20 +29,24 @@ public class UserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.existsByEmailIgnoreCase("test@test.com")) {
-            return;
+        if (!userRepository.existsByEmailIgnoreCase("test@test.com")) {
+            Role role = roleRepository.findByName("CUSTOMER")
+                .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
+
+            User user = new User(
+                "test@test.com",
+                passwordEncoder.encode("12345678"),
+                "Test User"
+            );
+            user.setRole(role);
+            userRepository.save(user);
         }
 
-        Role role = roleRepository.findByName("CUSTOMER")
-            .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
-
-        User user = new User(
-            "test@test.com",
-            passwordEncoder.encode("12345678"),
-            "Test User"
-        );
-        user.setRole(role);
-
-        userRepository.save(user);
+        userRepository.findByEmailIgnoreCase("lanc5676@gmail.com")
+            .ifPresent(user -> roleRepository.findByName("PROJECT_MANAGER")
+                .ifPresent(role -> {
+                    user.setRole(role);
+                    userRepository.save(user);
+                }));
     }
 }
