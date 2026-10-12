@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -72,6 +74,7 @@ public class SiteDiaryAdvisoryLockManager {
         } else {
             ReentrantReadWriteLock rwLock = jvmLocks.computeIfAbsent(key, k -> new ReentrantReadWriteLock(true));
             rwLock.readLock().lock();
+            registerTransactionCompletionUnlock(rwLock.readLock()::unlock);
         }
     }
 
@@ -89,16 +92,22 @@ public class SiteDiaryAdvisoryLockManager {
         } else {
             ReentrantReadWriteLock rwLock = jvmLocks.computeIfAbsent(key, k -> new ReentrantReadWriteLock(true));
             rwLock.writeLock().lock();
+            registerTransactionCompletionUnlock(rwLock.writeLock()::unlock);
         }
     }
 
     /**
-     * Giải phóng lock thủ công (chỉ áp dụng cho H2 / non-PostgreSQL JVM fallback).
-     * Trên PostgreSQL, Advisory Xact Lock tự động nhả khi commit/rollback nên không cần gọi giải phóng.
+     * Giải phóng lock thủ công (chỉ áp dụng cho H2 / non-PostgreSQL JVM fallback khi không chạy trong transaction).
+     * Nếu transaction đang active, lock sẽ được tự động giải phóng qua afterCompletion để bảo đảm
+     * không bị release trước khi transaction commit/rollback.
      */
     public void releaseSharedLock(UUID projectId, LocalDate date) {
         if (projectId == null || date == null) return;
         if (!isPostgreSqlDatabase()) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                // Đã được đăng ký giải phóng tại afterCompletion của Spring transaction
+                return;
+            }
             long key = generateLockKey(projectId, date);
             ReentrantReadWriteLock rwLock = jvmLocks.get(key);
             if (rwLock != null && rwLock.getReadHoldCount() > 0) {
@@ -110,11 +119,32 @@ public class SiteDiaryAdvisoryLockManager {
     public void releaseExclusiveLock(UUID projectId, LocalDate date) {
         if (projectId == null || date == null) return;
         if (!isPostgreSqlDatabase()) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                // Đã được đăng ký giải phóng tại afterCompletion của Spring transaction
+                return;
+            }
             long key = generateLockKey(projectId, date);
             ReentrantReadWriteLock rwLock = jvmLocks.get(key);
             if (rwLock != null && rwLock.isWriteLockedByCurrentThread()) {
                 rwLock.writeLock().unlock();
             }
+        }
+    }
+
+    private void registerTransactionCompletionUnlock(Runnable unlockAction) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCompletion(int status) {
+                            try {
+                                unlockAction.run();
+                            } catch (Exception e) {
+                                log.error("Lỗi khi giải phóng ReentrantReadWriteLock sau completion transaction", e);
+                            }
+                        }
+                    }
+            );
         }
     }
 

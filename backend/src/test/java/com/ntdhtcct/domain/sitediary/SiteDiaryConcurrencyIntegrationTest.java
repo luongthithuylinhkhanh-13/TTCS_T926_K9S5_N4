@@ -134,4 +134,96 @@ public class SiteDiaryConcurrencyIntegrationTest {
             executor.shutdownNow();
         }
     }
+
+    @Test
+    @DisplayName("H2 Fallback Lifecycle: Khóa ReentrantReadWriteLock không bị release khi service method kết thúc mà được giữ đến transaction completion")
+    void testH2LockHeldUntilTransactionCompletion_NotReleasedPrematurelyInFinally() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        LocalDate targetDate = LocalDate.of(2026, 10, 16);
+
+        SiteDiaryAdvisoryLockManager lockManager = new SiteDiaryAdvisoryLockManager(null);
+        SiteDiaryLockService lockService = new SiteDiaryLockService(siteDiaryLockRepository, lockManager);
+        SiteDiarySyncService syncService = new SiteDiarySyncService(siteDiaryRepository, lockService, lockManager);
+
+        when(siteDiaryLockRepository.findByProjectIdAndLockDate(projectId, targetDate))
+                .thenReturn(Optional.empty());
+        when(siteDiaryLockRepository.save(any(SiteDiaryLock.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        when(siteDiaryRepository.findByClientSyncId(any())).thenReturn(Optional.empty());
+        when(siteDiaryRepository.save(any(SiteDiary.class))).thenAnswer(inv -> {
+            SiteDiary d = inv.getArgument(0);
+            d.setId(UUID.randomUUID());
+            return d;
+        });
+
+        CountDownLatch syncMethodFinished = new CountDownLatch(1);
+        CountDownLatch lockAttemptStarted = new CountDownLatch(1);
+        CountDownLatch transactionCanComplete = new CountDownLatch(1);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            // Luồng 1: Giả lập Spring Transaction interceptor quản lý TransactionSynchronization
+            Future<SiteDiarySyncResult> syncTxFuture = executor.submit(() -> {
+                // Kích hoạt transaction synchronization giả lập vòng đời của Spring @Transactional
+                org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+                org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+                try {
+                    SiteDiarySyncRequest req = new SiteDiarySyncRequest(
+                            "sync-tx-test", targetDate, "Nắng", "29", 10, "", "CV", "", OffsetDateTime.now()
+                    );
+
+                    // syncSingleDiary thực hiện: acquireSharedLock -> xử lý -> finally { releaseSharedLock }
+                    // Nhờ TransactionSynchronization, releaseSharedLock trong finally không được release ngay
+                    SiteDiarySyncResult res = syncService.syncSingleDiary(projectId, userId, req);
+
+                    // Báo hiệu service method đã return (finally đã chạy xong)
+                    syncMethodFinished.countDown();
+
+                    // Transaction CHƯA commit: giữ synchronization active và chờ
+                    transactionCanComplete.await(5, TimeUnit.SECONDS);
+
+                    return res;
+                } finally {
+                    // Giả lập commit: chạy afterCompletion trên tất cả synchronizations đã đăng ký
+                    for (org.springframework.transaction.support.TransactionSynchronization sync :
+                            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
+                        sync.afterCompletion(org.springframework.transaction.support.TransactionSynchronization.STATUS_COMMITTED);
+                    }
+                    org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+                    org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
+                }
+            });
+
+            // Chờ luồng 1 hoàn tất syncSingleDiary (service method đã return)
+            assertThat(syncMethodFinished.await(3, TimeUnit.SECONDS)).isTrue();
+
+            // Luồng 2: Cố gắng lấy exclusive lock để khóa sổ
+            AtomicBoolean lockCompleted = new AtomicBoolean(false);
+            Future<?> lockFuture = executor.submit(() -> {
+                lockAttemptStarted.countDown();
+                // Phương thức này đòi hỏi Exclusive Lock
+                lockService.lockDate(projectId, userId, targetDate, "Khóa ngày sau giao dịch ghi");
+                lockCompleted.set(true);
+            });
+
+            assertThat(lockAttemptStarted.await(2, TimeUnit.SECONDS)).isTrue();
+            // Đợi một khoảng thời gian để chứng minh luồng 2 VẪN BỊ CHẶN dù syncSingleDiary đã return
+            Thread.sleep(150);
+            assertThat(lockCompleted.get())
+                    .as("Khóa ReentrantReadWriteLock PHẢI được giữ đến khi transaction commit, không được nhả ngay khi method kết thúc")
+                    .isFalse();
+
+            // Cho phép transaction của luồng 1 hoàn tất commit (afterCompletion được kích hoạt)
+            transactionCanComplete.countDown();
+            syncTxFuture.get(5, TimeUnit.SECONDS);
+
+            // Bây giờ luồng 2 mới có thể lấy exclusive lock và hoàn tất
+            lockFuture.get(5, TimeUnit.SECONDS);
+            assertThat(lockCompleted.get()).isTrue();
+        } finally {
+            executor.shutdownNow();
+        }
+    }
 }
