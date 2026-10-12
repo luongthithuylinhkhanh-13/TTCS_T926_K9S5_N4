@@ -31,6 +31,9 @@ public class SiteDiarySyncServiceTest {
     @Mock
     private SiteDiaryLockService siteDiaryLockService;
 
+    @Mock
+    private SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     private SiteDiarySyncService siteDiarySyncService;
 
     private final UUID projectId = UUID.randomUUID();
@@ -38,7 +41,7 @@ public class SiteDiarySyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService);
+        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager);
     }
 
     @Test

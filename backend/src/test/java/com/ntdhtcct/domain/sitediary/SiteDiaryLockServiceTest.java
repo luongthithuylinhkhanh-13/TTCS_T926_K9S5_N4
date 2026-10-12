@@ -26,6 +26,9 @@ class SiteDiaryLockServiceTest {
     @Mock
     private SiteDiaryLockRepository siteDiaryLockRepository;
 
+    @Mock
+    private SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     @InjectMocks
     private SiteDiaryLockService siteDiaryLockService;
 

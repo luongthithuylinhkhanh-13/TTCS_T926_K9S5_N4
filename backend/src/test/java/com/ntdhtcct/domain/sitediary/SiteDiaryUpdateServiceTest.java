@@ -26,6 +26,9 @@ class SiteDiaryUpdateServiceTest {
     @Mock
     private SiteDiaryLockService siteDiaryLockService;
 
+    @Mock
+    private SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     @Test
     void updatesDiaryContentWithoutChangingItsProjectOrReporter() {
         UUID projectId = UUID.randomUUID();
@@ -63,7 +66,7 @@ class SiteDiaryUpdateServiceTest {
         when(siteDiaryLockService.isDateLocked(projectId, LocalDate.of(2026, 10, 8))).thenReturn(false);
         when(siteDiaryLockService.isDateLocked(projectId, LocalDate.of(2026, 10, 9))).thenReturn(false);
 
-        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService)
+        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager)
                 .updateDiary(projectId, diaryId, request);
 
         assertThat(result).isPresent();
@@ -91,7 +94,7 @@ class SiteDiaryUpdateServiceTest {
         diary.setProjectId(UUID.randomUUID());
         when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
 
-        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService).updateDiary(
+        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager).updateDiary(
                 UUID.randomUUID(),
                 diaryId,
                 new SiteDiaryUpdateRequest(
@@ -122,7 +125,7 @@ class SiteDiaryUpdateServiceTest {
                 originalDate, "Nắng", "30°C", 1, 20, 2, "Tổ 1", "Xe tải", "Bình thường", "Nội dung", "Không"
         );
 
-        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService);
+        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager);
 
         assertThatThrownBy(() -> service.updateDiary(projectId, diaryId, request))
                 .isInstanceOf(DiaryDateLockedException.class)
@@ -152,7 +155,7 @@ class SiteDiaryUpdateServiceTest {
                 targetLockedDate, "Nắng", "30°C", 1, 20, 2, "Tổ 1", "Xe tải", "Bình thường", "Nội dung", "Không"
         );
 
-        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService);
+        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager);
 
         assertThatThrownBy(() -> service.updateDiary(projectId, diaryId, request))
                 .isInstanceOf(DiaryDateLockedException.class)

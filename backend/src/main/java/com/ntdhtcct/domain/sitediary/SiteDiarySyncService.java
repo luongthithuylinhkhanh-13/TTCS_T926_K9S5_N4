@@ -10,8 +10,10 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,61 +29,70 @@ public class SiteDiarySyncService {
 
     private final SiteDiaryRepository siteDiaryRepository;
     private final SiteDiaryLockService siteDiaryLockService;
+    private final SiteDiaryAdvisoryLockManager advisoryLockManager;
 
     public SiteDiarySyncService(
             SiteDiaryRepository siteDiaryRepository,
-            SiteDiaryLockService siteDiaryLockService) {
+            SiteDiaryLockService siteDiaryLockService,
+            SiteDiaryAdvisoryLockManager advisoryLockManager) {
         this.siteDiaryRepository = siteDiaryRepository;
         this.siteDiaryLockService = siteDiaryLockService;
+        this.advisoryLockManager = advisoryLockManager;
     }
 
     /**
      * Đồng bộ một bản ghi nhật ký công trường từ hàng đợi ngoại tuyến hoặc tạo trực tiếp.
      * T-65: Nếu ngày của nhật ký đã bị khóa sổ, từ chối tạo mới.
+     * Giữ Shared Advisory Lock trong suốt transaction để đảm bảo thứ tự nghiêm ngặt với thao tác Khóa sổ.
      */
     @Transactional
     public SiteDiarySyncResult syncSingleDiary(UUID projectId, UUID reporterId, SiteDiarySyncRequest request) {
-        if (siteDiaryLockService.isDateLocked(projectId, request.getDiaryDate())) {
-            return SiteDiarySyncResult.locked(
-                    request.getClientSyncId(),
-                    "Nhật ký công trường ngày " + request.getDiaryDate() + " đã bị khóa sổ. Thao tác bị từ chối."
-            );
-        }
-
-        if (request.getClientSyncId() != null && !request.getClientSyncId().isBlank()) {
-            Optional<SiteDiary> existingOpt = siteDiaryRepository.findByClientSyncId(request.getClientSyncId());
-            if (existingOpt.isPresent()) {
-                return SiteDiarySyncResult.alreadyExists(request.getClientSyncId(), existingOpt.get().getId());
-            }
-        }
-
+        advisoryLockManager.acquireSharedLock(projectId, request.getDiaryDate());
         try {
-            OffsetDateTime offlineTime = request.getOfflineCreatedAt() != null
-                    ? request.getOfflineCreatedAt()
-                    : OffsetDateTime.now();
+            if (siteDiaryLockService.isDateLocked(projectId, request.getDiaryDate())) {
+                return SiteDiarySyncResult.locked(
+                        request.getClientSyncId(),
+                        "Nhật ký công trường ngày " + request.getDiaryDate() + " đã bị khóa sổ. Thao tác bị từ chối."
+                );
+            }
 
-            SiteDiary diary = new SiteDiary(
-                    projectId,
-                    reporterId,
-                    request.getDiaryDate(),
-                    request.getWeather(),
-                    request.getTemperature(),
-                    request.getWorkerCount(),
-                    request.getEquipmentStatus(),
-                    request.getWorkSummary(),
-                    request.getIssues(),
-                    request.getClientSyncId(),
-                    offlineTime
-            );
-            diary.setEngineerCount(request.getEngineerCount());
-            diary.setCrewCount(request.getCrewCount());
-            diary.setCrewDetails(request.getCrewDetails());
-            diary.setWorkingConditions(request.getWorkingConditions());
+            if (request.getClientSyncId() != null && !request.getClientSyncId().isBlank()) {
+                Optional<SiteDiary> existingOpt = siteDiaryRepository.findByClientSyncId(request.getClientSyncId());
+                if (existingOpt.isPresent()) {
+                    return SiteDiarySyncResult.alreadyExists(request.getClientSyncId(), existingOpt.get().getId());
+                }
+            }
 
-            SiteDiary saved = siteDiaryRepository.save(diary);
-            return SiteDiarySyncResult.created(request.getClientSyncId(), saved.getId());
-        } catch (Exception e) {
-            return SiteDiarySyncResult.error(request.getClientSyncId(), e.getMessage());
+            try {
+                OffsetDateTime offlineTime = request.getOfflineCreatedAt() != null
+                        ? request.getOfflineCreatedAt()
+                        : OffsetDateTime.now();
+
+                SiteDiary diary = new SiteDiary(
+                        projectId,
+                        reporterId,
+                        request.getDiaryDate(),
+                        request.getWeather(),
+                        request.getTemperature(),
+                        request.getWorkerCount(),
+                        request.getEquipmentStatus(),
+                        request.getWorkSummary(),
+                        request.getIssues(),
+                        request.getClientSyncId(),
+                        offlineTime
+                );
+                diary.setEngineerCount(request.getEngineerCount());
+                diary.setCrewCount(request.getCrewCount());
+                diary.setCrewDetails(request.getCrewDetails());
+                diary.setWorkingConditions(request.getWorkingConditions());
+
+                SiteDiary saved = siteDiaryRepository.save(diary);
+                return SiteDiarySyncResult.created(request.getClientSyncId(), saved.getId());
+            } catch (Exception e) {
+                return SiteDiarySyncResult.error(request.getClientSyncId(), e.getMessage());
+            }
+        } finally {
+            advisoryLockManager.releaseSharedLock(projectId, request.getDiaryDate());
         }
     }
 
@@ -142,6 +153,7 @@ public class SiteDiarySyncService {
      * Cập nhật nội dung nhật ký, chỉ khi bản ghi thuộc đúng dự án.
      * T-65: Kiểm tra cả ngày gốc của nhật ký và ngày mới yêu cầu.
      * Nếu một trong hai ngày đã bị khóa sổ -> ném DiaryDateLockedException.
+     * Lấy Shared Advisory Lock cho cả ngày cũ và ngày mới (theo thứ tự ngày tăng dần để tránh deadlock).
      */
     @Transactional
     public Optional<SiteDiaryResponse> updateDiary(
@@ -152,34 +164,53 @@ public class SiteDiarySyncService {
         return siteDiaryRepository.findById(Objects.requireNonNull(diaryId))
                 .filter(diary -> diary.getProjectId().equals(projectId))
                 .map(diary -> {
-                    // 1. Kiểm tra ngày gốc của bản ghi
-                    if (siteDiaryLockService.isDateLocked(projectId, diary.getDiaryDate())) {
-                        throw new DiaryDateLockedException(
-                                "Nhật ký công trường ngày " + diary.getDiaryDate() + " đã bị khóa sổ. Không thể chỉnh sửa."
-                        );
+                    LocalDate oldDate = diary.getDiaryDate();
+                    LocalDate newDate = request.diaryDate();
+
+                    // Xác định danh sách ngày cần lock theo thứ tự tăng dần (tránh deadlock)
+                    List<LocalDate> datesToLock = new ArrayList<>();
+                    if (oldDate != null) datesToLock.add(oldDate);
+                    if (newDate != null && !newDate.equals(oldDate)) datesToLock.add(newDate);
+                    datesToLock.sort(Comparator.naturalOrder());
+
+                    for (LocalDate d : datesToLock) {
+                        advisoryLockManager.acquireSharedLock(projectId, d);
                     }
 
-                    // 2. Nếu thay đổi sang ngày khác, kiểm tra ngày mới
-                    if (request.diaryDate() != null && !request.diaryDate().equals(diary.getDiaryDate())) {
-                        if (siteDiaryLockService.isDateLocked(projectId, request.diaryDate())) {
+                    try {
+                        // 1. Kiểm tra ngày gốc của bản ghi
+                        if (siteDiaryLockService.isDateLocked(projectId, oldDate)) {
                             throw new DiaryDateLockedException(
-                                    "Ngày mới " + request.diaryDate() + " đã bị khóa sổ. Không thể chuyển nhật ký sang ngày này."
+                                    "Nhật ký công trường ngày " + oldDate + " đã bị khóa sổ. Không thể chỉnh sửa."
                             );
                         }
-                    }
 
-                    diary.setDiaryDate(request.diaryDate());
-                    diary.setWeather(request.weather());
-                    diary.setTemperature(request.temperature());
-                    diary.setEngineerCount(request.engineerCount());
-                    diary.setWorkerCount(request.workerCount());
-                    diary.setCrewCount(request.crewCount());
-                    diary.setCrewDetails(request.crewDetails());
-                    diary.setEquipmentStatus(request.equipmentStatus());
-                    diary.setWorkingConditions(request.workingConditions());
-                    diary.setWorkSummary(request.workSummary());
-                    diary.setIssues(request.issues());
-                    return siteDiaryRepository.save(diary);
+                        // 2. Nếu thay đổi sang ngày khác, kiểm tra ngày mới
+                        if (newDate != null && !newDate.equals(oldDate)) {
+                            if (siteDiaryLockService.isDateLocked(projectId, newDate)) {
+                                throw new DiaryDateLockedException(
+                                        "Ngày mới " + newDate + " đã bị khóa sổ. Không thể chuyển nhật ký sang ngày này."
+                                    );
+                            }
+                        }
+
+                        diary.setDiaryDate(request.diaryDate());
+                        diary.setWeather(request.weather());
+                        diary.setTemperature(request.temperature());
+                        diary.setEngineerCount(request.engineerCount());
+                        diary.setWorkerCount(request.workerCount());
+                        diary.setCrewCount(request.crewCount());
+                        diary.setCrewDetails(request.crewDetails());
+                        diary.setEquipmentStatus(request.equipmentStatus());
+                        diary.setWorkingConditions(request.workingConditions());
+                        diary.setWorkSummary(request.workSummary());
+                        diary.setIssues(request.issues());
+                        return siteDiaryRepository.save(diary);
+                    } finally {
+                        for (LocalDate d : datesToLock) {
+                            advisoryLockManager.releaseSharedLock(projectId, d);
+                        }
+                    }
                 })
                 .map(SiteDiaryResponse::from);
     }
