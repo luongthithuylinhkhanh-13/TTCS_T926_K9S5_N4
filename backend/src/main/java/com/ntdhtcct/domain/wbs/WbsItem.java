@@ -168,6 +168,10 @@ public class WbsItem {
         return id;
     }
 
+    void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getProjectId() {
         return projectId;
     }
