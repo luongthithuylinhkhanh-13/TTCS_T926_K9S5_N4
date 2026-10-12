@@ -1,6 +1,8 @@
 package com.ntdhtcct.domain.sitediary;
 
+import com.ntdhtcct.common.exception.DiaryDateLockedException;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -12,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -19,6 +22,9 @@ class SiteDiaryUpdateServiceTest {
 
     @Mock
     private SiteDiaryRepository siteDiaryRepository;
+
+    @Mock
+    private SiteDiaryLockService siteDiaryLockService;
 
     @Test
     void updatesDiaryContentWithoutChangingItsProjectOrReporter() {
@@ -54,8 +60,10 @@ class SiteDiaryUpdateServiceTest {
         );
         when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
         when(siteDiaryRepository.save(diary)).thenReturn(diary);
+        when(siteDiaryLockService.isDateLocked(projectId, LocalDate.of(2026, 10, 8))).thenReturn(false);
+        when(siteDiaryLockService.isDateLocked(projectId, LocalDate.of(2026, 10, 9))).thenReturn(false);
 
-        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository)
+        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService)
                 .updateDiary(projectId, diaryId, request);
 
         assertThat(result).isPresent();
@@ -83,7 +91,7 @@ class SiteDiaryUpdateServiceTest {
         diary.setProjectId(UUID.randomUUID());
         when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
 
-        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository).updateDiary(
+        Optional<?> result = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService).updateDiary(
                 UUID.randomUUID(),
                 diaryId,
                 new SiteDiaryUpdateRequest(
@@ -92,6 +100,65 @@ class SiteDiaryUpdateServiceTest {
         );
 
         assertThat(result).isEmpty();
+        verify(siteDiaryRepository, never()).save(any(SiteDiary.class));
+    }
+
+    @Test
+    @DisplayName("T-65: Ném DiaryDateLockedException khi ngày gốc của nhật ký đã bị khóa")
+    void throwsExceptionWhenOriginalDateIsLocked() {
+        UUID projectId = UUID.randomUUID();
+        UUID diaryId = UUID.randomUUID();
+        LocalDate originalDate = LocalDate.of(2026, 10, 5);
+
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(originalDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, originalDate)).thenReturn(true);
+
+        SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
+                originalDate, "Nắng", "30°C", 1, 20, 2, "Tổ 1", "Xe tải", "Bình thường", "Nội dung", "Không"
+        );
+
+        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService);
+
+        assertThatThrownBy(() -> service.updateDiary(projectId, diaryId, request))
+                .isInstanceOf(DiaryDateLockedException.class)
+                .hasMessageContaining("đã bị khóa sổ");
+
+        verify(siteDiaryRepository, never()).save(any(SiteDiary.class));
+    }
+
+    @Test
+    @DisplayName("T-65: Ném DiaryDateLockedException khi chuyển nhật ký sang một ngày mới đã bị khóa")
+    void throwsExceptionWhenTargetDateIsLocked() {
+        UUID projectId = UUID.randomUUID();
+        UUID diaryId = UUID.randomUUID();
+        LocalDate originalDate = LocalDate.of(2026, 10, 5);
+        LocalDate targetLockedDate = LocalDate.of(2026, 10, 6);
+
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(originalDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, originalDate)).thenReturn(false);
+        when(siteDiaryLockService.isDateLocked(projectId, targetLockedDate)).thenReturn(true);
+
+        SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
+                targetLockedDate, "Nắng", "30°C", 1, 20, 2, "Tổ 1", "Xe tải", "Bình thường", "Nội dung", "Không"
+        );
+
+        SiteDiarySyncService service = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService);
+
+        assertThatThrownBy(() -> service.updateDiary(projectId, diaryId, request))
+                .isInstanceOf(DiaryDateLockedException.class)
+                .hasMessageContaining("Ngày mới")
+                .hasMessageContaining("đã bị khóa sổ");
+
         verify(siteDiaryRepository, never()).save(any(SiteDiary.class));
     }
 }

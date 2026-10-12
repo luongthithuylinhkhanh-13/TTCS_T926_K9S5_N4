@@ -1,5 +1,6 @@
 package com.ntdhtcct.domain.sitediary;
 
+import com.ntdhtcct.common.exception.DiaryDateLockedException;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
@@ -18,27 +19,35 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service xử lý đồng bộ ngoại tuyến nhật ký công trường (S-30: NTDHTCT-214).
- * Hỗ trợ các nhiệm vụ:
- *   - NTDHTCT-255 (T-70): Xử lý dữ liệu từ hàng đợi chưa đồng bộ.
- *   - NTDHTCT-256 (T-71): Tiếp nhận và xử lý dữ liệu tự động gửi lên máy chủ khi có mạng trở lại.
- * Đảm bảo Idempotency (chống trùng lặp dữ liệu) thông qua clientSyncId.
+ * Service xử lý đồng bộ ngoại tuyến nhật ký công trường (S-30: NTDHTCT-214)
+ * và kiểm soát khóa sổ (S-24: T-64, T-65).
  */
 @Service
 public class SiteDiarySyncService {
 
     private final SiteDiaryRepository siteDiaryRepository;
+    private final SiteDiaryLockService siteDiaryLockService;
 
-    public SiteDiarySyncService(SiteDiaryRepository siteDiaryRepository) {
+    public SiteDiarySyncService(
+            SiteDiaryRepository siteDiaryRepository,
+            SiteDiaryLockService siteDiaryLockService) {
         this.siteDiaryRepository = siteDiaryRepository;
+        this.siteDiaryLockService = siteDiaryLockService;
     }
 
     /**
-     * Đồng bộ một bản ghi nhật ký công trường từ hàng đợi ngoại tuyến.
-     * Nếu bản ghi với clientSyncId đã tồn tại trên server -> trả về ALREADY_EXISTS (Idempotent).
+     * Đồng bộ một bản ghi nhật ký công trường từ hàng đợi ngoại tuyến hoặc tạo trực tiếp.
+     * T-65: Nếu ngày của nhật ký đã bị khóa sổ, từ chối tạo mới.
      */
     @Transactional
     public SiteDiarySyncResult syncSingleDiary(UUID projectId, UUID reporterId, SiteDiarySyncRequest request) {
+        if (siteDiaryLockService.isDateLocked(projectId, request.getDiaryDate())) {
+            return SiteDiarySyncResult.locked(
+                    request.getClientSyncId(),
+                    "Nhật ký công trường ngày " + request.getDiaryDate() + " đã bị khóa sổ. Thao tác bị từ chối."
+            );
+        }
+
         if (request.getClientSyncId() != null && !request.getClientSyncId().isBlank()) {
             Optional<SiteDiary> existingOpt = siteDiaryRepository.findByClientSyncId(request.getClientSyncId());
             if (existingOpt.isPresent()) {
@@ -131,6 +140,8 @@ public class SiteDiarySyncService {
 
     /**
      * Cập nhật nội dung nhật ký, chỉ khi bản ghi thuộc đúng dự án.
+     * T-65: Kiểm tra cả ngày gốc của nhật ký và ngày mới yêu cầu.
+     * Nếu một trong hai ngày đã bị khóa sổ -> ném DiaryDateLockedException.
      */
     @Transactional
     public Optional<SiteDiaryResponse> updateDiary(
@@ -141,6 +152,22 @@ public class SiteDiarySyncService {
         return siteDiaryRepository.findById(Objects.requireNonNull(diaryId))
                 .filter(diary -> diary.getProjectId().equals(projectId))
                 .map(diary -> {
+                    // 1. Kiểm tra ngày gốc của bản ghi
+                    if (siteDiaryLockService.isDateLocked(projectId, diary.getDiaryDate())) {
+                        throw new DiaryDateLockedException(
+                                "Nhật ký công trường ngày " + diary.getDiaryDate() + " đã bị khóa sổ. Không thể chỉnh sửa."
+                        );
+                    }
+
+                    // 2. Nếu thay đổi sang ngày khác, kiểm tra ngày mới
+                    if (request.diaryDate() != null && !request.diaryDate().equals(diary.getDiaryDate())) {
+                        if (siteDiaryLockService.isDateLocked(projectId, request.diaryDate())) {
+                            throw new DiaryDateLockedException(
+                                    "Ngày mới " + request.diaryDate() + " đã bị khóa sổ. Không thể chuyển nhật ký sang ngày này."
+                            );
+                        }
+                    }
+
                     diary.setDiaryDate(request.diaryDate());
                     diary.setWeather(request.weather());
                     diary.setTemperature(request.temperature());

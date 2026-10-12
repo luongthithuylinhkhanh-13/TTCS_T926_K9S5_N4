@@ -15,7 +15,8 @@ import {
   notification,
   Select,
   Typography,
-  Space
+  Space,
+  Tooltip
 } from 'antd';
 import {
   BookOutlined,
@@ -36,7 +37,8 @@ import {
   updateSiteDiary,
   lockSiteDiaryDate,
   unlockSiteDiaryDate,
-  getProjectDiaryLocks
+  getProjectDiaryLocks,
+  retryQueueItem
 } from '../services/siteDiaryApi';
 import { isProjectManager } from '../utils/permissions';
 
@@ -141,6 +143,15 @@ const SiteDiaryPage = () => {
       return;
     }
 
+    const dateFormatted = values.diaryDate.format('YYYY-MM-DD');
+    if (isDateLocked(dateFormatted)) {
+      notification.error({
+        message: 'Ngày đã bị khóa sổ',
+        description: `Không thể lưu hoặc cập nhật nhật ký cho ngày ${values.diaryDate.format('DD/MM/YYYY')} vì ngày này đã bị khóa sổ.`
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -196,7 +207,21 @@ const SiteDiaryPage = () => {
     }
   };
 
+  const isDateLocked = targetDate => {
+    if (!targetDate) return false;
+    const dateStr = dayjs(targetDate).format('YYYY-MM-DD');
+    const lockRecord = locks.find(l => l.lockDate === dateStr);
+    return Boolean(lockRecord?.locked || lockRecord?.status === 'LOCKED');
+  };
+
   const startEditingDiary = diary => {
+    if (isDateLocked(diary.diaryDate)) {
+      notification.warning({
+        message: 'Không thể chỉnh sửa',
+        description: `Nhật ký ngày ${dayjs(diary.diaryDate).format('DD/MM/YYYY')} đã bị khóa sổ.`
+      });
+      return;
+    }
     if (diary._isPendingSync) {
       notification.info({
         message: 'Nhật ký chưa đồng bộ',
@@ -307,8 +332,17 @@ const SiteDiaryPage = () => {
     {
       title: 'Đồng bộ',
       key: 'syncStatus',
-      width: 150,
+      width: 170,
       render: (_, r) => {
+        if (r._isRejectedLocked) {
+          return (
+            <Tooltip title={r._lastError || 'Ngày nhật ký đã bị khóa sổ'}>
+              <Tag icon={<LockOutlined />} color="error">
+                Từ chối (Đã khóa)
+              </Tag>
+            </Tooltip>
+          );
+        }
         if (r._isPendingSync) {
           return (
             <Tag icon={<ClockCircleOutlined />} color="warning">
@@ -326,12 +360,9 @@ const SiteDiaryPage = () => {
     {
       title: 'Khóa sổ',
       key: 'lockStatus',
-      width: 150,
+      width: 130,
       render: (_, r) => {
-        const dateStr = r.diaryDate ? dayjs(r.diaryDate).format('YYYY-MM-DD') : null;
-        const lockRecord = locks.find(l => l.lockDate === dateStr);
-        const isLocked = lockRecord?.locked || lockRecord?.status === 'LOCKED';
-
+        const isLocked = isDateLocked(r.diaryDate);
         if (isLocked) {
           return (
             <Tag icon={<LockOutlined />} color="error">
@@ -349,15 +380,46 @@ const SiteDiaryPage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 130,
-      render: (_, diary) => (
-        <Button
-          icon={<EyeOutlined />}
-          onClick={() => setDetailDiary(diary)}
-        >
-          Chi tiết
-        </Button>
-      )
+      width: 190,
+      render: (_, diary) => {
+        const locked = isDateLocked(diary.diaryDate);
+        return (
+          <Space>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => setDetailDiary(diary)}
+            >
+              Chi tiết
+            </Button>
+            {diary._isRejectedLocked ? (
+              <Button
+                type="link"
+                size="small"
+                onClick={async () => {
+                  retryQueueItem(diary.id);
+                  notification.info({
+                    message: 'Đã đưa vào hàng đợi',
+                    description: 'Bản ghi đã được chuyển về trạng thái chờ đồng bộ.'
+                  });
+                  await loadDiaries();
+                }}
+              >
+                Thử lại
+              </Button>
+            ) : (
+              <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.' : ''}>
+                <Button
+                  icon={<EditOutlined />}
+                  disabled={locked || diary._isPendingSync}
+                  onClick={() => startEditingDiary(diary)}
+                >
+                  Sửa
+                </Button>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      }
     }
   ];
 
@@ -608,20 +670,46 @@ const SiteDiaryPage = () => {
           <Button key="close" onClick={() => setDetailDiary(null)}>
             Đóng
           </Button>,
-          <Button
+          <Tooltip
             key="edit"
-            type="primary"
-            icon={<EditOutlined />}
-            disabled={detailDiary?._isPendingSync}
-            onClick={() => startEditingDiary(detailDiary)}
+            title={
+              detailDiary && isDateLocked(detailDiary.diaryDate)
+                ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.'
+                : ''
+            }
           >
-            Chỉnh sửa
-          </Button>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              disabled={
+                Boolean(detailDiary?._isPendingSync) ||
+                Boolean(detailDiary?._isRejectedLocked) ||
+                (detailDiary && isDateLocked(detailDiary.diaryDate))
+              }
+              onClick={() => startEditingDiary(detailDiary)}
+            >
+              Chỉnh sửa
+            </Button>
+          </Tooltip>
         ]}
       >
         {detailDiary && (
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            {detailDiary._isPendingSync && (
+            {detailDiary && isDateLocked(detailDiary.diaryDate) && (
+              <Alert
+                type="error"
+                showIcon
+                message="Ngày này đã bị khóa sổ. Toàn bộ thao tác chỉnh sửa đều bị khóa."
+              />
+            )}
+            {detailDiary._isRejectedLocked && (
+              <Alert
+                type="error"
+                showIcon
+                message={`Bị từ chối đồng bộ: ${detailDiary._lastError || 'Ngày nhật ký đã bị khóa sổ'}`}
+              />
+            )}
+            {detailDiary._isPendingSync && !detailDiary._isRejectedLocked && (
               <Text type="warning">Nhật ký đang chờ đồng bộ, hiện chưa thể chỉnh sửa.</Text>
             )}
             <div><Text strong>Ngày ghi: </Text>{dayjs(detailDiary.diaryDate).format('DD/MM/YYYY')}</div>

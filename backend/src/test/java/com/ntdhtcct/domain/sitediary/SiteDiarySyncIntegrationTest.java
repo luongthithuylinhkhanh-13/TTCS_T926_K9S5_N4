@@ -65,7 +65,9 @@ public class SiteDiarySyncIntegrationTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
-        mockMvc = MockMvcBuilders.standaloneSetup(siteDiaryController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(siteDiaryController)
+                .setControllerAdvice(new com.ntdhtcct.common.exception.GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -436,5 +438,70 @@ public class SiteDiarySyncIntegrationTest {
                         .param("date", lockDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.locked", equalTo(true)));
+    }
+
+    @Test
+    @DisplayName("TC-LOCK-04: T-65 - Đồng bộ đơn lẻ trả về 409 Conflict khi ngày đã bị khóa")
+    void testSyncSingleDiary_WhenLocked_Returns409Conflict() throws Exception {
+        String clientSyncId = "sync-locked-" + UUID.randomUUID();
+        LocalDate lockDate = LocalDate.now();
+
+        SiteDiarySyncRequest request = new SiteDiarySyncRequest(
+                clientSyncId,
+                lockDate,
+                "Nắng",
+                "32°C",
+                20,
+                "Máy đào",
+                "Nội dung thi công",
+                "Không",
+                OffsetDateTime.now()
+        );
+
+        when(siteDiarySyncService.syncSingleDiary(eq(projectId), any(), any(SiteDiarySyncRequest.class)))
+                .thenReturn(SiteDiarySyncResult.locked(clientSyncId, "Nhật ký công trường ngày " + lockDate + " đã bị khóa sổ. Thao tác bị từ chối."));
+
+        mockMvc.perform(post("/api/projects/{projectId}/site-diaries/sync", projectId)
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-User-Id", engineerUserId.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", equalTo("LOCKED")))
+                .andExpect(jsonPath("$.errorCode", equalTo("DIARY_DATE_LOCKED")))
+                .andExpect(jsonPath("$.clientSyncId", equalTo(clientSyncId)));
+    }
+
+    @Test
+    @DisplayName("TC-LOCK-05: T-65 - Chỉnh sửa nhật ký vào ngày đã khóa trả về 409 Conflict")
+    void testUpdateDiary_WhenLocked_Returns409Conflict() throws Exception {
+        UUID diaryId = UUID.randomUUID();
+        LocalDate lockDate = LocalDate.now();
+
+        SiteDiaryUpdateRequest request = new SiteDiaryUpdateRequest(
+                lockDate,
+                "Nắng",
+                "32°C",
+                2,
+                20,
+                2,
+                "Tổ 1",
+                "Máy xúc",
+                "Bình thường",
+                "Cập nhật nội dung",
+                "Không"
+        );
+
+        when(siteDiarySyncService.updateDiary(eq(projectId), eq(diaryId), any(SiteDiaryUpdateRequest.class)))
+                .thenThrow(new com.ntdhtcct.common.exception.DiaryDateLockedException("Nhật ký công trường ngày " + lockDate + " đã bị khóa sổ. Không thể chỉnh sửa."));
+
+        mockMvc.perform(put("/api/projects/{projectId}/site-diaries/{diaryId}", projectId, diaryId)
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-User-Id", engineerUserId.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code", equalTo("DIARY_DATE_LOCKED")))
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("đã bị khóa sổ")));
     }
 }

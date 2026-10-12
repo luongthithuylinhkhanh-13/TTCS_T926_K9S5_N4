@@ -62,6 +62,9 @@ public class SiteDiaryController {
         UUID reporterId = resolveUserId(authorization, xUserId);
         SiteDiarySyncResult result = siteDiarySyncService.syncSingleDiary(projectId, reporterId, request);
 
+        if ("LOCKED".equals(result.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+        }
         if ("ERROR".equals(result.getStatus())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }

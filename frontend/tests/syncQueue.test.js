@@ -311,3 +311,38 @@ test('TC-S34: Ghi 20 nhật ký khi mất mạng và đồng bộ đầy đủ k
     syncQueueService.clearAll();
   }
 });
+
+test('TC-SYNC-07: T-65 - markLocked đánh dấu REJECTED_LOCKED và loại khỏi pending items, retryQueueItem đưa về PENDING', () => {
+  syncQueueService.clearAll();
+
+  const item = syncQueueService.enqueue({
+    projectId: 'p-lock-1',
+    payload: {
+      diaryDate: '2026-10-10',
+      workSummary: 'Nhật ký ngày khóa'
+    }
+  });
+
+  assert.equal(syncQueueService.getPendingItems().length, 1);
+
+  // Giả lập đồng bộ bị từ chối do ngày khóa sổ
+  syncQueueService.markLocked(item.id, 'Nhật ký ngày 2026-10-10 đã bị khóa sổ.');
+
+  const updatedQueue = syncQueueService.getQueue();
+  const lockedItem = updatedQueue.find(i => i.id === item.id);
+  assert.equal(lockedItem.status, 'REJECTED_LOCKED');
+  assert.equal(lockedItem.isLocked, true);
+  assert.equal(lockedItem.lastError, 'Nhật ký ngày 2026-10-10 đã bị khóa sổ.');
+
+  // Không xuất hiện trong getPendingItems để tránh retry tự động liên tục
+  assert.equal(syncQueueService.getPendingItems().length, 0);
+
+  // Khi người dùng bấm Thử lại (retry)
+  const retried = syncQueueService.retryItem(item.id);
+  assert.equal(retried.status, 'PENDING');
+  assert.equal(retried.isLocked, false);
+  assert.equal(syncQueueService.getPendingItems().length, 1);
+
+  syncQueueService.clearAll();
+});
+

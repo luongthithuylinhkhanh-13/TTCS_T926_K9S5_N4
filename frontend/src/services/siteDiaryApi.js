@@ -103,34 +103,41 @@ export const getSiteDiaries = async projectId => {
     console.warn('[SiteDiary] Không thể tải từ máy chủ, lấy từ bộ nhớ đệm:', err.message);
   }
 
-  // Lấy các bản ghi đang chờ đồng bộ từ hàng đợi local
-  const pendingItems = syncQueueService
-    .getPendingItems()
-    .filter(i => i.projectId === projectId && i.entityType === 'SITE_DIARY')
-    .map(i => ({
-      id: i.id,
-      clientSyncId: i.clientSyncId,
-      projectId: i.projectId,
-      diaryDate: i.payload.diaryDate,
-      weather: i.payload.weather,
-      temperature: i.payload.temperature,
-      engineerCount: i.payload.engineerCount,
-      workerCount: i.payload.workerCount,
-      crewCount: i.payload.crewCount,
-      crewDetails: i.payload.crewDetails,
-      equipmentStatus: i.payload.equipmentStatus,
-      workSummary: i.payload.workSummary,
-      issues: i.payload.issues,
-      workingConditions: i.payload.workingConditions,
-      syncStatus: i.status === 'FAILED' ? 'Lỗi đồng bộ' : 'Chờ đồng bộ',
-      _isPendingSync: true,
-      _retryCount: i.retryCount,
-      _lastError: i.lastError,
-      offlineCreatedAt: i.payload.offlineCreatedAt
-    }));
+  // Lấy các bản ghi từ hàng đợi local (bao gồm chờ đồng bộ và bản ghi bị từ chối do khóa sổ)
+  const localItems = syncQueueService
+    .getQueue()
+    .filter(i => i.projectId === projectId && i.entityType === 'SITE_DIARY' && (i.status === 'PENDING' || i.status === 'FAILED' || i.status === 'REJECTED_LOCKED'))
+    .map(i => {
+      let syncStatusText = 'Chờ đồng bộ';
+      if (i.status === 'FAILED') syncStatusText = 'Lỗi đồng bộ';
+      if (i.status === 'REJECTED_LOCKED') syncStatusText = 'Bị từ chối (Đã khóa)';
 
-  // Gộp bản ghi chờ gửi lên đầu danh sách
-  return [...pendingItems, ...serverList];
+      return {
+        id: i.id,
+        clientSyncId: i.clientSyncId,
+        projectId: i.projectId,
+        diaryDate: i.payload.diaryDate,
+        weather: i.payload.weather,
+        temperature: i.payload.temperature,
+        engineerCount: i.payload.engineerCount,
+        workerCount: i.payload.workerCount,
+        crewCount: i.payload.crewCount,
+        crewDetails: i.payload.crewDetails,
+        equipmentStatus: i.payload.equipmentStatus,
+        workSummary: i.payload.workSummary,
+        issues: i.payload.issues,
+        workingConditions: i.payload.workingConditions,
+        syncStatus: syncStatusText,
+        _isPendingSync: i.status !== 'REJECTED_LOCKED',
+        _isRejectedLocked: i.status === 'REJECTED_LOCKED',
+        _retryCount: i.retryCount,
+        _lastError: i.lastError,
+        offlineCreatedAt: i.payload.offlineCreatedAt
+      };
+    });
+
+  // Gộp bản ghi local lên đầu danh sách
+  return [...localItems, ...serverList];
 };
 
 /**
@@ -138,6 +145,24 @@ export const getSiteDiaries = async projectId => {
  */
 export const triggerManualSync = () => {
   return autoSyncService.syncQueueNow();
+};
+
+/**
+ * T-65: Đưa một bản ghi từ trạng thái REJECTED_LOCKED trở lại PENDING để đồng bộ lại
+ */
+export const retryQueueItem = queueId => {
+  const queue = syncQueueService.getQueue();
+  const item = queue.find(i => i.id === queueId);
+  if (item) {
+    item.status = 'PENDING';
+    item.isLocked = false;
+    item.lastError = null;
+    item.retryCount = 0;
+    item.updatedAt = new Date().toISOString();
+    syncQueueService.saveQueue(queue);
+    return true;
+  }
+  return false;
 };
 
 /**
