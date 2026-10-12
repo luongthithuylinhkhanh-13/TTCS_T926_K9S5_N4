@@ -24,11 +24,17 @@ import {
   ClockCircleOutlined,
   ReloadOutlined,
   EyeOutlined,
-  EditOutlined
+  EditOutlined,
+  SyncOutlined,
+  CloseCircleOutlined,
+  CloudSyncOutlined,
+  UnorderedListOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
-import { submitSiteDiary, getSiteDiaries, updateSiteDiary } from '../services/siteDiaryApi';
+import { submitSiteDiary, getSiteDiaries, updateSiteDiary, triggerManualSync } from '../services/siteDiaryApi';
+import SyncQueueModal from '../components/sync/SyncQueueModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -46,6 +52,9 @@ const SiteDiaryPage = () => {
   const [editingDiaryId, setEditingDiaryId] = useState(null);
   const [detailDiary, setDetailDiary] = useState(null);
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
+  const [syncFilter, setSyncFilter] = useState('ALL'); // 'ALL' | 'UNSYNCED' | 'SYNCED'
+  const [manualSyncing, setManualSyncing] = useState(false);
+  const [queueModalOpen, setQueueModalOpen] = useState(false);
 
   // Tải danh sách dự án
   useEffect(() => {
@@ -212,6 +221,38 @@ const SiteDiaryPage = () => {
     setSelectedProjectId(projectId);
   };
 
+  const handleManualSyncNow = async () => {
+    setManualSyncing(true);
+    try {
+      await triggerManualSync();
+      await loadDiaries();
+      notification.success({
+        message: 'Hoàn tất đồng bộ',
+        description: 'Đã hoàn thành kiểm tra và đồng bộ hàng đợi ngoại tuyến.'
+      });
+    } catch (err) {
+      notification.error({
+        message: 'Lỗi đồng bộ',
+        description: err.message
+      });
+    } finally {
+      setManualSyncing(false);
+    }
+  };
+
+  const pendingDiaries = diaries.filter(d => d._isPendingSync);
+  const syncedDiaries = diaries.filter(d => !d._isPendingSync);
+  const failedDiaries = pendingDiaries.filter(d => d.rawSyncStatus === 'FAILED');
+  const pendingCount = pendingDiaries.length;
+  const syncedCount = syncedDiaries.length;
+  const failedCount = failedDiaries.length;
+
+  const filteredDiaries = diaries.filter(d => {
+    if (syncFilter === 'UNSYNCED') return d._isPendingSync;
+    if (syncFilter === 'SYNCED') return !d._isPendingSync;
+    return true;
+  });
+
   const columns = [
     {
       title: 'Ngày ghi',
@@ -275,21 +316,41 @@ const SiteDiaryPage = () => {
       )
     },
     {
-      title: 'Đồng bộ',
+      title: 'Trạng thái đồng bộ',
       key: 'syncStatus',
       width: 200,
       render: (_, r) => {
         if (r._isPendingSync) {
+          if (r.rawSyncStatus === 'FAILED') {
+            return (
+              <Tooltip title={`Lỗi đồng bộ: ${r._lastError || 'Không thể kết nối máy chủ'}. Số lần thử: ${r._retryCount || 1}`}>
+                <Tag icon={<CloseCircleOutlined />} color="error">
+                  Chưa đồng bộ (Lỗi)
+                </Tag>
+              </Tooltip>
+            );
+          }
+          if (r.rawSyncStatus === 'SYNCING') {
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                Đang đồng bộ...
+              </Tag>
+            );
+          }
           return (
-            <Tag icon={<ClockCircleOutlined />} color="warning">
-              Chờ đồng bộ
-            </Tag>
+            <Tooltip title={`Bản ghi được lưu trên thiết bị lúc ${dayjs(r.offlineCreatedAt || r.createdAt).format('HH:mm DD/MM/YYYY')}. Đang chờ gửi lên máy chủ.`}>
+              <Tag icon={<ClockCircleOutlined />} color="warning">
+                Chưa đồng bộ
+              </Tag>
+            </Tooltip>
           );
         }
         return (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            Đã đồng bộ
-          </Tag>
+          <Tooltip title="Đã lưu trữ an toàn trên máy chủ">
+            <Tag icon={<CheckCircleOutlined />} color="success">
+              Đã đồng bộ
+            </Tag>
+          </Tooltip>
         );
       }
     },
@@ -376,19 +437,162 @@ const SiteDiaryPage = () => {
         </Row>
       </Card>
 
+      {/* T-73 (NTDHTCT-258): Thông báo số lượng mục đang chờ đồng bộ */}
+      {pendingCount > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<ClockCircleOutlined style={{ fontSize: 20, color: '#fa8c16' }} />}
+          message={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, fontSize: '15px' }}>
+                Đang có {pendingCount} mục nhật ký chờ đồng bộ lên máy chủ
+              </span>
+              {failedCount > 0 && (
+                <Tag color="error">({failedCount} mục gặp lỗi cần thử lại)</Tag>
+              )}
+            </div>
+          }
+          description={
+            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <span style={{ color: '#595959' }}>
+                {online
+                  ? 'Dữ liệu được lưu trữ an toàn trên thiết bị và sẽ tự động gửi. Bạn cũng có thể nhấn đồng bộ thủ công ngay lập tức.'
+                  : 'Thiết bị đang ngoại tuyến. Dữ liệu sẽ tự động được gửi lên máy chủ khi kết nối mạng trở lại.'}
+              </span>
+              <Space wrap>
+                <Button
+                  size="small"
+                  icon={<UnorderedListOutlined />}
+                  onClick={() => setQueueModalOpen(true)}
+                >
+                  Xem hàng đợi ({pendingCount})
+                </Button>
+                {online && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={manualSyncing ? <LoadingOutlined /> : <CloudSyncOutlined />}
+                    loading={manualSyncing}
+                    onClick={handleManualSyncNow}
+                    style={{ backgroundColor: '#1890ff' }}
+                  >
+                    Đồng bộ ngay ({pendingCount} mục)
+                  </Button>
+                )}
+              </Space>
+            </div>
+          }
+          style={{ marginBottom: '20px', border: '1px solid #ffe58f', background: '#fffbe6' }}
+        />
+      )}
+
+      {/* T-72 & T-73: Thẻ tóm tắt số lượng mục đồng bộ */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '20px' }}>
+        <Col xs={24} sm={8}>
+          <Card
+            size="small"
+            hoverable
+            onClick={() => setSyncFilter('ALL')}
+            style={{
+              cursor: 'pointer',
+              borderLeft: syncFilter === 'ALL' ? '4px solid #1890ff' : '4px solid #d9d9d9',
+              background: '#ffffff',
+              borderRadius: '6px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Tổng số nhật ký</Text>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#262626' }}>{diaries.length}</div>
+              </div>
+              <BookOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={8}>
+          <Card
+            size="small"
+            hoverable
+            onClick={() => setSyncFilter('UNSYNCED')}
+            style={{
+              cursor: 'pointer',
+              borderLeft: syncFilter === 'UNSYNCED' ? '4px solid #faad14' : pendingCount > 0 ? '4px solid #faad14' : '4px solid #d9d9d9',
+              background: pendingCount > 0 ? '#fffbe6' : '#ffffff',
+              borderRadius: '6px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Chờ đồng bộ (T-73)</Text>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: pendingCount > 0 ? '#d48806' : '#595959', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{pendingCount} mục</span>
+                  {pendingCount > 0 && <Badge status="warning" />}
+                </div>
+              </div>
+              <ClockCircleOutlined style={{ fontSize: '24px', color: '#faad14' }} />
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={8}>
+          <Card
+            size="small"
+            hoverable
+            onClick={() => setSyncFilter('SYNCED')}
+            style={{
+              cursor: 'pointer',
+              borderLeft: syncFilter === 'SYNCED' ? '4px solid #52c41a' : '4px solid #d9d9d9',
+              background: '#ffffff',
+              borderRadius: '6px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Đã đồng bộ</Text>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#389e0d' }}>{syncedCount} mục</div>
+              </div>
+              <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       <Card
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span>Lịch sử nhật ký</span>
-            <Text type="secondary" style={{ fontSize: '13px' }}>
-              Tổng cộng: {diaries.length} bản ghi
-            </Text>
+            <Space align="center">
+              <span>Lịch sử nhật ký</span>
+              {pendingCount > 0 && (
+                <Badge
+                  count={`${pendingCount} chờ đồng bộ`}
+                  style={{ backgroundColor: failedCount > 0 ? '#ff4d4f' : '#faad14' }}
+                />
+              )}
+            </Space>
+            <Space wrap align="center">
+              <span style={{ fontSize: '13px', color: '#595959' }}>Lọc đồng bộ:</span>
+              <Select
+                value={syncFilter}
+                onChange={setSyncFilter}
+                style={{ width: 180 }}
+                options={[
+                  { label: `Tất cả (${diaries.length})`, value: 'ALL' },
+                  { label: `Chưa đồng bộ (${pendingCount})`, value: 'UNSYNCED' },
+                  { label: `Đã đồng bộ (${syncedCount})`, value: 'SYNCED' }
+                ]}
+              />
+              <Text type="secondary" style={{ fontSize: '13px' }}>
+                Hiển thị: {filteredDiaries.length}/{diaries.length} bản ghi
+              </Text>
+            </Space>
           </div>
         }
         style={{ width: '100%' }}
       >
         <Table
-          dataSource={diaries}
+          dataSource={filteredDiaries}
           columns={columns}
           rowKey={r => r.clientSyncId || r.id}
           loading={loading}
@@ -539,9 +743,46 @@ const SiteDiaryPage = () => {
       >
         {detailDiary && (
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            {detailDiary._isPendingSync && (
-              <Text type="warning">Nhật ký đang chờ đồng bộ, hiện chưa thể chỉnh sửa.</Text>
-            )}
+            {/* T-72: Chi tiết trạng thái đồng bộ của nhật ký */}
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '6px',
+                background: detailDiary._isPendingSync ? '#fffbe6' : '#f6ffed',
+                border: `1px solid ${detailDiary._isPendingSync ? '#ffe58f' : '#b7eb8f'}`
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <Text strong>Trạng thái đồng bộ:</Text>
+                {detailDiary._isPendingSync ? (
+                  detailDiary.rawSyncStatus === 'FAILED' ? (
+                    <Tag icon={<CloseCircleOutlined />} color="error">Chưa đồng bộ (Gặp lỗi)</Tag>
+                  ) : detailDiary.rawSyncStatus === 'SYNCING' ? (
+                    <Tag icon={<SyncOutlined spin />} color="processing">Đang gửi lên máy chủ...</Tag>
+                  ) : (
+                    <Tag icon={<ClockCircleOutlined />} color="warning">Chưa đồng bộ (Ngoại tuyến)</Tag>
+                  )
+                ) : (
+                  <Tag icon={<CheckCircleOutlined />} color="success">Đã đồng bộ lên máy chủ</Tag>
+                )}
+              </div>
+              {detailDiary._isPendingSync ? (
+                <div style={{ marginTop: '6px', fontSize: '12px', color: '#ad6800' }}>
+                  Bản ghi này đang được lưu trên thiết bị và chưa được tải lên máy chủ. Hệ thống sẽ tự động đồng bộ khi có kết nối mạng.
+                  {detailDiary.offlineCreatedAt && (
+                    <div style={{ marginTop: 2 }}>Thời điểm tạo: {dayjs(detailDiary.offlineCreatedAt).format('HH:mm:ss DD/MM/YYYY')}</div>
+                  )}
+                  {detailDiary._lastError && (
+                    <div style={{ color: '#cf1322', marginTop: 2 }}>Chi tiết lỗi: {detailDiary._lastError} (Thử {detailDiary._retryCount} lần)</div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#389e0d' }}>
+                  Bản ghi đã được lưu trữ an toàn và xác thực trên máy chủ.
+                </div>
+              )}
+            </div>
+
             <div><Text strong>Ngày ghi: </Text>{dayjs(detailDiary.diaryDate).format('DD/MM/YYYY')}</div>
             <div><Text strong>Thời tiết: </Text>{detailDiary.weather || 'Chưa ghi nhận'} {detailDiary.temperature ? `(${detailDiary.temperature})` : ''}</div>
             <div><Text strong>Số kỹ sư: </Text>{detailDiary.engineerCount ?? 'Chưa ghi nhận'}</div>
@@ -570,6 +811,13 @@ const SiteDiaryPage = () => {
           </Space>
         )}
       </Modal>
+
+      <SyncQueueModal
+        open={queueModalOpen}
+        onClose={() => setQueueModalOpen(false)}
+        onSyncNow={handleManualSyncNow}
+        isSyncing={manualSyncing}
+      />
     </div>
   );
 };

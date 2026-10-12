@@ -140,4 +140,24 @@ public class SiteDiarySyncServiceTest {
         assertThat(batchResponse.getDuplicateCount()).isEqualTo(1);
         assertThat(batchResponse.getFailedCount()).isEqualTo(0);
     }
+
+    @Test
+    @DisplayName("T-72 & T-73 (S-31): Thống kê trạng thái đồng bộ và số lượng mục của dự án")
+    void getProjectSyncStatus_ShouldReturnCorrectStats() {
+        OffsetDateTime now = OffsetDateTime.now();
+        SiteDiary diary = new SiteDiary();
+        diary.setId(UUID.randomUUID());
+
+        when(siteDiaryRepository.countByProjectId(projectId)).thenReturn(5L);
+        when(siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "SYNCED")).thenReturn(5L);
+        when(siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "PENDING")).thenReturn(0L);
+        when(siteDiaryRepository.findFirstByProjectIdOrderByUpdatedAtDesc(projectId)).thenReturn(Optional.of(diary));
+
+        var status = siteDiarySyncService.getProjectSyncStatus(projectId);
+
+        assertThat(status.getProjectId()).isEqualTo(projectId);
+        assertThat(status.getTotalDiaries()).isEqualTo(5L);
+        assertThat(status.getSyncedCount()).isEqualTo(5L);
+        assertThat(status.getPendingCount()).isEqualTo(0L);
+    }
 }
