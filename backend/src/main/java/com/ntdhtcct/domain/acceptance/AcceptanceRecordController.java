@@ -1,11 +1,8 @@
 package com.ntdhtcct.domain.acceptance;
 
-import com.ntdhtcct.auth.annotation.RequireProjectRole;
-import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordAuditLogResponse;
-import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordRequest;
-import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordResponse;
-import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordReturnRequest;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,8 +13,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.UUID;
+import com.ntdhtcct.auth.annotation.RequireProjectRole;
+import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordAuditLogResponse;
+import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordRequest;
+import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordResponse;
+import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordReturnRequest;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/acceptance-records")
@@ -96,7 +98,7 @@ public class AcceptanceRecordController {
     public AcceptanceRecordResponse returnForChanges(
             @PathVariable UUID projectId,
             @PathVariable UUID recordId,
-            @Valid @RequestBody(required = false) AcceptanceRecordReturnRequest request
+            @Valid @RequestBody AcceptanceRecordReturnRequest request
     ) {
         String comment = request == null ? null : request.comment();
         return AcceptanceRecordResponse.from(
