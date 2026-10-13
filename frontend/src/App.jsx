@@ -7,6 +7,7 @@ import WorkingCalendarPage from './pages/WorkingCalendarPage';
 import AssignedTasksPage from './pages/AssignedTasksPage';
 import MilestonesPage from './pages/MilestonesPage';
 import SiteDiaryPage from './pages/SiteDiaryPage';
+import AcceptanceRecordsPage from './pages/AcceptanceRecordsPage';
 import { isAuthenticated } from './utils/auth';
 
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,7 @@ function App() {
         <Route path="assigned-tasks" element={<AssignedTasksPage />} />
         <Route path="progress/milestones" element={<MilestonesPage />} />
         <Route path="site-diary" element={<SiteDiaryPage />} />
+        <Route path="acceptance-records" element={<AcceptanceRecordsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

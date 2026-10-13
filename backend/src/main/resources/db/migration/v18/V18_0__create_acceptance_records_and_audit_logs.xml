@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V18.0-create-acceptance-records-and-audit-logs" author="S-39">
+        <createTable tableName="acceptance_records">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="inspection_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(32)" defaultValue="PENDING_APPROVAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="acceptance_records"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_acceptance_records_project"
+            onDelete="CASCADE"/>
+
+        <createIndex tableName="acceptance_records" indexName="idx_acceptance_records_project">
+            <column name="project_id"/>
+        </createIndex>
+
+        <createTable tableName="acceptance_record_audit_logs">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="acceptance_record_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actor_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="TEXT"/>
+            <column name="performed_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="acceptance_record_audit_logs"
+            baseColumnNames="acceptance_record_id"
+            referencedTableName="acceptance_records"
+            referencedColumnNames="id"
+            constraintName="fk_acceptance_audit_record"
+            onDelete="CASCADE"/>
+
+        <createIndex tableName="acceptance_record_audit_logs" indexName="idx_acceptance_audit_record_time">
+            <column name="acceptance_record_id"/>
+            <column name="performed_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="acceptance_record_audit_logs"/>
+            <dropTable tableName="acceptance_records"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
