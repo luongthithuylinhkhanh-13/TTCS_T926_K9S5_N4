@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Empty, Form, Input, InputNumber, List, Modal, Spin, Tag, message } from 'antd';
+import { Button, Col, Empty, Form, Input, InputNumber, List, Modal, Row, Select, Spin, Tag, message } from 'antd';
 import { ClockCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { createCategoryTask, getCategoryTasks } from '../../services/categoryTaskApi';
 import { useLocale } from '../../utils/LocaleContext';
@@ -77,8 +77,23 @@ const CategoryTaskSection = ({ projectId, category }) => {
             size="small"
             dataSource={tasks}
             renderItem={task => (
-              <List.Item className="category-task-item">
-                <span>{task.name}</span>
+              <List.Item className="category-task-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontWeight: 600 }}>{task.name}</span>
+                  {(task.quantity != null || task.unitPrice != null) && (
+                    <span style={{ fontSize: 12, color: '#64748B' }}>
+                      {task.quantity != null && (
+                        <span>KL: <strong>{task.quantity} {task.unit || ''}</strong></span>
+                      )}
+                      {task.unitPrice != null && (
+                        <span> · {Number(task.unitPrice).toLocaleString('vi-VN')} đ/đv</span>
+                      )}
+                      {task.totalPrice != null && (
+                        <span style={{ color: '#047857', fontWeight: 600 }}> = {Number(task.totalPrice).toLocaleString('vi-VN')} đ</span>
+                      )}
+                    </span>
+                  )}
+                </div>
                 <Tag icon={<ClockCircleOutlined />} color="blue">
                   {task.duration} {t('ngày')}
                 </Tag>
@@ -125,6 +140,67 @@ const CategoryTaskSection = ({ projectId, category }) => {
             rules={[{ required: true, message: t('Nhập thời lượng') }]}
           >
             <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item
+                label={t('Khối lượng')}
+                name="quantity"
+                rules={[{ type: 'number', min: 0, message: t('Khối lượng >= 0') }]}
+              >
+                <InputNumber min={0} step={0.1} precision={2} style={{ width: '100%' }} placeholder={t('Ví dụ: 100')} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label={t('Đơn vị tính')}
+                name="unit"
+                rules={[
+                  { max: 50, message: t('Tối đa 50 ký tự') },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const qty = getFieldValue('quantity');
+                      if (qty != null && qty > 0 && (!value || !value.trim())) {
+                        return Promise.reject(new Error(t('Nhập ĐVT')));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
+                <Input placeholder="m3, m2, tấn..." />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label={t('Đơn giá (VNĐ)')}
+                name="unitPrice"
+                rules={[{ type: 'number', min: 0, message: t('Đơn giá >= 0') }]}
+              >
+                <InputNumber
+                  min={0}
+                  style={{ width: '100%' }}
+                  formatter={value => value == null ? '' : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value?.replace(/\$\s?|(,*)/g, '') ?? ''}
+                  placeholder="250,000"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.quantity !== cur.quantity || prev.unitPrice !== cur.unitPrice}>
+            {({ getFieldValue }) => {
+              const qty = Number(getFieldValue('quantity') || 0);
+              const price = Number(getFieldValue('unitPrice') || 0);
+              const total = qty > 0 && price > 0 ? qty * price : 0;
+              return total > 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, color: '#047857', fontSize: 13, fontWeight: 600, marginTop: -4 }}>
+                  <span>{t('Thành tiền ước tính:')}</span>
+                  <span>{total.toLocaleString('vi-VN')} VNĐ</span>
+                </div>
+              ) : null;
+            }}
           </Form.Item>
         </Form>
       </Modal>

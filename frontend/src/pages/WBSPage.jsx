@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -112,6 +112,7 @@ const normalizeFormData = (formData) => {
   const assignee = formData.assignee || {};
 
   return {
+    version: formData.version,
     wbsCode: formData.wbsCode,
     name: formData.name,
     type: formData.type,
@@ -146,6 +147,11 @@ const normalizeFormData = (formData) => {
 
     description: formData.description || '',
 
+    quantity: formData.quantity == null && formData.totalVolume == null ? null : Number(formData.quantity ?? formData.totalVolume),
+    totalVolume: formData.quantity == null && formData.totalVolume == null ? null : Number(formData.totalVolume ?? formData.quantity),
+    unit: formData.unit ? formData.unit.trim() : null,
+    unitPrice: formData.unitPrice == null ? null : Number(formData.unitPrice),
+
     image:
       formData.image ||
       formData.images?.[0] ||
@@ -156,6 +162,7 @@ const normalizeFormData = (formData) => {
 const WBSPage = () => {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   // =========================================================
   // PROJECT / WBS DATA
   // =========================================================
@@ -165,7 +172,7 @@ const WBSPage = () => {
   const [
     selectedProjectId,
     setSelectedProjectId
-  ] = useState(null);
+  ] = useState(searchParams.get('projectId') || null);
 
   const [
     rawTreeNodes,
@@ -247,6 +254,8 @@ const WBSPage = () => {
     setModalInitialValues
   ] = useState(null);
 
+  const [editConflict, setEditConflict] = useState(false);
+
   const [
     submitting,
     setSubmitting
@@ -282,6 +291,10 @@ const WBSPage = () => {
 
       if (projectList.length > 0) {
         setSelectedProjectId(current => {
+          const queryId = searchParams.get('projectId');
+          if (queryId && projectList.some(p => p.id === queryId)) {
+            return queryId;
+          }
           const stillExists = projectList.some(
             project => project.id === current
           );
@@ -303,6 +316,13 @@ const WBSPage = () => {
       setLoadingProjects(false);
     }
   };
+
+  useEffect(() => {
+    const paramId = searchParams.get('projectId');
+    if (paramId && projects.some(p => p.id === paramId)) {
+      setSelectedProjectId(paramId);
+    }
+  }, [searchParams, projects]);
 
   // =========================================================
   // LOAD WBS
@@ -427,6 +447,7 @@ const WBSPage = () => {
 
   const handleSelectProject = projectId => {
     setSelectedProjectId(projectId);
+    setSearchParams(projectId ? { projectId } : {});
 
     setSearchText('');
     setStatusFilter('ALL');
@@ -621,6 +642,7 @@ const WBSPage = () => {
     }
 
     setModalIsEdit(false);
+    setEditConflict(false);
 
     if (parent) {
       setModalInitialValues({
@@ -643,6 +665,7 @@ const WBSPage = () => {
 
   const handleOpenEditModal = node => {
     setModalIsEdit(true);
+    setEditConflict(false);
 
     setModalInitialValues({
       ...node,
@@ -796,6 +819,15 @@ const WBSPage = () => {
           selectedProjectId
         );
       } catch (error) {
+        if (error.status === 409) {
+          setEditConflict(true);
+          await loadWbs(selectedProjectId);
+          message.warning(
+            t('Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.')
+          );
+          return;
+        }
+
         message.error(
           error.message ||
           (
@@ -1161,6 +1193,10 @@ const WBSPage = () => {
 
         confirmLoading={
           submitting
+        }
+
+        editConflict={
+          editConflict
         }
       />
 

@@ -5,8 +5,8 @@
  *   - NTDHTCT-256: T-71 – Tự động gửi dữ liệu lên máy chủ khi kết nối mạng trở lại
  */
 
-import apiClient from './apiClient';
-import syncQueueService from './syncQueueService';
+import apiClient from './apiClient.js';
+import syncQueueService from './syncQueueService.js';
 
 class AutoSyncService {
   constructor() {
@@ -105,19 +105,37 @@ class AutoSyncService {
 
     for (const item of pendingItems) {
       try {
-        syncQueueService.markSyncing(item.id);
-
-        await apiClient({
+        const response = await apiClient({
           url: item.endpoint,
           method: item.method,
           data: item.payload
         });
 
-        syncQueueService.markSuccess(item.id);
-        successCount++;
+        // Kiểm tra kết quả trả về từ endpoint sync có mang status LOCKED hay không
+        if (response.data?.status === 'LOCKED' || response.data?.errorCode === 'DIARY_DATE_LOCKED') {
+          const lockMessage = response.data?.message || 'Ngày nhật ký đã bị khóa sổ. Thao tác bị từ chối.';
+          syncQueueService.markLocked(item.id, lockMessage);
+          failCount++;
+        } else {
+          syncQueueService.markSuccess(item.id);
+          successCount++;
+        }
       } catch (error) {
-        const errorMessage = error.message || 'Lỗi gửi dữ liệu lên máy chủ';
-        syncQueueService.markFailed(item.id, errorMessage);
+        // Kiểm tra xem lỗi HTTP có phải 409 Conflict hoặc mang mã DIARY_DATE_LOCKED không
+        const isLockedError =
+          error.response?.status === 409 ||
+          error.response?.data?.code === 'DIARY_DATE_LOCKED' ||
+          error.response?.data?.errorCode === 'DIARY_DATE_LOCKED' ||
+          error.response?.data?.status === 'LOCKED';
+
+        if (isLockedError) {
+          const lockMessage =
+            error.response?.data?.message || 'Ngày nhật ký đã bị khóa sổ. Thao tác bị từ chối.';
+          syncQueueService.markLocked(item.id, lockMessage);
+        } else {
+          const errorMessage = error.message || 'Lỗi gửi dữ liệu lên máy chủ';
+          syncQueueService.markFailed(item.id, errorMessage);
+        }
         failCount++;
       }
     }

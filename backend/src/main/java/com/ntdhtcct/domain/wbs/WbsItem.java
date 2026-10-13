@@ -14,6 +14,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -71,6 +72,9 @@ public class WbsItem {
 
     @Column(name = "unit", length = 50)
     private String unit;
+
+    @Column(name = "unit_price")
+    private Double unitPrice;
 
 
     @Column(name = "start_date")
@@ -140,6 +144,10 @@ public class WbsItem {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     public WbsItem() {
     }
@@ -430,6 +438,14 @@ public class WbsItem {
         return updatedAt;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     public Double getTotalVolume() {
         return totalVolume;
     }
@@ -444,5 +460,31 @@ public class WbsItem {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public Double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(Double unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    @JsonProperty("quantity")
+    public Double getQuantity() {
+        return totalVolume;
+    }
+
+    @JsonProperty("quantity")
+    public void setQuantity(Double quantity) {
+        this.totalVolume = quantity;
+    }
+
+    @JsonProperty("totalPrice")
+    public Double getTotalPrice() {
+        if (totalVolume != null && unitPrice != null) {
+            return Math.round(totalVolume * unitPrice * 100.0) / 100.0;
+        }
+        return null;
     }
 }

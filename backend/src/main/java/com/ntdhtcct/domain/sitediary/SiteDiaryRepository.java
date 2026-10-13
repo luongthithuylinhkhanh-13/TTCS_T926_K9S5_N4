@@ -30,4 +30,20 @@ public interface SiteDiaryRepository extends JpaRepository<SiteDiary, UUID> {
      * Lấy nhật ký theo dự án và ngày cụ thể.
      */
     List<SiteDiary> findByProjectIdAndDiaryDate(UUID projectId, LocalDate diaryDate);
+
+    /**
+     * Đếm tổng số nhật ký thuộc dự án.
+     */
+    long countByProjectId(UUID projectId);
+
+    /**
+     * Đếm số nhật ký thuộc dự án theo trạng thái đồng bộ.
+     */
+    long countByProjectIdAndSyncStatus(UUID projectId, String syncStatus);
+
+    /**
+     * Lấy nhật ký cập nhật mới nhất của dự án để xác định thời điểm đồng bộ gần nhất.
+     */
+    Optional<SiteDiary> findFirstByProjectIdOrderByUpdatedAtDesc(UUID projectId);
 }
+

@@ -6,8 +6,13 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncStatusResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockRequest;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryLockResponse;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUnlockRequest;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,26 +22,31 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Controller tiếp nhận và xử lý đồng bộ nhật ký công trường.
- * Phục vụ Story S-30 (NTDHTCT-214):
- *   - NTDHTCT-255 (T-70): Hàng đợi dữ liệu chưa đồng bộ
- *   - NTDHTCT-256 (T-71): Tự động gửi dữ liệu lên máy chủ khi kết nối mạng trở lại
+ * Phục vụ Story S-30 (NTDHTCT-214) và S-24 (T-64: Khóa sổ nhật ký theo ngày).
  */
 @RestController
 @RequestMapping("/api/projects/{projectId}/site-diaries")
 public class SiteDiaryController {
 
     private final SiteDiarySyncService siteDiarySyncService;
+    private final SiteDiaryLockService siteDiaryLockService;
     private final AuthTokenService authTokenService;
 
-    public SiteDiaryController(SiteDiarySyncService siteDiarySyncService, AuthTokenService authTokenService) {
+    public SiteDiaryController(
+            SiteDiarySyncService siteDiarySyncService,
+            SiteDiaryLockService siteDiaryLockService,
+            AuthTokenService authTokenService) {
         this.siteDiarySyncService = siteDiarySyncService;
+        this.siteDiaryLockService = siteDiaryLockService;
         this.authTokenService = authTokenService;
     }
 
@@ -53,6 +63,9 @@ public class SiteDiaryController {
         UUID reporterId = resolveUserId(authorization, xUserId);
         SiteDiarySyncResult result = siteDiarySyncService.syncSingleDiary(projectId, reporterId, request);
 
+        if ("LOCKED".equals(result.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+        }
         if ("ERROR".equals(result.getStatus())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
@@ -101,6 +114,15 @@ public class SiteDiaryController {
     }
 
     /**
+     * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký của dự án.
+     */
+    @GetMapping("/sync-status")
+    public ResponseEntity<SiteDiarySyncStatusResponse> getSyncStatus(@PathVariable UUID projectId) {
+        SiteDiarySyncStatusResponse status = siteDiarySyncService.getProjectSyncStatus(projectId);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
      * Xem chi tiết một bản ghi nhật ký.
      */
     @GetMapping("/{diaryId}")
@@ -122,6 +144,82 @@ public class SiteDiaryController {
         return siteDiarySyncService.updateDiary(projectId, diaryId, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * T-64: Khóa sổ nhật ký công trường theo ngày (Yêu cầu ADMIN hoặc PROJECT_MANAGER).
+     */
+    @PostMapping("/locks")
+    public ResponseEntity<SiteDiaryLockResponse> lockDiaryDate(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody SiteDiaryLockRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId
+    ) {
+        UUID userId = resolveUserId(authorization, xUserId);
+        SiteDiaryLockResponse response = siteDiaryLockService.lockDate(
+                projectId,
+                userId,
+                request.lockDate(),
+                request.reason()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * T-64: Mở khóa sổ nhật ký công trường theo ngày (Yêu cầu ADMIN hoặc PROJECT_MANAGER).
+     */
+    @PostMapping("/unlocks")
+    public ResponseEntity<SiteDiaryLockResponse> unlockDiaryDate(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody SiteDiaryUnlockRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId
+    ) {
+        UUID userId = resolveUserId(authorization, xUserId);
+        SiteDiaryLockResponse response = siteDiaryLockService.unlockDate(
+                projectId,
+                userId,
+                request.lockDate(),
+                request.reason()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * T-64: Danh sách tất cả các ngày đã thiết lập khóa/mở khóa sổ của dự án.
+     */
+    @GetMapping("/locks")
+    public ResponseEntity<List<SiteDiaryLockResponse>> getProjectLocks(@PathVariable UUID projectId) {
+        List<SiteDiaryLockResponse> response = siteDiaryLockService.getProjectLocks(projectId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * T-64: Tra cứu trạng thái khóa sổ của một ngày cụ thể trong dự án.
+     */
+    @GetMapping("/locks/status")
+    public ResponseEntity<SiteDiaryLockResponse> getLockStatus(
+            @PathVariable UUID projectId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return siteDiaryLockService.getLockStatus(projectId, date)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.ok(new SiteDiaryLockResponse(
+                        null,
+                        projectId,
+                        date,
+                        "UNLOCKED",
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )));
     }
 
     private UUID resolveUserId(String authorization, String xUserId) {

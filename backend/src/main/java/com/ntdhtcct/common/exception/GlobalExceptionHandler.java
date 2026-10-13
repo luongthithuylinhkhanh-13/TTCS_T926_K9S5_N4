@@ -62,6 +62,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(DiaryDateLockedException.class)
+    public ResponseEntity<ErrorResponse> handleDiaryDateLockedException(DiaryDateLockedException ex, HttpServletRequest request) {
+        log.warn("Ngày nhật ký đã bị khóa sổ [409 Conflict] tại {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                ex.getCode() != null ? ex.getCode() : "DIARY_DATE_LOCKED",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException ex, HttpServletRequest request) {
         log.warn("Yêu cầu không hợp lệ [400 Bad Request] tại {}: {}", request.getRequestURI(), ex.getMessage());

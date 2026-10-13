@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        S-24 (T-64): Khóa sổ nhật ký công trường theo ngày
+        Quản lý trạng thái khóa sổ theo cặp (project_id, lock_date).
+    -->
+    <changeSet id="V20.0-create-site-diary-locks" author="S-24">
+        <createTable tableName="site_diary_locks">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lock_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="LOCKED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lock_reason" type="TEXT"/>
+            <column name="unlocked_by" type="UUID"/>
+            <column name="unlocked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="unlock_reason" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="site_diary_locks"
+            columnNames="project_id, lock_date"
+            constraintName="uk_site_diary_locks_project_date"/>
+
+        <addForeignKeyConstraint
+            baseTableName="site_diary_locks"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_site_diary_locks_project"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="site_diary_locks"
+            baseColumnNames="locked_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_site_diary_locks_locked_by"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="site_diary_locks"
+            baseColumnNames="unlocked_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_site_diary_locks_unlocked_by"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="site_diary_locks" indexName="idx_site_diary_locks_lookup">
+            <column name="project_id"/>
+            <column name="lock_date"/>
+            <column name="status"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="site_diary_locks"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

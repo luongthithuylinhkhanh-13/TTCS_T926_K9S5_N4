@@ -15,7 +15,8 @@ const WorkFormModal = ({
   parentOptions = [],
   taskOptions = [],
   isEdit = false,
-  confirmLoading = false
+  confirmLoading = false,
+  editConflict = false
 }) => {
   const { t } = useLocale();
   const [form] = Form.useForm();
@@ -49,6 +50,9 @@ const WorkFormModal = ({
           actualEndDate: initialValues.actualEndDate ? dayjs(initialValues.actualEndDate) : null,
           predecessorIds: initialValues.predecessorIds || [],
           progressPercent: initialValues.progressPercent ?? initialValues.progress ?? 0,
+          quantity: initialValues.quantity ?? initialValues.totalVolume ?? undefined,
+          unit: initialValues.unit || '',
+          unitPrice: initialValues.unitPrice ?? undefined,
           description: initialValues.description || ''
         });
       } else {
@@ -57,6 +61,9 @@ const WorkFormModal = ({
           status: 'not_started',
           duration: undefined,
           progressPercent: 0,
+          quantity: undefined,
+          unit: '',
+          unitPrice: undefined,
           predecessorIds: []
         });
       }
@@ -94,6 +101,10 @@ const WorkFormModal = ({
       endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : '',
       actualStartDate: values.actualStartDate ? values.actualStartDate.format('YYYY-MM-DD') : null,
       actualEndDate: values.actualEndDate ? values.actualEndDate.format('YYYY-MM-DD') : null,
+      quantity: values.quantity == null ? null : Number(values.quantity),
+      totalVolume: values.quantity == null ? null : Number(values.quantity),
+      unit: values.unit ? values.unit.trim() : null,
+      unitPrice: values.unitPrice == null ? null : Number(values.unitPrice),
       description: values.description || ''
     };
 
@@ -111,8 +122,16 @@ const WorkFormModal = ({
       cancelText={t('Hủy')}
       destroyOnClose
       confirmLoading={confirmLoading}
-      okButtonProps={{ disabled: actualDatesInvalid || progressInvalid || confirmLoading }}
+      okButtonProps={{ disabled: actualDatesInvalid || progressInvalid || confirmLoading || editConflict }}
     >
+      {editConflict && (
+        <Alert
+          type="warning"
+          showIcon
+          message={t('Công việc đã được người khác cập nhật. Hãy đóng biểu mẫu và mở lại để xem dữ liệu mới nhất. Các thay đổi chưa lưu chưa được áp dụng.')}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <div style={{ marginBottom: 16, color: '#667085', fontSize: 13 }}>
         {isEdit 
           ? t('Cập nhật thông tin chi tiết và tiến độ cho công việc WBS')
@@ -172,6 +191,104 @@ const WorkFormModal = ({
             <InputNumber min={1} precision={0} changeOnBlur={false} style={{ width: '100%' }} placeholder={t('Nhập số ngày')} />
           </Form.Item>
         )}
+
+        {/* ROW: Khai báo khối lượng, đơn vị tính và đơn giá (NTDHTCT-265: T-80) */}
+        <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 8, marginBottom: 16, border: '1px solid #E2E8F0' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{t('KHỐI LƯỢNG & ĐƠN GIÁ (DỰ TOÁN)')}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}>T-80 / T-82</span>
+          </div>
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item
+                label={t('Khối lượng')}
+                name="quantity"
+                rules={[
+                  { type: 'number', min: 0, message: t('Khối lượng phải lớn hơn hoặc bằng 0') }
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  step={0.1}
+                  precision={2}
+                  style={{ width: '100%' }}
+                  placeholder={t('Ví dụ: 120.5')}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={8}>
+              <Form.Item
+                label={t('Đơn vị tính')}
+                name="unit"
+                rules={[
+                  { max: 50, message: t('Đơn vị tính không quá 50 ký tự') },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const qty = getFieldValue('quantity');
+                      if (qty != null && qty > 0 && (!value || !value.trim())) {
+                        return Promise.reject(new Error(t('Vui lòng nhập đơn vị tính khi đã có khối lượng')));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
+                <Select
+                  placeholder={t('Chọn / nhập ĐVT')}
+                  showSearch
+                  allowClear
+                  options={[
+                    { value: 'm3', label: 'm3 (Mét khối)' },
+                    { value: 'm2', label: 'm2 (Mét vuông)' },
+                    { value: 'm', label: 'm (Mét dài)' },
+                    { value: 'tấn', label: 'tấn' },
+                    { value: 'kg', label: 'kg' },
+                    { value: 'cái', label: 'cái' },
+                    { value: 'bộ', label: 'bộ' },
+                    { value: 'hố', label: 'hố' },
+                    { value: 'gói', label: 'gói' },
+                    { value: 'cột', label: 'cột' }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={8}>
+              <Form.Item
+                label={t('Đơn giá (VNĐ)')}
+                name="unitPrice"
+                rules={[
+                  { type: 'number', min: 0, message: t('Đơn giá phải lớn hơn hoặc bằng 0') }
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  style={{ width: '100%' }}
+                  formatter={value => value == null ? '' : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value?.replace(/\$\s?|(,*)/g, '') ?? ''}
+                  placeholder={t('Ví dụ: 250,000')}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.quantity !== cur.quantity || prev.unitPrice !== cur.unitPrice}>
+            {({ getFieldValue }) => {
+              const qty = Number(getFieldValue('quantity') || 0);
+              const price = Number(getFieldValue('unitPrice') || 0);
+              const total = qty > 0 && price > 0 ? qty * price : 0;
+              return total > 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: -4, color: '#0F766E', fontSize: 13, fontWeight: 600 }}>
+                  <span>{t('Thành tiền dự toán ước tính:')}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#047857' }}>
+                    {total.toLocaleString('vi-VN')} VNĐ
+                  </span>
+                </div>
+              ) : null;
+            }}
+          </Form.Item>
+        </div>
 
         {/* ROW 2: Parent Task */}
         <Form.Item
