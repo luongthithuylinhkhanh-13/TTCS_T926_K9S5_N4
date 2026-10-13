@@ -9,6 +9,7 @@ import {
   CheckSquareOutlined,
   CalendarOutlined,
   BookOutlined,
+  AuditOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
@@ -45,10 +46,6 @@ const Sidebar = ({ collapsed }) => {
     navigate('/login');
   };
 
-  const handleNonWbsClick = (menuName) => {
-    message.info(`${t('Mục')} "${menuName}" ${t('là chức năng ngoài phạm vi T-05/T-06')}`);
-  };
-
   return (
     <aside
       className={`app-sidebar${collapsed ? ' collapsed' : ''}`}
@@ -69,8 +66,8 @@ const Sidebar = ({ collapsed }) => {
       <div className="sidebar-menu">
         {!collapsed && <div className="sidebar-section-label">{t('TỔNG QUAN')}</div>}
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick(t('Dashboard'))}
+          className={`sidebar-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+          onClick={() => navigate('/dashboard')}
           title={collapsed ? t('Dashboard') : ''}
         >
           <DashboardOutlined />
@@ -79,18 +76,17 @@ const Sidebar = ({ collapsed }) => {
 
         {!collapsed && <div className="sidebar-section-label" style={{ marginTop: 12 }}>{t('DỰ ÁN')}</div>}
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick(t('Dự án'))}
+          className={`sidebar-item ${location.pathname === '/projects' ? 'active' : ''}`}
+          onClick={() => navigate('/projects')}
           title={collapsed ? t('Dự án') : ''}
         >
           <ProjectOutlined />
           {!collapsed && <span>{t('Dự án')}</span>}
         </div>
 
-        {/* ACTIVE ITEM */}
         <div
-          className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}
-          onClick={() => navigate('/')}
+          className={`sidebar-item ${location.pathname === '/wbs' ? 'active' : ''}`}
+          onClick={() => navigate('/wbs')}
           title={collapsed ? t('Cơ cấu công việc') : ''}
         >
           <NodeIndexOutlined />
@@ -128,12 +124,21 @@ const Sidebar = ({ collapsed }) => {
         </div>
 
         <div
-          className={`sidebar-item ${location.pathname === '/assigned-tasks' ? 'active' : ''}`}
-          onClick={() => navigate('/assigned-tasks')}
+          className={`sidebar-item ${location.pathname === '/tasks' ? 'active' : ''}`}
+          onClick={() => navigate('/tasks')}
           title={collapsed ? t('Công việc') : ''}
         >
           <CheckSquareOutlined />
           {!collapsed && <span>{t('Công việc')}</span>}
+        </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/assigned-tasks' ? 'active' : ''}`}
+          onClick={() => navigate('/assigned-tasks')}
+          title={collapsed ? t('Công việc đã giao') : ''}
+        >
+          <CheckSquareOutlined />
+          {!collapsed && <span>{t('Công việc đã giao')}</span>}
         </div>
 
         <div
@@ -143,6 +148,15 @@ const Sidebar = ({ collapsed }) => {
         >
           <BookOutlined />
           {!collapsed && <span>{t('Nhật ký công trường')}</span>}
+        </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/acceptance' ? 'active' : ''}`}
+          onClick={() => navigate('/acceptance')}
+          title={collapsed ? t('Nghiệm thu khối lượng') : ''}
+        >
+          <AuditOutlined />
+          {!collapsed && <span>{t('Nghiệm thu khối lượng')}</span>}
         </div>
       </div>
 

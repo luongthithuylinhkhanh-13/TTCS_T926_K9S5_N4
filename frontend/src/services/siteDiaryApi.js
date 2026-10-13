@@ -103,14 +103,20 @@ export const getSiteDiaries = async projectId => {
     console.warn('[SiteDiary] Không thể tải từ máy chủ, lấy từ bộ nhớ đệm:', err.message);
   }
 
-  // Lấy các bản ghi từ hàng đợi local (bao gồm chờ đồng bộ và bản ghi bị từ chối do khóa sổ)
-  const localItems = syncQueueService
+  // Lấy các bản ghi từ hàng đợi local (bao gồm PENDING, SYNCING, FAILED và REJECTED_LOCKED)
+  const pendingItems = syncQueueService
     .getQueue()
-    .filter(i => i.projectId === projectId && i.entityType === 'SITE_DIARY' && (i.status === 'PENDING' || i.status === 'FAILED' || i.status === 'REJECTED_LOCKED'))
+    .filter(
+      i =>
+        i.projectId === projectId &&
+        i.entityType === 'SITE_DIARY' &&
+        (i.status === 'PENDING' || i.status === 'SYNCING' || i.status === 'FAILED' || i.status === 'REJECTED_LOCKED' || !i.status)
+    )
     .map(i => {
-      let syncStatusText = 'Chờ đồng bộ';
+      let syncStatusText = 'Chưa đồng bộ';
       if (i.status === 'FAILED') syncStatusText = 'Lỗi đồng bộ';
-      if (i.status === 'REJECTED_LOCKED') syncStatusText = 'Bị từ chối (Đã khóa)';
+      else if (i.status === 'SYNCING') syncStatusText = 'Đang đồng bộ';
+      else if (i.status === 'REJECTED_LOCKED') syncStatusText = 'Bị từ chối (Đã khóa)';
 
       return {
         id: i.id,
@@ -128,16 +134,44 @@ export const getSiteDiaries = async projectId => {
         issues: i.payload.issues,
         workingConditions: i.payload.workingConditions,
         syncStatus: syncStatusText,
+        rawSyncStatus: i.status || 'PENDING',
         _isPendingSync: i.status !== 'REJECTED_LOCKED',
         _isRejectedLocked: i.status === 'REJECTED_LOCKED',
-        _retryCount: i.retryCount,
+        _retryCount: i.retryCount || 0,
         _lastError: i.lastError,
         offlineCreatedAt: i.payload.offlineCreatedAt
       };
     });
 
+  const formattedServerList = serverList.map(item => ({
+    ...item,
+    syncStatus: (!item.syncStatus || item.syncStatus === 'SYNCED') ? 'Đã đồng bộ' : item.syncStatus,
+    rawSyncStatus: 'SYNCED',
+    _isPendingSync: false
+  }));
+
   // Gộp bản ghi local lên đầu danh sách
-  return [...localItems, ...serverList];
+  return [...pendingItems, ...formattedServerList];
+};
+
+/**
+ * T-73 (NTDHTCT-258): Đếm số lượng mục nhật ký đang chờ đồng bộ của một dự án
+ */
+export const getPendingSiteDiaryCount = (projectId = null) => {
+  return syncQueueService.getPendingCount(projectId);
+};
+
+/**
+ * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký từ máy chủ
+ */
+export const getSiteDiarySyncStatus = async projectId => {
+  try {
+    const res = await apiClient.get(`/api/projects/${projectId}/site-diaries/sync-status`);
+    return res.data;
+  } catch (err) {
+    console.warn('[SiteDiary] Không thể lấy trạng thái đồng bộ từ máy chủ:', err.message);
+    return null;
+  }
 };
 
 /**

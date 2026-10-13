@@ -3,7 +3,7 @@ import test from 'node:test';
 import { syncQueueService, generateUUID } from '../src/services/syncQueueService.js';
 import apiClient from '../src/services/apiClient.js';
 import autoSyncService from '../src/services/autoSyncService.js';
-import { submitSiteDiary } from '../src/services/siteDiaryApi.js';
+import { submitSiteDiary, getSiteDiaries, getPendingSiteDiaryCount } from '../src/services/siteDiaryApi.js';
 
 // Mock localStorage cho môi trường Node test
 class LocalStorageMock {
@@ -346,3 +346,208 @@ test('TC-SYNC-07: T-65 - markLocked đánh dấu REJECTED_LOCKED và loại kh�
   syncQueueService.clearAll();
 });
 
+// ============================================================================
+// Story S-31 (NTDHTCT-215): Trạng thái chưa đồng bộ và số mục
+//   - T-72 (NTDHTCT-257): Hiển thị trạng thái chưa đồng bộ của nhật ký
+//   - T-73 (NTDHTCT-258): Hiển thị số lượng mục đang chờ đồng bộ
+// ============================================================================
+
+test('TC-S31-01: T-72 - Bản ghi ngoại tuyến có trạng thái "Chưa đồng bộ" và _isPendingSync = true', async () => {
+  syncQueueService.clearAll();
+  const projectId = 'p-s31-status';
+
+  // Thêm một bản ghi vào hàng đợi ngoại tuyến
+  const queueItem = syncQueueService.enqueue({
+    projectId,
+    entityType: 'SITE_DIARY',
+    payload: {
+      diaryDate: '2026-10-12',
+      workSummary: 'Thi công ép cọc đại trà'
+    }
+  });
+
+  assert.equal(queueItem.status, 'PENDING');
+
+  // Lấy danh sách nhật ký qua service API
+  const diaries = await getSiteDiaries(projectId);
+  const target = diaries.find(d => d.clientSyncId === queueItem.clientSyncId);
+
+  assert.ok(target, 'Bản ghi phải có trong danh sách');
+  assert.equal(target._isPendingSync, true, 'Bản ghi ngoại tuyến phải có cờ _isPendingSync = true');
+  assert.equal(target.syncStatus, 'Chưa đồng bộ', 'Trạng thái hiển thị phải là "Chưa đồng bộ"');
+  assert.equal(target.rawSyncStatus, 'PENDING');
+
+  syncQueueService.clearAll();
+});
+
+test('TC-S31-02: T-72 - Cập nhật trạng thái "Đang đồng bộ" và "Lỗi đồng bộ" kèm chi tiết lỗi', async () => {
+  syncQueueService.clearAll();
+  const projectId = 'p-s31-failed';
+
+  const item1 = syncQueueService.enqueue({
+    projectId,
+    entityType: 'SITE_DIARY',
+    payload: { diaryDate: '2026-10-11', workSummary: 'Công tác đào đất' }
+  });
+
+  const item2 = syncQueueService.enqueue({
+    projectId,
+    entityType: 'SITE_DIARY',
+    payload: { diaryDate: '2026-10-12', workSummary: 'Đổ bê tông móng' }
+  });
+
+  // item1 chuyển sang SYNCING
+  syncQueueService.markSyncing(item1.id);
+  assert.equal(syncQueueService.getDiarySyncStatus(item1.clientSyncId), 'SYNCING');
+
+  // item2 chuyển sang FAILED
+  syncQueueService.markFailed(item2.id, 'Lỗi 503: Service Unavailable');
+  assert.equal(syncQueueService.getDiarySyncStatus(item2.clientSyncId), 'FAILED');
+
+  const diaries = await getSiteDiaries(projectId);
+  const diary1 = diaries.find(d => d.clientSyncId === item1.clientSyncId);
+  const diary2 = diaries.find(d => d.clientSyncId === item2.clientSyncId);
+
+  assert.equal(diary1.syncStatus, 'Đang đồng bộ');
+  assert.equal(diary1.rawSyncStatus, 'SYNCING');
+
+  assert.equal(diary2.syncStatus, 'Lỗi đồng bộ');
+  assert.equal(diary2.rawSyncStatus, 'FAILED');
+  assert.equal(diary2._retryCount, 1);
+  assert.equal(diary2._lastError, 'Lỗi 503: Service Unavailable');
+
+  syncQueueService.clearAll();
+});
+
+test('TC-S31-03: T-72 - Kiểm tra hàm getDiarySyncStatus xác định đúng trạng thái', () => {
+  syncQueueService.clearAll();
+
+  const item = syncQueueService.enqueue({
+    projectId: 'p-test-status',
+    payload: { workSummary: 'Kiểm tra trạng thái' }
+  });
+
+  assert.equal(syncQueueService.getDiarySyncStatus(item.clientSyncId), 'PENDING');
+
+  syncQueueService.markSyncing(item.id);
+  assert.equal(syncQueueService.getDiarySyncStatus(item.clientSyncId), 'SYNCING');
+
+  syncQueueService.markFailed(item.id, 'Timeout');
+  assert.equal(syncQueueService.getDiarySyncStatus(item.clientSyncId), 'FAILED');
+
+  // Khi đã đồng bộ thành công và xóa khỏi hàng đợi
+  syncQueueService.markSuccess(item.id);
+  assert.equal(syncQueueService.getDiarySyncStatus(item.clientSyncId), 'SYNCED');
+
+  syncQueueService.clearAll();
+});
+
+test('TC-S31-04: T-73 - Tính toán chính xác số lượng mục đang chờ đồng bộ (pendingCount)', () => {
+  syncQueueService.clearAll();
+
+  const projectA = 'project-alpha';
+  const projectB = 'project-beta';
+
+  // Dự án A có 3 mục (2 PENDING, 1 FAILED)
+  const a1 = syncQueueService.enqueue({ projectId: projectA, entityType: 'SITE_DIARY', payload: { w: 1 } });
+  const a2 = syncQueueService.enqueue({ projectId: projectA, entityType: 'SITE_DIARY', payload: { w: 2 } });
+  const a3 = syncQueueService.enqueue({ projectId: projectA, entityType: 'SITE_DIARY', payload: { w: 3 } });
+  syncQueueService.markFailed(a3.id, 'Lỗi');
+
+  // Dự án B có 2 mục (1 PENDING, 1 SYNCING)
+  const b1 = syncQueueService.enqueue({ projectId: projectB, entityType: 'SITE_DIARY', payload: { w: 4 } });
+  const b2 = syncQueueService.enqueue({ projectId: projectB, entityType: 'SITE_DIARY', payload: { w: 5 } });
+  syncQueueService.markSyncing(b2.id);
+
+  // Đếm theo từng dự án
+  assert.equal(syncQueueService.getPendingCount(projectA), 3, 'Dự án A phải có 3 mục chờ đồng bộ');
+  assert.equal(syncQueueService.getPendingCount(projectB), 2, 'Dự án B phải có 2 mục chờ đồng bộ');
+  assert.equal(getPendingSiteDiaryCount(projectA), 3);
+  assert.equal(getPendingSiteDiaryCount(projectB), 2);
+
+  // Đếm toàn cục
+  assert.equal(syncQueueService.getPendingCount(), 5, 'Tổng cộng phải có 5 mục chờ đồng bộ');
+  const globalStats = syncQueueService.getStats();
+  assert.equal(globalStats.pendingCount, 5);
+  assert.equal(globalStats.pending, 3);
+  assert.equal(globalStats.syncing, 1);
+  assert.equal(globalStats.failed, 1);
+
+  // Thống kê lọc theo dự án A
+  const statsA = syncQueueService.getStats(projectA);
+  assert.equal(statsA.total, 3);
+  assert.equal(statsA.pendingCount, 3);
+  assert.equal(statsA.failed, 1);
+
+  syncQueueService.clearAll();
+});
+
+test('TC-S31-05: T-73 - Số lượng mục chờ đồng bộ tự động giảm chính xác sau khi đồng bộ thành công hoặc xóa', () => {
+  syncQueueService.clearAll();
+  const projectId = 'p-countdown';
+
+  const item1 = syncQueueService.enqueue({ projectId, entityType: 'SITE_DIARY', payload: { w: 1 } });
+  const item2 = syncQueueService.enqueue({ projectId, entityType: 'SITE_DIARY', payload: { w: 2 } });
+  const item3 = syncQueueService.enqueue({ projectId, entityType: 'SITE_DIARY', payload: { w: 3 } });
+
+  assert.equal(syncQueueService.getPendingCount(projectId), 3);
+
+  // Đồng bộ item1 thành công
+  syncQueueService.markSuccess(item1.id);
+  assert.equal(syncQueueService.getPendingCount(projectId), 2, 'Còn 2 mục sau khi đồng bộ item1');
+
+  // Xóa thủ công item2
+  syncQueueService.remove(item2.id);
+  assert.equal(syncQueueService.getPendingCount(projectId), 1, 'Còn 1 mục sau khi xóa item2');
+
+  // Đồng bộ item3 thành công
+  syncQueueService.markSuccess(item3.id);
+  assert.equal(syncQueueService.getPendingCount(projectId), 0, 'Còn 0 mục khi hoàn tất tất cả');
+  assert.equal(syncQueueService.getStats(projectId).hasPending, false);
+
+  syncQueueService.clearAll();
+});
+
+test('TC-S31-06: T-72 & T-73 - Phân loại bộ lọc (Filter) giữa Chưa đồng bộ và Đã đồng bộ', async () => {
+  syncQueueService.clearAll();
+  const projectId = 'p-filter-test';
+
+  const originalAdapter = apiClient.defaults.adapter;
+  apiClient.defaults.adapter = async config => {
+    // Trả về 2 bản ghi server
+    return {
+      data: [
+        { id: 'server-1', projectId, diaryDate: '2026-10-01', workSummary: 'Đã lưu server 1', syncStatus: 'SYNCED' },
+        { id: 'server-2', projectId, diaryDate: '2026-10-02', workSummary: 'Đã lưu server 2', syncStatus: 'SYNCED' }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config
+    };
+  };
+
+  try {
+    // Thêm 1 bản ghi offline
+    syncQueueService.enqueue({
+      projectId,
+      entityType: 'SITE_DIARY',
+      payload: { diaryDate: '2026-10-03', workSummary: 'Bản ghi offline mới' }
+    });
+
+    const list = await getSiteDiaries(projectId);
+    assert.equal(list.length, 3, 'Tổng số bản ghi là 3');
+
+    const unsyncedList = list.filter(d => d._isPendingSync);
+    const syncedList = list.filter(d => !d._isPendingSync);
+
+    assert.equal(unsyncedList.length, 1, 'Số lượng bản ghi chưa đồng bộ là 1 (T-73)');
+    assert.equal(syncedList.length, 2, 'Số lượng bản ghi đã đồng bộ là 2');
+
+    assert.equal(unsyncedList[0].syncStatus, 'Chưa đồng bộ', 'Mục chưa đồng bộ có nhãn đúng (T-72)');
+    assert.equal(syncedList[0].syncStatus, 'Đã đồng bộ', 'Mục đã đồng bộ có nhãn đúng (T-72)');
+  } finally {
+    apiClient.defaults.adapter = originalAdapter;
+    syncQueueService.clearAll();
+  }
+});

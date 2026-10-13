@@ -60,6 +60,12 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.PUT, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
+        // S-23 (T-61, T-62, T-63): Diary entries & Image uploads/views
+        addRule(HttpMethod.POST, "/api/projects/*/diary-entries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images/*/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
         addRule(HttpMethod.GET, "/api/projects/*/crew-members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.PUT, "/api/projects/*/tasks/*/team-assignment", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.GET, "/api/projects/*/tasks/*/team-assignment/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
@@ -77,6 +83,13 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries/batch-sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.PUT, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+        // S-36 (NTDHTCT-220, T-83, T-84, T-85): Lập phiếu nghiệm thu theo đợt
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

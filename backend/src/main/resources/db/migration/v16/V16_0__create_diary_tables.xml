@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Bảng mục nhật ký công trường (Minimal Diary Context) -->
+    <changeSet id="V16.0-create-diary-entries" author="NTDHTCT-S23">
+        <createTable tableName="diary_entries">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="wbs_item_id" type="UUID"/>
+            <column name="author_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entry_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT"/>
+            <column name="weather" type="VARCHAR(50)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="diary_entries"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            constraintName="fk_diary_entries_project"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="diary_entries"
+            baseColumnNames="wbs_item_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_diary_entries_wbs_item"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="diary_entries"
+            baseColumnNames="author_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            constraintName="fk_diary_entries_author"/>
+
+        <createIndex tableName="diary_entries" indexName="idx_diary_entries_project_date">
+            <column name="project_id"/>
+            <column name="entry_date"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="diary_entries"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Bảng ảnh đính kèm (Nhất quán cho T-61 đến T-63) -->
+    <changeSet id="V16.0-create-diary-images" author="NTDHTCT-S23">
+        <createTable tableName="diary_images">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="diary_entry_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_image_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_filename" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Đường dẫn lưu file vật lý trên đĩa -->
+            <column name="thumbnail_path" type="VARCHAR(500)"/>
+            <column name="display_path" type="VARCHAR(500)"/>
+            <column name="original_path" type="VARCHAR(500)"/>
+            <!-- Kích thước file (bytes) -->
+            <column name="display_file_size" type="BIGINT"/>
+            <column name="original_file_size" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="width" type="INT"/>
+            <column name="height" type="INT"/>
+            <!-- Metadata EXIF/GPS từ thiết bị (Nullable) -->
+            <column name="captured_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="latitude" type="DOUBLE PRECISION"/>
+            <column name="longitude" type="DOUBLE PRECISION"/>
+            <!-- Trạng thái upload cho từng bản: PENDING, UPLOADING, COMPLETED, FAILED -->
+            <column name="display_status" type="VARCHAR(30)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_status" type="VARCHAR(30)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Phục vụ chống retry cũ ghi đè kết quả mới ở T-62 -->
+            <column name="display_attempt_id" type="UUID"/>
+            <column name="original_attempt_id" type="UUID"/>
+            <column name="sort_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="diary_images"
+            baseColumnNames="diary_entry_id"
+            referencedTableName="diary_entries"
+            referencedColumnNames="id"
+            constraintName="fk_diary_images_entry"
+            onDelete="CASCADE"/>
+
+        <!-- Unique constraint: không tạo 2 bản ghi cho cùng client_image_id trong 1 entry -->
+        <addUniqueConstraint
+            tableName="diary_images"
+            columnNames="diary_entry_id,client_image_id"
+            constraintName="uk_diary_images_idempotency"/>
+
+        <createIndex tableName="diary_images" indexName="idx_diary_images_entry_order">
+            <column name="diary_entry_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="diary_images"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

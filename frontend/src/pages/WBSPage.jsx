@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -162,6 +162,7 @@ const normalizeFormData = (formData) => {
 const WBSPage = () => {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   // =========================================================
   // PROJECT / WBS DATA
   // =========================================================
@@ -171,7 +172,7 @@ const WBSPage = () => {
   const [
     selectedProjectId,
     setSelectedProjectId
-  ] = useState(null);
+  ] = useState(searchParams.get('projectId') || null);
 
   const [
     rawTreeNodes,
@@ -290,6 +291,10 @@ const WBSPage = () => {
 
       if (projectList.length > 0) {
         setSelectedProjectId(current => {
+          const queryId = searchParams.get('projectId');
+          if (queryId && projectList.some(p => p.id === queryId)) {
+            return queryId;
+          }
           const stillExists = projectList.some(
             project => project.id === current
           );
@@ -311,6 +316,13 @@ const WBSPage = () => {
       setLoadingProjects(false);
     }
   };
+
+  useEffect(() => {
+    const paramId = searchParams.get('projectId');
+    if (paramId && projects.some(p => p.id === paramId)) {
+      setSelectedProjectId(paramId);
+    }
+  }, [searchParams, projects]);
 
   // =========================================================
   // LOAD WBS
@@ -435,6 +447,7 @@ const WBSPage = () => {
 
   const handleSelectProject = projectId => {
     setSelectedProjectId(projectId);
+    setSearchParams(projectId ? { projectId } : {});
 
     setSearchText('');
     setStatusFilter('ALL');
