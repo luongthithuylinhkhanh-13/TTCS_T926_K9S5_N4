@@ -146,6 +146,41 @@ class SyncQueueService {
   }
 
   /**
+   * T-65: Đánh dấu item bị từ chối do ngày đã bị khóa sổ (REJECTED_LOCKED).
+   * Giữ nguyên dữ liệu trên LocalStorage để không mất dữ liệu,
+   * nhưng ngừng tự động thử lại ở các lần sync tự động.
+   */
+  markLocked(id, errorMessage) {
+    const queue = this.getQueue();
+    const item = queue.find(i => i.id === id);
+    if (item) {
+      item.lastError = errorMessage;
+      item.status = 'REJECTED_LOCKED';
+      item.isLocked = true;
+      item.updatedAt = new Date().toISOString();
+      this.saveQueue(queue);
+    }
+  }
+
+  /**
+   * T-65: Đưa một bản ghi từ trạng thái REJECTED_LOCKED hoặc FAILED trở lại PENDING
+   */
+  retryItem(id) {
+    const queue = this.getQueue();
+    const item = queue.find(i => i.id === id);
+    if (item) {
+      item.status = 'PENDING';
+      item.isLocked = false;
+      item.lastError = null;
+      item.retryCount = 0;
+      item.updatedAt = new Date().toISOString();
+      this.saveQueue(queue);
+      return item;
+    }
+    return null;
+  }
+
+  /**
    * Xóa thủ công một bản ghi khỏi hàng đợi
    */
   remove(id) {

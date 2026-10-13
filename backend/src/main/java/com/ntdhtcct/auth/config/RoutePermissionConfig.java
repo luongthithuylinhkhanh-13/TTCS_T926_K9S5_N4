@@ -70,6 +70,12 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.PUT, "/api/projects/*/tasks/*/team-assignment", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.GET, "/api/projects/*/tasks/*/team-assignment/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
 
+        // S-24 (T-64): Khóa sổ nhật ký công trường theo ngày
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/locks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/unlocks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/locks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/locks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
         // S-30 (NTDHTCT-214, NTDHTCT-255, NTDHTCT-256): Hàng đợi đồng bộ nhật ký công trường tự gửi khi có mạng
         addRule(HttpMethod.GET, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});

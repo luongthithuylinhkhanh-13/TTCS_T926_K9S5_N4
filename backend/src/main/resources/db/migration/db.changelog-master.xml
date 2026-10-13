@@ -106,4 +106,8 @@
     <!-- S-36 (NTDHTCT-220, T-83, T-84, T-85): Lập phiếu nghiệm thu theo đợt, tự tính -->
     <include file="db/migration/v20/V20_0__create_acceptance_reports_and_items.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-24 (T-64): Khóa sổ nhật ký công trường theo ngày -->
+    <include file="db/migration/v20/V20_0__create_site_diary_locks_table.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

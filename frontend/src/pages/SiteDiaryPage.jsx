@@ -15,7 +15,9 @@ import {
   notification,
   Select,
   Typography,
-  Space
+  Space,
+  Tooltip,
+  Badge
 } from 'antd';
 import {
   BookOutlined,
@@ -25,6 +27,8 @@ import {
   ReloadOutlined,
   EyeOutlined,
   EditOutlined,
+  LockOutlined,
+  UnlockOutlined,
   SyncOutlined,
   CloseCircleOutlined,
   CloudSyncOutlined,
@@ -33,7 +37,17 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
-import { submitSiteDiary, getSiteDiaries, updateSiteDiary, triggerManualSync } from '../services/siteDiaryApi';
+import {
+  submitSiteDiary,
+  getSiteDiaries,
+  updateSiteDiary,
+  lockSiteDiaryDate,
+  unlockSiteDiaryDate,
+  getProjectDiaryLocks,
+  retryQueueItem,
+  triggerManualSync
+} from '../services/siteDiaryApi';
+import { isProjectManager } from '../utils/permissions';
 import SyncQueueModal from '../components/sync/SyncQueueModal';
 
 const { Title, Text } = Typography;
@@ -41,9 +55,11 @@ const { TextArea } = Input;
 
 const SiteDiaryPage = () => {
   const [form] = Form.useForm();
+  const [lockForm] = Form.useForm();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [diaries, setDiaries] = useState([]);
+  const [locks, setLocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [online, setOnline] = useState(() => (
@@ -52,6 +68,9 @@ const SiteDiaryPage = () => {
   const [editingDiaryId, setEditingDiaryId] = useState(null);
   const [detailDiary, setDetailDiary] = useState(null);
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
+  const [lockModalOpen, setLockModalOpen] = useState(false);
+  const [lockModalMode, setLockModalMode] = useState('LOCK'); // 'LOCK' | 'UNLOCK'
+  const [lockActionSubmitting, setLockActionSubmitting] = useState(false);
   const [syncFilter, setSyncFilter] = useState('ALL'); // 'ALL' | 'UNSYNCED' | 'SYNCED'
   const [manualSyncing, setManualSyncing] = useState(false);
   const [queueModalOpen, setQueueModalOpen] = useState(false);
@@ -72,13 +91,28 @@ const SiteDiaryPage = () => {
     fetchProjects();
   }, []);
 
+  // Tải danh sách khóa sổ theo dự án
+  const loadLocks = async () => {
+    if (!selectedProjectId) return;
+    try {
+      const lockList = await getProjectDiaryLocks(selectedProjectId);
+      setLocks(lockList);
+    } catch (err) {
+      console.error('Lỗi tải danh sách khóa sổ:', err);
+    }
+  };
+
   // Tải nhật ký khi chọn dự án
   const loadDiaries = async () => {
     if (!selectedProjectId) return;
     setLoading(true);
     try {
-      const data = await getSiteDiaries(selectedProjectId);
+      const [data, lockList] = await Promise.all([
+        getSiteDiaries(selectedProjectId),
+        getProjectDiaryLocks(selectedProjectId)
+      ]);
       setDiaries(data);
+      setLocks(lockList);
     } catch (err) {
       console.error('Lỗi tải nhật ký:', err);
     } finally {
@@ -117,6 +151,15 @@ const SiteDiaryPage = () => {
   const onFinish = async values => {
     if (!selectedProjectId) {
       notification.warning({ message: 'Vui lòng chọn một dự án' });
+      return;
+    }
+
+    const dateFormatted = values.diaryDate.format('YYYY-MM-DD');
+    if (isDateLocked(dateFormatted)) {
+      notification.error({
+        message: 'Ngày đã bị khóa sổ',
+        description: `Không thể lưu hoặc cập nhật nhật ký cho ngày ${values.diaryDate.format('DD/MM/YYYY')} vì ngày này đã bị khóa sổ.`
+      });
       return;
     }
 
@@ -175,7 +218,21 @@ const SiteDiaryPage = () => {
     }
   };
 
+  const isDateLocked = targetDate => {
+    if (!targetDate) return false;
+    const dateStr = dayjs(targetDate).format('YYYY-MM-DD');
+    const lockRecord = locks.find(l => l.lockDate === dateStr);
+    return Boolean(lockRecord?.locked || lockRecord?.status === 'LOCKED');
+  };
+
   const startEditingDiary = diary => {
+    if (isDateLocked(diary.diaryDate)) {
+      notification.warning({
+        message: 'Không thể chỉnh sửa',
+        description: `Nhật ký ngày ${dayjs(diary.diaryDate).format('DD/MM/YYYY')} đã bị khóa sổ.`
+      });
+      return;
+    }
     if (diary._isPendingSync) {
       notification.info({
         message: 'Nhật ký chưa đồng bộ',
@@ -318,8 +375,17 @@ const SiteDiaryPage = () => {
     {
       title: 'Trạng thái đồng bộ',
       key: 'syncStatus',
-      width: 200,
+      width: 170,
       render: (_, r) => {
+        if (r._isRejectedLocked) {
+          return (
+            <Tooltip title={r._lastError || 'Ngày nhật ký đã bị khóa sổ'}>
+              <Tag icon={<LockOutlined />} color="error">
+                Từ chối (Đã khóa)
+              </Tag>
+            </Tooltip>
+          );
+        }
         if (r._isPendingSync) {
           if (r.rawSyncStatus === 'FAILED') {
             return (
@@ -355,17 +421,68 @@ const SiteDiaryPage = () => {
       }
     },
     {
+      title: 'Khóa sổ',
+      key: 'lockStatus',
+      width: 130,
+      render: (_, r) => {
+        const isLocked = isDateLocked(r.diaryDate);
+        if (isLocked) {
+          return (
+            <Tag icon={<LockOutlined />} color="error">
+              Đã khóa sổ
+            </Tag>
+          );
+        }
+        return (
+          <Tag icon={<UnlockOutlined />} color="default">
+            Mở
+          </Tag>
+        );
+      }
+    },
+    {
       title: 'Thao tác',
       key: 'actions',
-      width: 130,
-      render: (_, diary) => (
-        <Button
-          icon={<EyeOutlined />}
-          onClick={() => setDetailDiary(diary)}
-        >
-          Chi tiết
-        </Button>
-      )
+      width: 190,
+      render: (_, diary) => {
+        const locked = isDateLocked(diary.diaryDate);
+        return (
+          <Space>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => setDetailDiary(diary)}
+            >
+              Chi tiết
+            </Button>
+            {diary._isRejectedLocked ? (
+              <Button
+                type="link"
+                size="small"
+                onClick={async () => {
+                  retryQueueItem(diary.id);
+                  notification.info({
+                    message: 'Đã đưa vào hàng đợi',
+                    description: 'Bản ghi đã được chuyển về trạng thái chờ đồng bộ.'
+                  });
+                  await loadDiaries();
+                }}
+              >
+                Thử lại
+              </Button>
+            ) : (
+              <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.' : ''}>
+                <Button
+                  icon={<EditOutlined />}
+                  disabled={locked || diary._isPendingSync}
+                  onClick={() => startEditingDiary(diary)}
+                >
+                  Sửa
+                </Button>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      }
     }
   ];
 
@@ -424,6 +541,35 @@ const SiteDiaryPage = () => {
               <Button icon={<ReloadOutlined />} onClick={loadDiaries}>
                 Làm mới
               </Button>
+              {isProjectManager() && (
+                <>
+                  <Button
+                    icon={<LockOutlined />}
+                    danger
+                    onClick={() => {
+                      setLockModalMode('LOCK');
+                      lockForm.resetFields();
+                      lockForm.setFieldsValue({ lockDate: dayjs() });
+                      setLockModalOpen(true);
+                    }}
+                    disabled={!selectedProjectId}
+                  >
+                    Khóa sổ
+                  </Button>
+                  <Button
+                    icon={<UnlockOutlined />}
+                    onClick={() => {
+                      setLockModalMode('UNLOCK');
+                      lockForm.resetFields();
+                      lockForm.setFieldsValue({ lockDate: dayjs() });
+                      setLockModalOpen(true);
+                    }}
+                    disabled={!selectedProjectId}
+                  >
+                    Mở khóa sổ
+                  </Button>
+                </>
+              )}
               <Button
                 type="primary"
                 icon={<CloudUploadOutlined />}
@@ -730,31 +876,69 @@ const SiteDiaryPage = () => {
           <Button key="close" onClick={() => setDetailDiary(null)}>
             Đóng
           </Button>,
-          <Button
+          <Tooltip
             key="edit"
-            type="primary"
-            icon={<EditOutlined />}
-            disabled={detailDiary?._isPendingSync}
-            onClick={() => startEditingDiary(detailDiary)}
+            title={
+              detailDiary && isDateLocked(detailDiary.diaryDate)
+                ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.'
+                : ''
+            }
           >
-            Chỉnh sửa
-          </Button>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              disabled={
+                Boolean(detailDiary?._isPendingSync) ||
+                Boolean(detailDiary?._isRejectedLocked) ||
+                (detailDiary && isDateLocked(detailDiary.diaryDate))
+              }
+              onClick={() => startEditingDiary(detailDiary)}
+            >
+              Chỉnh sửa
+            </Button>
+          </Tooltip>
         ]}
       >
         {detailDiary && (
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            {detailDiary && isDateLocked(detailDiary.diaryDate) && (
+              <Alert
+                type="error"
+                showIcon
+                message="Ngày này đã bị khóa sổ. Toàn bộ thao tác chỉnh sửa đều bị khóa."
+              />
+            )}
+            {detailDiary._isRejectedLocked && (
+              <Alert
+                type="error"
+                showIcon
+                message={`Bị từ chối đồng bộ: ${detailDiary._lastError || 'Ngày nhật ký đã bị khóa sổ'}`}
+              />
+            )}
             {/* T-72: Chi tiết trạng thái đồng bộ của nhật ký */}
             <div
               style={{
                 padding: '10px 14px',
                 borderRadius: '6px',
-                background: detailDiary._isPendingSync ? '#fffbe6' : '#f6ffed',
-                border: `1px solid ${detailDiary._isPendingSync ? '#ffe58f' : '#b7eb8f'}`
+                background: detailDiary._isRejectedLocked
+                  ? '#fff2f0'
+                  : detailDiary._isPendingSync
+                    ? '#fffbe6'
+                    : '#f6ffed',
+                border: `1px solid ${
+                  detailDiary._isRejectedLocked
+                    ? '#ffccc7'
+                    : detailDiary._isPendingSync
+                      ? '#ffe58f'
+                      : '#b7eb8f'
+                }`
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <Text strong>Trạng thái đồng bộ:</Text>
-                {detailDiary._isPendingSync ? (
+                {detailDiary._isRejectedLocked ? (
+                  <Tag icon={<LockOutlined />} color="error">Từ chối (Đã khóa sổ)</Tag>
+                ) : detailDiary._isPendingSync ? (
                   detailDiary.rawSyncStatus === 'FAILED' ? (
                     <Tag icon={<CloseCircleOutlined />} color="error">Chưa đồng bộ (Gặp lỗi)</Tag>
                   ) : detailDiary.rawSyncStatus === 'SYNCING' ? (
@@ -766,7 +950,11 @@ const SiteDiaryPage = () => {
                   <Tag icon={<CheckCircleOutlined />} color="success">Đã đồng bộ lên máy chủ</Tag>
                 )}
               </div>
-              {detailDiary._isPendingSync ? (
+              {detailDiary._isRejectedLocked ? (
+                <div style={{ marginTop: '6px', fontSize: '12px', color: '#cf1322' }}>
+                  Bản ghi này chưa thể đồng bộ lên máy chủ vì ngày ghi nhật ký đã bị khóa sổ. Dữ liệu vẫn được giữ an toàn trên thiết bị.
+                </div>
+              ) : detailDiary._isPendingSync ? (
                 <div style={{ marginTop: '6px', fontSize: '12px', color: '#ad6800' }}>
                   Bản ghi này đang được lưu trên thiết bị và chưa được tải lên máy chủ. Hệ thống sẽ tự động đồng bộ khi có kết nối mạng.
                   {detailDiary.offlineCreatedAt && (
@@ -810,6 +998,95 @@ const SiteDiaryPage = () => {
             </div>
           </Space>
         )}
+      </Modal>
+
+      {/* Modal Khóa / Mở khóa sổ (T-64) */}
+      <Modal
+        title={
+          <Space>
+            {lockModalMode === 'LOCK' ? <LockOutlined style={{ color: '#ff4d4f' }} /> : <UnlockOutlined style={{ color: '#52c41a' }} />}
+            <span>{lockModalMode === 'LOCK' ? 'Khóa sổ nhật ký theo ngày' : 'Mở khóa sổ nhật ký theo ngày'}</span>
+          </Space>
+        }
+        open={lockModalOpen}
+        onCancel={() => {
+          setLockModalOpen(false);
+          lockForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={lockForm}
+          layout="vertical"
+          onFinish={async values => {
+            if (!selectedProjectId) return;
+            setLockActionSubmitting(true);
+            try {
+              const dateStr = values.lockDate.format('YYYY-MM-DD');
+              if (lockModalMode === 'LOCK') {
+                await lockSiteDiaryDate(selectedProjectId, dateStr, values.reason);
+                notification.success({
+                  message: 'Khóa sổ thành công',
+                  description: `Đã khóa sổ nhật ký ngày ${values.lockDate.format('DD/MM/YYYY')}.`
+                });
+              } else {
+                await unlockSiteDiaryDate(selectedProjectId, dateStr, values.reason);
+                notification.success({
+                  message: 'Mở khóa sổ thành công',
+                  description: `Đã mở khóa sổ nhật ký ngày ${values.lockDate.format('DD/MM/YYYY')}.`
+                });
+              }
+              setLockModalOpen(false);
+              lockForm.resetFields();
+              await loadDiaries();
+            } catch (err) {
+              notification.error({
+                message: lockModalMode === 'LOCK' ? 'Lỗi khóa sổ' : 'Lỗi mở khóa sổ',
+                description: err.response?.data?.message || err.message
+              });
+            } finally {
+              setLockActionSubmitting(false);
+            }
+          }}
+          initialValues={{ lockDate: dayjs() }}
+        >
+          <Form.Item
+            name="lockDate"
+            label="Ngày áp dụng"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày' }]}
+          >
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label={lockModalMode === 'LOCK' ? 'Lý do khóa sổ' : 'Lý do mở khóa sổ'}
+            rules={[{ required: lockModalMode === 'UNLOCK', message: 'Vui lòng nhập lý do' }]}
+          >
+            <TextArea
+              rows={3}
+              placeholder={
+                lockModalMode === 'LOCK'
+                  ? 'Ví dụ: Đã chốt số liệu và kiểm toán khối lượng thi công ngày...'
+                  : 'Ví dụ: Cần bổ sung quân số hoặc khắc phục sai lệch báo cáo...'
+              }
+            />
+          </Form.Item>
+
+          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={() => setLockModalOpen(false)}>Hủy</Button>
+            <Button
+              type="primary"
+              danger={lockModalMode === 'LOCK'}
+              htmlType="submit"
+              loading={lockActionSubmitting}
+              icon={lockModalMode === 'LOCK' ? <LockOutlined /> : <UnlockOutlined />}
+            >
+              {lockModalMode === 'LOCK' ? 'Xác nhận khóa sổ' : 'Xác nhận mở khóa'}
+            </Button>
+          </Space>
+        </Form>
       </Modal>
 
       <SyncQueueModal

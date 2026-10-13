@@ -28,6 +28,12 @@ public class SiteDiarySyncServiceTest {
     @Mock
     private SiteDiaryRepository siteDiaryRepository;
 
+    @Mock
+    private SiteDiaryLockService siteDiaryLockService;
+
+    @Mock
+    private SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     private SiteDiarySyncService siteDiarySyncService;
 
     private final UUID projectId = UUID.randomUUID();
@@ -35,7 +41,7 @@ public class SiteDiarySyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository);
+        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager);
     }
 
     @Test
@@ -142,9 +148,75 @@ public class SiteDiarySyncServiceTest {
     }
 
     @Test
+    @DisplayName("T-65: Từ chối đồng bộ đơn lẻ khi ngày đã bị khóa sổ")
+    void syncSingleDiary_WhenDateLocked_ShouldReturnLockedResult() {
+        LocalDate lockedDate = LocalDate.of(2026, 10, 10);
+        String syncId = "sync-locked-001";
+        SiteDiarySyncRequest req = new SiteDiarySyncRequest(
+                syncId,
+                lockedDate,
+                "Nắng",
+                "30°C",
+                20,
+                "Không",
+                "Công việc",
+                "Không",
+                OffsetDateTime.now()
+        );
+
+        when(siteDiaryLockService.isDateLocked(projectId, lockedDate)).thenReturn(true);
+
+        SiteDiarySyncResult result = siteDiarySyncService.syncSingleDiary(projectId, reporterId, req);
+
+        assertThat(result.getStatus()).isEqualTo("LOCKED");
+        assertThat(result.getErrorCode()).isEqualTo("DIARY_DATE_LOCKED");
+        assertThat(result.getClientSyncId()).isEqualTo(syncId);
+        assertThat(result.getMessage()).contains("đã bị khóa sổ");
+        verify(siteDiaryRepository, never()).save(any(SiteDiary.class));
+    }
+
+    @Test
+    @DisplayName("T-65: Batch Sync xử lý độc lập từng bản ghi khi có bản ghi bị khóa sổ")
+    void syncBatchDiaries_WithLockedRecord_ShouldIncrementFailedCountAndPreserveValid() {
+        LocalDate lockedDate = LocalDate.of(2026, 10, 10);
+        LocalDate validDate = LocalDate.of(2026, 10, 11);
+
+        String lockedSyncId = "sync-locked";
+        String validSyncId = "sync-valid";
+
+        SiteDiarySyncRequest lockedReq = new SiteDiarySyncRequest(lockedSyncId, lockedDate, "Nắng", "30", 10, "", "CV Khóa", "", OffsetDateTime.now());
+        SiteDiarySyncRequest validReq = new SiteDiarySyncRequest(validSyncId, validDate, "Mưa", "28", 12, "", "CV Hợp lệ", "", OffsetDateTime.now());
+
+        when(siteDiaryLockService.isDateLocked(projectId, lockedDate)).thenReturn(true);
+        when(siteDiaryLockService.isDateLocked(projectId, validDate)).thenReturn(false);
+
+        when(siteDiaryRepository.findByClientSyncId(validSyncId)).thenReturn(Optional.empty());
+        SiteDiary saved = new SiteDiary();
+        saved.setId(UUID.randomUUID());
+        when(siteDiaryRepository.save(any(SiteDiary.class))).thenReturn(saved);
+
+        SiteDiaryBatchSyncResponse batchResponse = siteDiarySyncService.syncBatchDiaries(
+                projectId,
+                reporterId,
+                new SiteDiaryBatchSyncRequest(List.of(lockedReq, validReq))
+        );
+
+        assertThat(batchResponse.getTotalProcessed()).isEqualTo(2);
+        assertThat(batchResponse.getCreatedCount()).isEqualTo(1);
+        assertThat(batchResponse.getDuplicateCount()).isEqualTo(0);
+        assertThat(batchResponse.getFailedCount()).isEqualTo(1);
+
+        SiteDiarySyncResult lockedResult = batchResponse.getResults().stream()
+                .filter(r -> lockedSyncId.equals(r.getClientSyncId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(lockedResult.getStatus()).isEqualTo("LOCKED");
+        assertThat(lockedResult.getErrorCode()).isEqualTo("DIARY_DATE_LOCKED");
+    }
+
+    @Test
     @DisplayName("T-72 & T-73 (S-31): Thống kê trạng thái đồng bộ và số lượng mục của dự án")
     void getProjectSyncStatus_ShouldReturnCorrectStats() {
-        OffsetDateTime now = OffsetDateTime.now();
         SiteDiary diary = new SiteDiary();
         diary.setId(UUID.randomUUID());
 

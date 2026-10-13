@@ -96,4 +96,34 @@ class RoutePermissionConfigTest {
         assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
         assertThat(roles).doesNotContain("WORKER", "VIEWER");
     }
+
+    @Test
+    void restrictsSiteDiaryLocksToProjectManagersAndAdmins() {
+        String[] lockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/site-diaries/locks"
+                )
+                .orElseThrow();
+
+        assertThat(lockRoles).containsExactly("ADMIN", "PROJECT_MANAGER");
+
+        String[] unlockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/site-diaries/unlocks"
+                )
+                .orElseThrow();
+
+        assertThat(unlockRoles).containsExactly("ADMIN", "PROJECT_MANAGER");
+
+        String[] viewLockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.GET.name(),
+                        "/api/projects/123/site-diaries/locks"
+                )
+                .orElseThrow();
+
+        assertThat(viewLockRoles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER");
+    }
 }
