@@ -90,6 +90,15 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.PUT, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // S-39: Phiếu nghiệm thu và lịch sử hoạt động
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records/*/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/acceptance-records/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records/*/return", new String[]{"ADMIN", "PROJECT_MANAGER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {
