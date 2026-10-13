@@ -150,6 +150,41 @@ class AcceptanceRecordIntegrationTest {
                 .andExpect(jsonPath("$[1].comment", is("Bổ sung biên bản đo kiểm")))
                 .andExpect(jsonPath("$[2].action", is("EDIT")));
     }
+    @Test
+    void cannotReturnRecordWithoutReason() throws Exception {
+        String recordId = createRecord(manager);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/return")
+                    .header("Authorization", token(manager))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"comment\":\"\"}"))
+            .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+
+        mockMvc.perform(get(recordUrl(recordId) + "/history")
+                    .header("Authorization", token(viewer)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)));
+}
+
+    @Test
+    void cannotReturnRecordWithWhitespaceOnlyReason() throws Exception {
+        String recordId = createRecord(manager);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/return")
+                    .header("Authorization", token(manager))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"comment\":\"   \"}"))
+            .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+
+        mockMvc.perform(get(recordUrl(recordId) + "/history")
+                    .header("Authorization", token(viewer)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)));
+}
 
     @Test
     void onlyProjectManagersCanApprove() throws Exception {
