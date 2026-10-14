@@ -15,6 +15,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -42,13 +44,15 @@ public class Task {
     @Column(name = "duration", nullable = false)
     private Integer duration;
 
-    @Column(name = "quantity", columnDefinition = "NUMERIC(15,2)")
+    @Column(name = "quantity")
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     private Double quantity;
 
     @Column(name = "unit", length = 50)
     private String unit;
 
-    @Column(name = "unit_price", columnDefinition = "NUMERIC(15,2)")
+    @Column(name = "unit_price")
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     private Double unitPrice;
 
     @Column(name = "created_at", nullable = false, updatable = false)

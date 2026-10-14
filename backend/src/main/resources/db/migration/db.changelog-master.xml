@@ -110,4 +110,8 @@
     <!-- S-24 (T-64): Khóa sổ nhật ký công trường theo ngày -->
     <include file="db/migration/v20/V20_0__create_site_diary_locks_table.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-39: Phiếu nghiệm thu và nhật ký thao tác -->
+    <include file="db/migration/v21/V21_0__create_acceptance_records_and_audit_logs.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
