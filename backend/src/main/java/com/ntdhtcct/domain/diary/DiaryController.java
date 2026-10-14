@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -111,5 +112,16 @@ public class DiaryController {
     ) {
         java.util.List<DiaryImageResponse> images = diaryService.getDiaryImages(projectId, entryId);
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách ảnh thành công", images));
+    }
+
+    @DeleteMapping("/{entryId}/images/{imageId}")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
+    public ResponseEntity<ApiResponse<Void>> deleteDiaryImage(
+            @PathVariable UUID projectId,
+            @PathVariable UUID entryId,
+            @PathVariable UUID imageId
+    ) {
+        diaryService.deleteDiaryImage(projectId, entryId, imageId);
+        return ResponseEntity.ok(ApiResponse.ok("Xóa ảnh thành công", null));
     }
 }

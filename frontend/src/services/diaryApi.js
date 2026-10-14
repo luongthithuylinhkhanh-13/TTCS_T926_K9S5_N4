@@ -87,3 +87,14 @@ export function getDisplayImageUrl(projectId, entryId, imageId, isThumb = false)
 export function getOriginalImageUrl(projectId, entryId, imageId) {
   return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/original`;
 }
+
+/**
+ * Xóa ảnh đính kèm khỏi nhật ký thi công.
+ * @param {string} projectId
+ * @param {string} entryId
+ * @param {string} imageId
+ */
+export async function deleteDiaryImage(projectId, entryId, imageId) {
+  const response = await apiClient.delete(`/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}`);
+  return response.data?.data || response.data;
+}

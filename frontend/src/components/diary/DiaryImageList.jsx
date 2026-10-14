@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag } from 'antd';
-import { FileImageOutlined, EyeOutlined } from '@ant-design/icons';
-import { getDiaryImages, getDisplayImageUrl } from '../../services/diaryApi.js';
+import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag, Popconfirm, Button, message } from 'antd';
+import { FileImageOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getDiaryImages, getDisplayImageUrl, deleteDiaryImage } from '../../services/diaryApi.js';
 import DiaryImageLightbox from './DiaryImageLightbox.jsx';
 
 const { Text } = Typography;
 
 /**
  * Component T-63: Hiển thị danh sách thumbnail các ảnh thuộc nhật ký thi công,
- * xử lý các trạng thái rỗng, đang tải, lỗi mạng và tích hợp Lightbox xem chi tiết.
+ * xử lý các trạng thái rỗng, đang tải, lỗi mạng, xóa ảnh và tích hợp Lightbox xem chi tiết.
  */
 export default function DiaryImageList({
   projectId,
   entryId,
   refreshTrigger = 0,
+  readOnly = false,
+  disabled = false,
+  onDelete,
 }) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Trạng thái Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -44,6 +48,23 @@ export default function DiaryImageList({
   const handleOpenLightbox = (index) => {
     setSelectedImageIndex(index);
     setLightboxOpen(true);
+  };
+
+  const handleDeleteImage = async (img) => {
+    if (disabled || readOnly) return;
+    setDeletingId(img.id);
+    try {
+      await deleteDiaryImage(projectId, entryId, img.id);
+      message.success('Đã xóa ảnh thành công');
+      if (onDelete) {
+        onDelete(img.id);
+      }
+      await fetchImages();
+    } catch (err) {
+      message.error(err.message || 'Không thể xóa ảnh');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) {
@@ -116,6 +137,48 @@ export default function DiaryImageList({
                     overflow: 'hidden',
                   }}
                 >
+                  {!readOnly && (
+                    <Tooltip title={disabled ? 'Ngày nhật ký đã bị khóa, không thể xóa ảnh' : 'Xóa ảnh'}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          zIndex: 3,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Popconfirm
+                          title="Xác nhận xóa ảnh"
+                          description="Bạn có chắc chắn muốn xóa ảnh này khỏi nhật ký không?"
+                          okText="Xóa"
+                          cancelText="Hủy"
+                          okButtonProps={{ danger: true }}
+                          disabled={disabled || deletingId === img.id}
+                          onConfirm={() => handleDeleteImage(img)}
+                        >
+                          <Button
+                            type="text"
+                            danger
+                            size="small"
+                            disabled={disabled || deletingId === img.id}
+                            loading={deletingId === img.id}
+                            icon={<DeleteOutlined />}
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                              borderRadius: '50%',
+                              width: 26,
+                              height: 26,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                            }}
+                          />
+                        </Popconfirm>
+                      </div>
+                    </Tooltip>
+                  )}
                   {isCompleted ? (
                     <>
                       <img
