@@ -27,6 +27,20 @@ test('getOriginalImageUrl generates direct original download URL preserving byte
   );
 });
 
+test('getDisplayImageUrl and getOriginalImageUrl append token parameter when token is provided', () => {
+  const urlWithToken = getDisplayImageUrl('proj-1', 'entry-1', 'img-1', true, 'test-token-xyz');
+  assert.equal(
+    urlWithToken,
+    '/api/projects/proj-1/diary-entries/entry-1/images/img-1/display?thumb=true&token=test-token-xyz'
+  );
+
+  const origWithToken = getOriginalImageUrl('proj-1', 'entry-1', 'img-1', 'test-token-xyz');
+  assert.equal(
+    origWithToken,
+    '/api/projects/proj-1/diary-entries/entry-1/images/img-1/original?token=test-token-xyz'
+  );
+});
+
 test('Lightbox navigation index wrap-around logic', () => {
   const images = [{ id: '1' }, { id: '2' }, { id: '3' }];
 

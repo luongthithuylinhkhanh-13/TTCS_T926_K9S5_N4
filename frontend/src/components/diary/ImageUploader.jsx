@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Upload, Button, Card, Typography, Space, Tooltip, Tag, Progress } from 'antd';
+import { Upload, Button, Card, Typography, Tooltip, Tag, message } from 'antd';
 import {
   InboxOutlined,
   DeleteOutlined,
@@ -13,6 +13,51 @@ import { formatFileSize, createQueueItem, revokeQueueItem, revokeAllQueueItems }
 
 const { Dragger } = Upload;
 const { Text } = Typography;
+
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const ALLOWED_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
+export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MiB
+
+/**
+ * Kiểm tra tính hợp lệ của tệp ảnh trước khi đưa vào hàng đợi
+ */
+export function validateDiaryImageFile(file) {
+  if (!file) {
+    return { valid: false, error: 'Vui lòng chọn tệp ảnh.' };
+  }
+
+  const fileName = file.name || '';
+  const fileType = (file.type || '').toLowerCase();
+
+  const hasValidExt = ALLOWED_EXTENSIONS.test(fileName);
+  const hasValidMime = fileType ? ALLOWED_MIME_TYPES.includes(fileType) : false;
+
+  // Kiểm tra định dạng: phần mở rộng và MIME type
+  if (!hasValidExt || (fileType && !hasValidMime)) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName || 'Không rõ'}" không đúng định dạng. Chỉ chấp nhận ảnh JPEG, PNG, WebP.`,
+    };
+  }
+
+  // Kiểm tra tệp rỗng
+  if (typeof file.size === 'number' && file.size <= 0) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName}" không được để trống (dung lượng 0 byte).`,
+    };
+  }
+
+  // Kiểm tra dung lượng tối đa (<= 20 MiB)
+  if (typeof file.size === 'number' && file.size > MAX_FILE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName}" (${formatFileSize(file.size)}) vượt quá dung lượng tối đa 20 MiB.`,
+    };
+  }
+
+  return { valid: true };
+}
 
 /**
  * Component T-62: Chọn nhiều ảnh, nén hiển thị, theo dõi trạng thái hai giai đoạn (Display & Original),
@@ -29,6 +74,11 @@ export default function ImageUploader({
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
+  // Luôn đồng bộ itemsRef với prop items mới nhất
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   useEffect(() => {
     return () => {
       // Thu hồi toàn bộ preview URL khi component unmount
@@ -36,31 +86,76 @@ export default function ImageUploader({
     };
   }, []);
 
-  const handleBeforeUpload = () => {
-    // Ngăn chặn form submit hoặc upload ngầm tự động
-    return false;
+  const handleBeforeUpload = (file) => {
+    if (disabled) {
+      return Upload.LIST_IGNORE;
+    }
+
+    if (maxCount && itemsRef.current.length >= maxCount) {
+      message.warning(`Đã đạt giới hạn tối đa ${maxCount} ảnh. Không thể thêm "${file.name || 'ảnh mới'}".`);
+      return Upload.LIST_IGNORE;
+    }
+
+    const validation = validateDiaryImageFile(file);
+    if (!validation.valid) {
+      message.error(validation.error);
+      return Upload.LIST_IGNORE;
+    }
+
+    // Tệp hợp lệ: trả về true để Ant Design chuyển sang customRequest
+    return true;
   };
 
-  const handleCustomUpload = ({ file }) => {
+  const handleCustomUpload = ({ file, onSuccess }) => {
     if (disabled) {
       return;
     }
-    if (maxCount && items.length >= maxCount) {
+    if (maxCount && itemsRef.current.length >= maxCount) {
+      message.warning(`Đã đạt giới hạn tối đa ${maxCount} ảnh. Không thể thêm "${file.name || 'ảnh mới'}".`);
       return;
     }
+
     const newItem = createQueueItem(file);
-    const updated = [...items, newItem];
+    const updated = [...itemsRef.current, newItem];
+    itemsRef.current = updated;
+
     if (onChange) {
       onChange(updated);
     }
+    if (onSuccess) {
+      onSuccess('ok');
+    }
+  };
+
+  const handleDrop = (e) => {
+    if (disabled) {
+      return;
+    }
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    if (droppedFiles.length === 0) {
+      return;
+    }
+
+    // Duyệt qua các tệp được thả vào để phát hiện và cảnh báo các tệp không hợp lệ
+    // (như tệp không phải ảnh bị Ant Design attrAccept tự động bỏ qua ngầm)
+    droppedFiles.forEach((file) => {
+      const validation = validateDiaryImageFile(file);
+      if (!validation.valid) {
+        message.error(validation.error);
+      }
+    });
   };
 
   const handleRemove = (clientImageId) => {
-    const target = items.find((it) => it.clientImageId === clientImageId);
+    if (disabled) {
+      return;
+    }
+    const target = itemsRef.current.find((it) => it.clientImageId === clientImageId);
     if (target) {
       revokeQueueItem(target);
     }
-    const updated = items.filter((it) => it.clientImageId !== clientImageId);
+    const updated = itemsRef.current.filter((it) => it.clientImageId !== clientImageId);
+    itemsRef.current = updated;
     if (onChange) {
       onChange(updated);
     }
@@ -111,6 +206,7 @@ export default function ImageUploader({
         disabled={disabled || (Boolean(maxCount) && items.length >= maxCount)}
         beforeUpload={handleBeforeUpload}
         customRequest={handleCustomUpload}
+        onDrop={handleDrop}
         showUploadList={false}
         style={{ padding: '16px', background: '#fafafa', borderRadius: '8px' }}
       >

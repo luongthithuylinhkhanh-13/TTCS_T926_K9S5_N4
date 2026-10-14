@@ -8,6 +8,7 @@ import {
   FileImageOutlined,
 } from '@ant-design/icons';
 import { getDisplayImageUrl, getOriginalImageUrl } from '../../services/diaryApi.js';
+import apiClient from '../../services/apiClient.js';
 import { formatFileSize } from '../../utils/imageQueueUtils.js';
 
 const { Text } = Typography;
@@ -196,9 +197,25 @@ export default function DiaryImageLightbox({
               src={displayUrl}
               alt={currentImage.originalFilename}
               onLoad={() => setLoading(false)}
-              onError={() => {
-                setLoading(false);
-                setLoadError(true);
+              onError={(e) => {
+                if (!e.target.dataset.fallbackTried) {
+                  e.target.dataset.fallbackTried = 'true';
+                  apiClient.get(`/api/projects/${projectId}/diary-entries/${entryId}/images/${currentImage.id}/display`, {
+                    responseType: 'blob',
+                  })
+                  .then((res) => {
+                    e.target.src = URL.createObjectURL(res.data);
+                    setLoading(false);
+                    setLoadError(false);
+                  })
+                  .catch(() => {
+                    setLoading(false);
+                    setLoadError(true);
+                  });
+                } else {
+                  setLoading(false);
+                  setLoadError(true);
+                }
               }}
               style={{
                 maxWidth: '100%',

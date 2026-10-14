@@ -11,10 +11,16 @@ import com.ntdhtcct.domain.sitediary.SiteDiary;
 import com.ntdhtcct.domain.sitediary.SiteDiaryAdvisoryLockManager;
 import com.ntdhtcct.domain.sitediary.SiteDiaryLockService;
 import com.ntdhtcct.domain.sitediary.SiteDiaryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -29,6 +35,7 @@ public class DiaryService {
 
     private static final long MAX_DISPLAY_FILE_SIZE = 1024 * 1024; // < 1 MiB
     private static final long MAX_ORIGINAL_FILE_SIZE = 20 * 1024 * 1024; // <= 20 MiB
+    private static final int STRIPE_COUNT = 256;
 
     private final DiaryEntryRepository diaryEntryRepository;
     private final DiaryImageRepository diaryImageRepository;
@@ -37,6 +44,41 @@ public class DiaryService {
     private final SiteDiaryRepository siteDiaryRepository;
     private final SiteDiaryLockService siteDiaryLockService;
     private final SiteDiaryAdvisoryLockManager advisoryLockManager;
+    private final Object[] bridgeStripes = new Object[STRIPE_COUNT];
+    private final Object[] imageStripes = new Object[STRIPE_COUNT];
+    private final TransactionOperations requiresNewTransactionOperations;
+
+    @Autowired
+    public DiaryService(DiaryEntryRepository diaryEntryRepository,
+                        DiaryImageRepository diaryImageRepository,
+                        ProjectRepository projectRepository,
+                        FileStorageService fileStorageService,
+                        SiteDiaryRepository siteDiaryRepository,
+                        SiteDiaryLockService siteDiaryLockService,
+                        SiteDiaryAdvisoryLockManager advisoryLockManager,
+                        @Autowired(required = false) PlatformTransactionManager transactionManager) {
+        this.diaryEntryRepository = diaryEntryRepository;
+        this.diaryImageRepository = diaryImageRepository;
+        this.projectRepository = projectRepository;
+        this.fileStorageService = fileStorageService;
+        this.siteDiaryRepository = siteDiaryRepository;
+        this.siteDiaryLockService = siteDiaryLockService;
+        this.advisoryLockManager = advisoryLockManager;
+
+        for (int i = 0; i < STRIPE_COUNT; i++) {
+            this.bridgeStripes[i] = new Object();
+            this.imageStripes[i] = new Object();
+        }
+
+        if (transactionManager != null) {
+            this.requiresNewTransactionOperations = new TransactionTemplate(
+                    transactionManager,
+                    new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+            );
+        } else {
+            this.requiresNewTransactionOperations = TransactionOperations.withoutTransaction();
+        }
+    }
 
     public DiaryService(DiaryEntryRepository diaryEntryRepository,
                         DiaryImageRepository diaryImageRepository,
@@ -45,13 +87,8 @@ public class DiaryService {
                         SiteDiaryRepository siteDiaryRepository,
                         SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager) {
-        this.diaryEntryRepository = diaryEntryRepository;
-        this.diaryImageRepository = diaryImageRepository;
-        this.projectRepository = projectRepository;
-        this.fileStorageService = fileStorageService;
-        this.siteDiaryRepository = siteDiaryRepository;
-        this.siteDiaryLockService = siteDiaryLockService;
-        this.advisoryLockManager = advisoryLockManager;
+        this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null);
     }
 
     @Transactional
@@ -103,14 +140,23 @@ public class DiaryService {
     @Transactional
     public DiaryImageResponse uploadDisplayImage(UUID projectId, UUID entryId, String clientImageId,
                                                 String filename, MultipartFile file) throws IOException {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        LocalDate diaryDate = resolveDiaryDate(projectId, entryId);
 
-        advisoryLockManager.acquireSharedLock(projectId, entry.getEntryDate());
+        advisoryLockManager.acquireSharedLock(projectId, diaryDate);
         try {
-            if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+            if (siteDiaryLockService.isDateLocked(projectId, diaryDate)) {
                 throw new DiaryDateLockedException(
-                        "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
+                        "Nhật ký công trường ngày " + diaryDate + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
                 );
+            }
+
+            DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
+            if (!entry.getEntryDate().equals(diaryDate)) {
+                if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+                    throw new DiaryDateLockedException(
+                            "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
+                    );
+                }
             }
 
             if (file.getSize() >= MAX_DISPLAY_FILE_SIZE) {
@@ -121,9 +167,7 @@ public class DiaryService {
 
             // Lấy hoặc khởi tạo bản ghi DiaryImage
             DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType());
-            image.setDisplayAttemptId(attemptId);
-            image.setDisplayStatus("UPLOADING");
-            diaryImageRepository.saveAndFlush(image);
+            diaryImageRepository.startDisplayUpload(image.getId(), attemptId, java.time.OffsetDateTime.now());
 
             // Lưu file vật lý và sinh thumbnail ngoài filesystem
             FileStorageService.StoredDisplayResult stored =
@@ -150,7 +194,7 @@ public class DiaryService {
 
             return toImageResponse(image);
         } finally {
-            advisoryLockManager.releaseSharedLock(projectId, entry.getEntryDate());
+            advisoryLockManager.releaseSharedLock(projectId, diaryDate);
         }
     }
 
@@ -160,14 +204,23 @@ public class DiaryService {
     @Transactional
     public DiaryImageResponse uploadOriginalImage(UUID projectId, UUID entryId, String clientImageId,
                                                  String filename, MultipartFile file) throws IOException {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        LocalDate diaryDate = resolveDiaryDate(projectId, entryId);
 
-        advisoryLockManager.acquireSharedLock(projectId, entry.getEntryDate());
+        advisoryLockManager.acquireSharedLock(projectId, diaryDate);
         try {
-            if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+            if (siteDiaryLockService.isDateLocked(projectId, diaryDate)) {
                 throw new DiaryDateLockedException(
-                        "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
+                        "Nhật ký công trường ngày " + diaryDate + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
                 );
+            }
+
+            DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
+            if (!entry.getEntryDate().equals(diaryDate)) {
+                if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+                    throw new DiaryDateLockedException(
+                            "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác tải ảnh bị từ chối."
+                    );
+                }
             }
 
             if (file.getSize() > MAX_ORIGINAL_FILE_SIZE) {
@@ -178,9 +231,7 @@ public class DiaryService {
 
             // Lấy hoặc khởi tạo bản ghi DiaryImage
             DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType());
-            image.setOriginalAttemptId(attemptId);
-            image.setOriginalStatus("UPLOADING");
-            diaryImageRepository.saveAndFlush(image);
+            diaryImageRepository.startOriginalUpload(image.getId(), attemptId, java.time.OffsetDateTime.now());
 
             // Lưu file nguyên trạng ngoài filesystem
             FileStorageService.StoredOriginalResult stored =
@@ -202,7 +253,7 @@ public class DiaryService {
 
             return toImageResponse(image);
         } finally {
-            advisoryLockManager.releaseSharedLock(projectId, entry.getEntryDate());
+            advisoryLockManager.releaseSharedLock(projectId, diaryDate);
         }
     }
 
@@ -212,14 +263,23 @@ public class DiaryService {
      */
     @Transactional
     public void deleteDiaryImage(UUID projectId, UUID entryId, UUID imageId) {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        LocalDate diaryDate = resolveDiaryDate(projectId, entryId);
 
-        advisoryLockManager.acquireSharedLock(projectId, entry.getEntryDate());
+        advisoryLockManager.acquireSharedLock(projectId, diaryDate);
         try {
-            if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+            if (siteDiaryLockService.isDateLocked(projectId, diaryDate)) {
                 throw new DiaryDateLockedException(
-                        "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác xóa ảnh bị từ chối."
+                        "Nhật ký công trường ngày " + diaryDate + " đã bị khóa sổ. Thao tác xóa ảnh bị từ chối."
                 );
+            }
+
+            DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
+            if (!entry.getEntryDate().equals(diaryDate)) {
+                if (siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())) {
+                    throw new DiaryDateLockedException(
+                            "Nhật ký công trường ngày " + entry.getEntryDate() + " đã bị khóa sổ. Thao tác xóa ảnh bị từ chối."
+                    );
+                }
             }
 
             DiaryImage image = diaryImageRepository.findById(imageId)
@@ -236,7 +296,7 @@ public class DiaryService {
 
             diaryImageRepository.delete(image);
         } finally {
-            advisoryLockManager.releaseSharedLock(projectId, entry.getEntryDate());
+            advisoryLockManager.releaseSharedLock(projectId, diaryDate);
         }
     }
 
@@ -245,7 +305,7 @@ public class DiaryService {
      */
     @Transactional(readOnly = true)
     public Resource getDisplayImageResource(UUID projectId, UUID entryId, UUID imageId, boolean isThumbnail) {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
 
         DiaryImage image = diaryImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("IMAGE_NOT_FOUND", "Không tìm thấy ảnh"));
@@ -254,12 +314,29 @@ public class DiaryService {
             throw new ResourceNotFoundException("IMAGE_NOT_FOUND", "Ảnh không thuộc mục nhật ký này");
         }
 
-        if (!"COMPLETED".equalsIgnoreCase(image.getDisplayStatus())) {
+        boolean isDisplayCompleted = "COMPLETED".equalsIgnoreCase(image.getDisplayStatus());
+        boolean isOriginalCompleted = "COMPLETED".equalsIgnoreCase(image.getOriginalStatus());
+
+        if (!isDisplayCompleted && !isOriginalCompleted) {
             throw new BadRequestException("IMAGE_NOT_READY", "Ảnh hiển thị chưa hoàn tất quá trình tải lên");
         }
 
-        String pathStr = isThumbnail ? image.getThumbnailPath() : image.getDisplayPath();
-        Path filePath = fileStorageService.loadFile(pathStr);
+        Path filePath = null;
+        if (isThumbnail && image.getThumbnailPath() != null && !image.getThumbnailPath().isBlank()) {
+            try {
+                filePath = fileStorageService.loadFile(image.getThumbnailPath());
+            } catch (ResourceNotFoundException ignored) {
+                // fallback to displayPath or originalPath
+            }
+        }
+
+        if (filePath == null) {
+            String pathStr = image.getDisplayPath() != null && !image.getDisplayPath().isBlank()
+                    ? image.getDisplayPath()
+                    : image.getOriginalPath();
+            filePath = fileStorageService.loadFile(pathStr);
+        }
+
         return new FileSystemResource(filePath);
     }
 
@@ -268,7 +345,7 @@ public class DiaryService {
      */
     @Transactional(readOnly = true)
     public Resource getOriginalImageResource(UUID projectId, UUID entryId, UUID imageId) {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
 
         DiaryImage image = diaryImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("IMAGE_NOT_FOUND", "Không tìm thấy ảnh"));
@@ -290,17 +367,56 @@ public class DiaryService {
      */
     @Transactional(readOnly = true)
     public List<DiaryImageResponse> getDiaryImages(UUID projectId, UUID entryId) {
-        DiaryEntry entry = resolveAndValidateEntry(projectId, entryId);
+        DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
         return diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(entry.getId())
                 .stream()
                 .map(this::toImageResponse)
                 .toList();
     }
 
+    private Object getBridgeLock(UUID entryId) {
+        if (entryId == null) {
+            return bridgeStripes[0];
+        }
+        int index = (entryId.hashCode() & 0x7fffffff) % STRIPE_COUNT;
+        return bridgeStripes[index];
+    }
+
+    private Object getImageLock(UUID entryId, String clientImageId) {
+        String key = (entryId != null ? entryId.toString() : "") + ":" + (clientImageId != null ? clientImageId : "");
+        int index = (key.hashCode() & 0x7fffffff) % STRIPE_COUNT;
+        return imageStripes[index];
+    }
+
+    /**
+     * Xác định ngày nhật ký và kiểm tra thuộc về dự án trước khi thực hiện thao tác.
+     */
+    private LocalDate resolveDiaryDate(UUID projectId, UUID entryId) {
+        Optional<DiaryEntry> entryOpt = diaryEntryRepository.findById(entryId);
+        if (entryOpt.isPresent()) {
+            DiaryEntry entry = entryOpt.get();
+            if (!entry.getProjectId().equals(projectId)) {
+                throw new ResourceNotFoundException("ENTRY_NOT_FOUND", "Mục nhật ký không thuộc dự án chỉ định");
+            }
+            return entry.getEntryDate();
+        }
+
+        Optional<SiteDiary> siteDiaryOpt = siteDiaryRepository.findById(entryId);
+        if (siteDiaryOpt.isPresent()) {
+            SiteDiary sd = siteDiaryOpt.get();
+            if (!sd.getProjectId().equals(projectId)) {
+                throw new ResourceNotFoundException("ENTRY_NOT_FOUND", "Mục nhật ký không thuộc dự án chỉ định");
+            }
+            return sd.getDiaryDate();
+        }
+
+        throw new ResourceNotFoundException("ENTRY_NOT_FOUND", "Không tìm thấy mục nhật ký");
+    }
+
     /**
      * Kiểm tra và giải quyết mục nhật ký: hỗ trợ cả DiaryEntry lẫn SiteDiary (bridge).
      */
-    private DiaryEntry resolveAndValidateEntry(UUID projectId, UUID entryId) {
+    private DiaryEntry resolveOrCreateEntry(UUID projectId, UUID entryId) {
         Optional<DiaryEntry> entryOpt = diaryEntryRepository.findById(entryId);
         if (entryOpt.isPresent()) {
             DiaryEntry entry = entryOpt.get();
@@ -310,27 +426,71 @@ public class DiaryService {
             return entry;
         }
 
-        // Kiểm tra xem entryId có thuộc site_diaries không (cùng ID)
         Optional<SiteDiary> siteDiaryOpt = siteDiaryRepository.findById(entryId);
         if (siteDiaryOpt.isPresent()) {
             SiteDiary sd = siteDiaryOpt.get();
             if (!sd.getProjectId().equals(projectId)) {
                 throw new ResourceNotFoundException("ENTRY_NOT_FOUND", "Mục nhật ký không thuộc dự án chỉ định");
             }
-            DiaryEntry bridged = new DiaryEntry(
-                    sd.getProjectId(),
-                    sd.getReporterId() != null ? sd.getReporterId() : UUID.fromString("00000000-0000-0000-0000-000000000000"),
-                    sd.getDiaryDate(),
-                    sd.getWorkSummary() != null && !sd.getWorkSummary().isBlank() ? sd.getWorkSummary() : "Nhật ký thi công",
-                    sd.getWorkSummary(),
-                    sd.getWeather(),
-                    null
-            );
-            bridged.setId(sd.getId());
-            return diaryEntryRepository.save(bridged);
+            return getOrCreateBridgedEntry(sd);
         }
 
         throw new ResourceNotFoundException("ENTRY_NOT_FOUND", "Không tìm thấy mục nhật ký");
+    }
+
+    private static String toSafeTitle(String workSummary) {
+        if (workSummary == null || workSummary.isBlank()) {
+            return "Nhật ký thi công";
+        }
+        String trimmed = workSummary.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
+    }
+
+    private static String toSafeWeather(String weather) {
+        if (weather == null) {
+            return null;
+        }
+        String trimmed = weather.trim();
+        return trimmed.length() > 50 ? trimmed.substring(0, 50) : trimmed;
+    }
+
+    private DiaryEntry getOrCreateBridgedEntry(SiteDiary sd) {
+        Optional<DiaryEntry> existing = diaryEntryRepository.findById(sd.getId());
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        Object lock = getBridgeLock(sd.getId());
+        synchronized (lock) {
+            existing = diaryEntryRepository.findById(sd.getId());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+
+            try {
+                return requiresNewTransactionOperations.execute(status -> {
+                    Optional<DiaryEntry> inTx = diaryEntryRepository.findById(sd.getId());
+                    if (inTx.isPresent()) {
+                        return inTx.get();
+                    }
+                    DiaryEntry bridged = new DiaryEntry(
+                            sd.getProjectId(),
+                            sd.getReporterId() != null ? sd.getReporterId() : UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                            sd.getDiaryDate(),
+                            toSafeTitle(sd.getWorkSummary()),
+                            sd.getWorkSummary(),
+                            toSafeWeather(sd.getWeather()),
+                            null
+                    );
+                    bridged.setId(sd.getId());
+                    bridged.setNew(true);
+                    return diaryEntryRepository.save(bridged);
+                });
+            } catch (Exception e) {
+                return diaryEntryRepository.findById(sd.getId())
+                        .orElseThrow(() -> new IllegalStateException("Không thể tạo hoặc tải DiaryEntry bridge cho ID: " + sd.getId(), e));
+            }
+        }
     }
 
     private DiaryImage getOrCreateImageRecord(UUID entryId, String clientImageId, String filename, String contentType) {
@@ -339,13 +499,32 @@ public class DiaryService {
             return existing.get();
         }
 
-        DiaryImage newImage = new DiaryImage(
-                entryId,
-                clientImageId,
-                filename != null ? filename : "image.jpg",
-                contentType != null ? contentType : "image/jpeg"
-        );
-        return diaryImageRepository.save(newImage);
+        Object lock = getImageLock(entryId, clientImageId);
+        synchronized (lock) {
+            existing = diaryImageRepository.findByDiaryEntryIdAndClientImageId(entryId, clientImageId);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+
+            try {
+                return requiresNewTransactionOperations.execute(status -> {
+                    Optional<DiaryImage> inTx = diaryImageRepository.findByDiaryEntryIdAndClientImageId(entryId, clientImageId);
+                    if (inTx.isPresent()) {
+                        return inTx.get();
+                    }
+                    DiaryImage newImage = new DiaryImage(
+                            entryId,
+                            clientImageId,
+                            filename != null ? filename : "image.jpg",
+                            contentType != null ? contentType : "image/jpeg"
+                    );
+                    return diaryImageRepository.save(newImage);
+                });
+            } catch (Exception e) {
+                return diaryImageRepository.findByDiaryEntryIdAndClientImageId(entryId, clientImageId)
+                        .orElseThrow(() -> new IllegalStateException("Không thể tạo hoặc tải DiaryImage cho clientImageId: " + clientImageId, e));
+            }
+        }
     }
 
     private DiaryImageResponse toImageResponse(DiaryImage img) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag, Popconfirm, Button, message } from 'antd';
 import { FileImageOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getDiaryImages, getDisplayImageUrl, deleteDiaryImage } from '../../services/diaryApi.js';
+import apiClient from '../../services/apiClient.js';
 import DiaryImageLightbox from './DiaryImageLightbox.jsx';
 
 const { Text } = Typography;
@@ -189,6 +190,28 @@ export default function DiaryImageList({
                           height: '100%',
                           objectFit: 'cover',
                           transition: 'transform 0.2s',
+                        }}
+                        onError={(e) => {
+                          if (!e.target.dataset.fallbackTried) {
+                            e.target.dataset.fallbackTried = 'true';
+                            apiClient.get(`/api/projects/${projectId}/diary-entries/${entryId}/images/${img.id}/display?thumb=true`, {
+                              responseType: 'blob',
+                            })
+                            .then((res) => {
+                              e.target.src = URL.createObjectURL(res.data);
+                            })
+                            .catch(() => {
+                              apiClient.get(`/api/projects/${projectId}/diary-entries/${entryId}/images/${img.id}/display`, {
+                                responseType: 'blob',
+                              })
+                              .then((res) => {
+                                e.target.src = URL.createObjectURL(res.data);
+                              })
+                              .catch((err) => {
+                                console.error('Lỗi tải ảnh fallback:', err);
+                              });
+                            });
+                          }
                         }}
                       />
                       <div
