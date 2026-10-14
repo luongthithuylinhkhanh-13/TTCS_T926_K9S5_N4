@@ -1,4 +1,5 @@
 import apiClient from './apiClient.js';
+import { getAuthUser } from '../utils/auth.js';
 
 /**
  * Service API cho nhật ký công trường và upload ảnh hai giai đoạn (S-23 T-62).
@@ -77,15 +78,26 @@ export async function getDiaryImages(projectId, entryId) {
 /**
  * T-63: Sinh URL xem ảnh hiển thị (hoặc thumbnail).
  */
-export function getDisplayImageUrl(projectId, entryId, imageId, isThumb = false) {
-  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/display${isThumb ? '?thumb=true' : ''}`;
+export function getDisplayImageUrl(projectId, entryId, imageId, isThumb = false, token = null) {
+  const authToken = token || getAuthUser()?.token;
+  const params = [];
+  if (isThumb) {
+    params.push('thumb=true');
+  }
+  if (authToken) {
+    params.push(`token=${encodeURIComponent(authToken)}`);
+  }
+  const query = params.length > 0 ? `?${params.join('&')}` : '';
+  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/display${query}`;
 }
 
 /**
  * T-63: Sinh URL tải ảnh gốc HD.
  */
-export function getOriginalImageUrl(projectId, entryId, imageId) {
-  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/original`;
+export function getOriginalImageUrl(projectId, entryId, imageId, token = null) {
+  const authToken = token || getAuthUser()?.token;
+  const query = authToken ? `?token=${encodeURIComponent(authToken)}` : '';
+  return `/api/projects/${projectId}/diary-entries/${entryId}/images/${imageId}/original${query}`;
 }
 
 /**

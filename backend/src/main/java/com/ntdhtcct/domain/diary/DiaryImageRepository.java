@@ -18,7 +18,21 @@ public interface DiaryImageRepository extends JpaRepository<DiaryImage, UUID> {
 
     Optional<DiaryImage> findByDiaryEntryIdAndClientImageId(UUID diaryEntryId, String clientImageId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE DiaryImage i SET i.displayStatus = 'UPLOADING', i.displayAttemptId = :attemptId, " +
+           "i.updatedAt = :now WHERE i.id = :id")
+    int startDisplayUpload(@Param("id") UUID id,
+                           @Param("attemptId") UUID attemptId,
+                           @Param("now") OffsetDateTime now);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE DiaryImage i SET i.originalStatus = 'UPLOADING', i.originalAttemptId = :attemptId, " +
+           "i.updatedAt = :now WHERE i.id = :id")
+    int startOriginalUpload(@Param("id") UUID id,
+                            @Param("attemptId") UUID attemptId,
+                            @Param("now") OffsetDateTime now);
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE DiaryImage i SET i.displayStatus = 'COMPLETED', i.displayPath = :path, " +
            "i.displayFileSize = :size, i.thumbnailPath = :thumbPath, i.width = :w, i.height = :h, " +
            "i.updatedAt = :now " +
@@ -32,7 +46,7 @@ public interface DiaryImageRepository extends JpaRepository<DiaryImage, UUID> {
                                               @Param("h") Integer h,
                                               @Param("now") OffsetDateTime now);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE DiaryImage i SET i.originalStatus = 'COMPLETED', i.originalPath = :path, " +
            "i.originalFileSize = :size, i.updatedAt = :now " +
            "WHERE i.id = :id AND i.originalAttemptId = :attemptId")

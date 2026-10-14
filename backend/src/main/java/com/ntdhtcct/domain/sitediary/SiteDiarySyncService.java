@@ -8,8 +8,16 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncStatusResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
+import com.ntdhtcct.domain.diary.DiaryEntry;
+import com.ntdhtcct.domain.diary.DiaryEntryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -28,17 +36,54 @@ import java.util.stream.Collectors;
 @Service
 public class SiteDiarySyncService {
 
+    private static final int STRIPE_COUNT = 256;
+
     private final SiteDiaryRepository siteDiaryRepository;
     private final SiteDiaryLockService siteDiaryLockService;
     private final SiteDiaryAdvisoryLockManager advisoryLockManager;
+    private final DiaryEntryRepository diaryEntryRepository;
+    private final Object[] bridgeStripes = new Object[STRIPE_COUNT];
+    private final TransactionOperations requiresNewTransactionOperations;
+
+    @Autowired
+    public SiteDiarySyncService(
+            SiteDiaryRepository siteDiaryRepository,
+            SiteDiaryLockService siteDiaryLockService,
+            SiteDiaryAdvisoryLockManager advisoryLockManager,
+            @Autowired(required = false) DiaryEntryRepository diaryEntryRepository,
+            @Autowired(required = false) PlatformTransactionManager transactionManager) {
+        this.siteDiaryRepository = siteDiaryRepository;
+        this.siteDiaryLockService = siteDiaryLockService;
+        this.advisoryLockManager = advisoryLockManager;
+        this.diaryEntryRepository = diaryEntryRepository;
+
+        for (int i = 0; i < STRIPE_COUNT; i++) {
+            this.bridgeStripes[i] = new Object();
+        }
+
+        if (transactionManager != null) {
+            this.requiresNewTransactionOperations = new TransactionTemplate(
+                    transactionManager,
+                    new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+            );
+        } else {
+            this.requiresNewTransactionOperations = TransactionOperations.withoutTransaction();
+        }
+    }
+
+    public SiteDiarySyncService(
+            SiteDiaryRepository siteDiaryRepository,
+            SiteDiaryLockService siteDiaryLockService,
+            SiteDiaryAdvisoryLockManager advisoryLockManager,
+            DiaryEntryRepository diaryEntryRepository) {
+        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, diaryEntryRepository, null);
+    }
 
     public SiteDiarySyncService(
             SiteDiaryRepository siteDiaryRepository,
             SiteDiaryLockService siteDiaryLockService,
             SiteDiaryAdvisoryLockManager advisoryLockManager) {
-        this.siteDiaryRepository = siteDiaryRepository;
-        this.siteDiaryLockService = siteDiaryLockService;
-        this.advisoryLockManager = advisoryLockManager;
+        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null);
     }
 
     /**
@@ -88,6 +133,7 @@ public class SiteDiarySyncService {
                 diary.setWorkingConditions(request.getWorkingConditions());
 
                 SiteDiary saved = siteDiaryRepository.save(diary);
+                syncDiaryEntryBridge(saved);
                 return SiteDiarySyncResult.created(request.getClientSyncId(), saved.getId());
             } catch (Exception e) {
                 return SiteDiarySyncResult.error(request.getClientSyncId(), e.getMessage());
@@ -206,7 +252,9 @@ public class SiteDiarySyncService {
                         diary.setWorkingConditions(request.workingConditions());
                         diary.setWorkSummary(request.workSummary());
                         diary.setIssues(request.issues());
-                        return siteDiaryRepository.save(diary);
+                        SiteDiary saved = siteDiaryRepository.save(diary);
+                        syncDiaryEntryBridge(saved);
+                        return saved;
                     } finally {
                         for (LocalDate d : datesToLock) {
                             advisoryLockManager.releaseSharedLock(projectId, d);
@@ -214,6 +262,94 @@ public class SiteDiarySyncService {
                     }
                 })
                 .map(SiteDiaryResponse::from);
+    }
+
+    private Object getBridgeLock(UUID entryId) {
+        if (entryId == null) {
+            return bridgeStripes[0];
+        }
+        int index = (entryId.hashCode() & 0x7fffffff) % STRIPE_COUNT;
+        return bridgeStripes[index];
+    }
+
+    private static String toSafeTitle(String workSummary) {
+        if (workSummary == null || workSummary.isBlank()) {
+            return "Nhật ký thi công";
+        }
+        String trimmed = workSummary.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
+    }
+
+    private static String toSafeWeather(String weather) {
+        if (weather == null) {
+            return null;
+        }
+        String trimmed = weather.trim();
+        return trimmed.length() > 50 ? trimmed.substring(0, 50) : trimmed;
+    }
+
+    private void updateEntryFields(DiaryEntry entry, SiteDiary sd) {
+        entry.setEntryDate(sd.getDiaryDate());
+        entry.setWeather(toSafeWeather(sd.getWeather()));
+        entry.setTitle(toSafeTitle(sd.getWorkSummary()));
+        entry.setContent(sd.getWorkSummary());
+    }
+
+    private void syncDiaryEntryBridge(SiteDiary sd) {
+        if (diaryEntryRepository == null || sd == null || sd.getId() == null) {
+            return;
+        }
+        try {
+            Optional<DiaryEntry> existing = diaryEntryRepository.findById(sd.getId());
+            if (existing.isPresent()) {
+                DiaryEntry entry = existing.get();
+                updateEntryFields(entry, sd);
+                diaryEntryRepository.save(entry);
+                return;
+            }
+
+            Object lock = getBridgeLock(sd.getId());
+            synchronized (lock) {
+                existing = diaryEntryRepository.findById(sd.getId());
+                if (existing.isPresent()) {
+                    DiaryEntry entry = existing.get();
+                    updateEntryFields(entry, sd);
+                    diaryEntryRepository.save(entry);
+                    return;
+                }
+
+                try {
+                    requiresNewTransactionOperations.execute(status -> {
+                        Optional<DiaryEntry> inTx = diaryEntryRepository.findById(sd.getId());
+                        if (inTx.isPresent()) {
+                            DiaryEntry entry = inTx.get();
+                            updateEntryFields(entry, sd);
+                            return diaryEntryRepository.save(entry);
+                        }
+                        DiaryEntry bridged = new DiaryEntry(
+                                sd.getProjectId(),
+                                sd.getReporterId() != null ? sd.getReporterId() : UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                                sd.getDiaryDate(),
+                                toSafeTitle(sd.getWorkSummary()),
+                                sd.getWorkSummary(),
+                                toSafeWeather(sd.getWeather()),
+                                null
+                        );
+                        bridged.setId(sd.getId());
+                        bridged.setNew(true);
+                        return diaryEntryRepository.save(bridged);
+                    });
+                } catch (Exception e) {
+                    // Nếu luồng khác (ví dụ: upload ảnh) đã tạo bridge thành công trong transaction độc lập,
+                    // cập nhật bản ghi đã commit để bảo đảm nhất quán dữ liệu mà không làm hỏng transaction chính.
+                    diaryEntryRepository.findById(sd.getId()).ifPresent(entry -> {
+                        updateEntryFields(entry, sd);
+                        diaryEntryRepository.save(entry);
+                    });
+                }
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     /**
