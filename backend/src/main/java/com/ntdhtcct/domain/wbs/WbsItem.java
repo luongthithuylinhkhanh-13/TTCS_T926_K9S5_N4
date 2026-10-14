@@ -73,7 +73,7 @@ public class WbsItem {
     @Column(name = "unit", length = 50)
     private String unit;
 
-    @Column(name = "unit_price")
+    @Column(name = "unit_price", columnDefinition = "NUMERIC(15,2)")
     private Double unitPrice;
 
 

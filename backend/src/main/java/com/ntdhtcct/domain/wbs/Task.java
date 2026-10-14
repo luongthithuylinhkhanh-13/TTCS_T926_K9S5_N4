@@ -42,13 +42,13 @@ public class Task {
     @Column(name = "duration", nullable = false)
     private Integer duration;
 
-    @Column(name = "quantity")
+    @Column(name = "quantity", columnDefinition = "NUMERIC(15,2)")
     private Double quantity;
 
     @Column(name = "unit", length = 50)
     private String unit;
 
-    @Column(name = "unit_price")
+    @Column(name = "unit_price", columnDefinition = "NUMERIC(15,2)")
     private Double unitPrice;
 
     @Column(name = "created_at", nullable = false, updatable = false)
