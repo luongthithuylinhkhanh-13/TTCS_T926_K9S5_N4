@@ -24,7 +24,7 @@ export default function ImageUploader({
   onRetryDisplay,
   onRetryOriginal,
   disabled = false,
-  maxCount = 20,
+  maxCount = null,
 }) {
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -42,7 +42,10 @@ export default function ImageUploader({
   };
 
   const handleCustomUpload = ({ file }) => {
-    if (items.length >= maxCount) {
+    if (disabled) {
+      return;
+    }
+    if (maxCount && items.length >= maxCount) {
       return;
     }
     const newItem = createQueueItem(file);
@@ -105,7 +108,7 @@ export default function ImageUploader({
       <Dragger
         multiple
         accept="image/jpeg,image/png,image/webp"
-        disabled={disabled || items.length >= maxCount}
+        disabled={disabled || (Boolean(maxCount) && items.length >= maxCount)}
         beforeUpload={handleBeforeUpload}
         customRequest={handleCustomUpload}
         showUploadList={false}
@@ -118,7 +121,7 @@ export default function ImageUploader({
           Nhấp hoặc kéo thả ảnh vào khu vực này để chọn
         </p>
         <p className="ant-upload-hint" style={{ color: '#8c8c8c', fontSize: '12px', margin: 0 }}>
-          Hỗ trợ định dạng JPEG, PNG, WebP (Tối đa {maxCount} ảnh, dung lượng gốc tối đa 20 MiB/ảnh).
+          {maxCount ? `Hỗ trợ JPEG, PNG, WebP (Tối đa ${maxCount} ảnh, dung lượng gốc tối đa 20 MiB/ảnh).` : 'Hỗ trợ định dạng JPEG, PNG, WebP (dung lượng gốc tối đa 20 MiB/ảnh).'}
         </p>
       </Dragger>
 

@@ -44,6 +44,15 @@ class DiaryServiceTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private com.ntdhtcct.domain.sitediary.SiteDiaryRepository siteDiaryRepository;
+
+    @Mock
+    private com.ntdhtcct.domain.sitediary.SiteDiaryLockService siteDiaryLockService;
+
+    @Mock
+    private com.ntdhtcct.domain.sitediary.SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     @InjectMocks
     private DiaryService diaryService;
 
@@ -242,5 +251,87 @@ class DiaryServiceTest {
         assertThat(list).hasSize(2);
         assertThat(list.get(0).clientImageId()).isEqualTo("img-1");
         assertThat(list.get(1).clientImageId()).isEqualTo("img-2");
+    }
+
+    @Test
+    void createDiaryEntry_RejectsWhenDateLocked() {
+        CreateDiaryEntryRequest request = new CreateDiaryEntryRequest(
+                null,
+                LocalDate.of(2026, 10, 11),
+                "Tiêu đề",
+                "Nội dung",
+                "Nắng"
+        );
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(siteDiaryLockService.isDateLocked(projectId, LocalDate.of(2026, 10, 11))).thenReturn(true);
+
+        com.ntdhtcct.common.exception.DiaryDateLockedException ex = assertThrows(
+                com.ntdhtcct.common.exception.DiaryDateLockedException.class,
+                () -> diaryService.createDiaryEntry(projectId, request, authorId)
+        );
+        assertThat(ex.getCode()).isEqualTo("DIARY_DATE_LOCKED");
+    }
+
+    @Test
+    void uploadDisplayImage_RejectsWhenDateLocked() {
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())).thenReturn(true);
+
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[]{1, 2});
+
+        com.ntdhtcct.common.exception.DiaryDateLockedException ex = assertThrows(
+                com.ntdhtcct.common.exception.DiaryDateLockedException.class,
+                () -> diaryService.uploadDisplayImage(projectId, entryId, "client-img-1", "test.jpg", file)
+        );
+        assertThat(ex.getCode()).isEqualTo("DIARY_DATE_LOCKED");
+    }
+
+    @Test
+    void uploadOriginalImage_RejectsWhenDateLocked() {
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())).thenReturn(true);
+
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[]{1, 2});
+
+        com.ntdhtcct.common.exception.DiaryDateLockedException ex = assertThrows(
+                com.ntdhtcct.common.exception.DiaryDateLockedException.class,
+                () -> diaryService.uploadOriginalImage(projectId, entryId, "client-img-1", "test.jpg", file)
+        );
+        assertThat(ex.getCode()).isEqualTo("DIARY_DATE_LOCKED");
+    }
+
+    @Test
+    void deleteDiaryImage_SuccessWhenNotLocked() {
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())).thenReturn(false);
+
+        DiaryImage image = new DiaryImage(entryId, "img-1", "photo.jpg", "image/jpeg");
+        image.setId(UUID.randomUUID());
+        image.setDisplayPath("e/display.jpg");
+        image.setThumbnailPath("e/thumb.jpg");
+        image.setOriginalPath("e/orig.bin");
+
+        when(diaryImageRepository.findById(image.getId())).thenReturn(Optional.of(image));
+
+        diaryService.deleteDiaryImage(projectId, entryId, image.getId());
+
+        verify(fileStorageService).deleteFile("e/thumb.jpg");
+        verify(fileStorageService).deleteFile("e/display.jpg");
+        verify(fileStorageService).deleteFile("e/orig.bin");
+        verify(diaryImageRepository).delete(image);
+    }
+
+    @Test
+    void deleteDiaryImage_RejectsWhenDateLocked() {
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(siteDiaryLockService.isDateLocked(projectId, entry.getEntryDate())).thenReturn(true);
+
+        UUID imageId = UUID.randomUUID();
+
+        com.ntdhtcct.common.exception.DiaryDateLockedException ex = assertThrows(
+                com.ntdhtcct.common.exception.DiaryDateLockedException.class,
+                () -> diaryService.deleteDiaryImage(projectId, entryId, imageId)
+        );
+        assertThat(ex.getCode()).isEqualTo("DIARY_DATE_LOCKED");
     }
 }
