@@ -44,6 +44,9 @@ public class User {
     @Column(name = "locked_until")
     private OffsetDateTime lockedUntil;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -144,6 +147,14 @@ public class User {
 
     public void setLockedUntil(OffsetDateTime lockedUntil) {
         this.lockedUntil = lockedUntil;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public OffsetDateTime getCreatedAt() {

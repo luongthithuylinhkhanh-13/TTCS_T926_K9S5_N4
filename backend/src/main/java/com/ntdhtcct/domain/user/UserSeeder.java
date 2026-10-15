@@ -33,7 +33,6 @@ public class UserSeeder implements CommandLineRunner {
     public void run(String... args) {
         ensureUser("test@test.com", "Test User", "CUSTOMER");
 
-        ensureUser("lanc5676@gmail.com", "Lanc", "PROJECT_MANAGER");
         ensureUser("linh.work@gmail.com", "Linh", "PROJECT_MANAGER");
         ensureUser("kien.work@gmail.com", "Kiên", "PROJECT_MANAGER");
         ensureUser("bach.work@gmail.com", "Bách", "PROJECT_MANAGER");

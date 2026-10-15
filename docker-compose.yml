@@ -28,6 +28,12 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-2911}
       APP_PORT: ${APP_PORT:-8080}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     ports:
       - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     depends_on:

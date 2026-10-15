@@ -38,6 +38,7 @@ class UserSeederTest {
         Role customerRole = new Role("CUSTOMER");
         setRoleId(customerRole, roleId);
 
+        when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(true);
         when(userRepository.existsByEmailIgnoreCase("test@test.com")).thenReturn(false);
         when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.of(customerRole));
         when(passwordEncoder.encode("12345678")).thenReturn("argon2-seeded-hash");

@@ -114,4 +114,8 @@
     <!-- S-39: Phiếu nghiệm thu và nhật ký thao tác -->
     <include file="db/migration/v21/V21_0__create_acceptance_records_and_audit_logs.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- Email verification for self-service registration -->
+    <include file="db/migration/v22/V22_0__add_email_verification.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
