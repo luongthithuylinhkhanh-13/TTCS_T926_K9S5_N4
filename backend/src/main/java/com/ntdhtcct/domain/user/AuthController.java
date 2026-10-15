@@ -19,13 +19,16 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthTokenService authTokenService;
+        private final EmailVerificationService emailVerificationService;
 
     public AuthController(
             UserService userService,
-            AuthTokenService authTokenService
+                        AuthTokenService authTokenService,
+                        EmailVerificationService emailVerificationService
     ) {
         this.userService = userService;
         this.authTokenService = authTokenService;
+                this.emailVerificationService = emailVerificationService;
     }
 
     /**
@@ -94,10 +97,11 @@ public class AuthController {
                     request.email(),
                     request.password()
             );
+            emailVerificationService.sendVerificationEmail(user);
             return ResponseEntity.status(201).body(
                     new RegistrationResponse(
                             true,
-                            "Đăng ký thành công. Bạn có thể đăng nhập.",
+                            "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.",
                             user.getEmail()
                     )
             );
@@ -107,6 +111,16 @@ public class AuthController {
             );
         }
     }
+
+        @GetMapping("/verify-email")
+        public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+                try {
+                        emailVerificationService.verifyEmail(token);
+                        return ResponseEntity.ok("Email đã được xác thực. Bạn có thể quay lại ứng dụng để đăng nhập.");
+                } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body(e.getMessage());
+                }
+        }
 
         /**
          * =========================

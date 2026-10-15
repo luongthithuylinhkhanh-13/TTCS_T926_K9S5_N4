@@ -12,8 +12,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthorizationService {
@@ -40,6 +43,24 @@ public class AuthorizationService {
         this.userRepository = userRepository;
         this.globalProjectRoleEmail = globalProjectRoleEmail;
         this.globalProjectRole = globalProjectRole;
+    }
+
+    private Set<String> configuredGlobalProjectRoleEmails() {
+        if (globalProjectRoleEmail == null || globalProjectRoleEmail.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(globalProjectRoleEmail.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+    }
+
+    private boolean hasConfiguredGlobalProjectRoleEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return configuredGlobalProjectRoleEmails().contains(email.trim().toLowerCase(Locale.ROOT));
     }
 
     public String checkProjectAccess(
@@ -136,7 +157,7 @@ public class AuthorizationService {
         }
 
         boolean configuredAccount = userRepository.findById(userId)
-                .map(user -> isConfiguredAccount(user.getEmail()))
+            .map(user -> isConfiguredAccount(user.getEmail()))
                 .orElse(false);
         return configuredAccount
                 && (requiredRoles == null
@@ -150,7 +171,7 @@ public class AuthorizationService {
             return false;
         }
         return userRepository.findById(userId)
-                .map(user -> isConfiguredAccount(user.getEmail()))
+            .map(user -> isConfiguredAccount(user.getEmail()))
                 .orElse(false);
     }
 

@@ -53,6 +53,7 @@ public class UserService {
         user.setRole(customerRole);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setEmailVerified(false);
 
         return userRepository.save(user);
     }
@@ -75,6 +76,12 @@ public class UserService {
 
             throw new RuntimeException(
                     "Tài khoản đang bị khóa. Vui lòng thử lại sau."
+            );
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new RuntimeException(
+                    "Vui lòng xác thực email trước khi đăng nhập."
             );
         }
 
