@@ -1,5 +1,11 @@
 package com.ntdhtcct.domain.acceptance;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ntdhtcct.auth.context.UserSecurityContext;
 import com.ntdhtcct.common.exception.BadRequestException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
@@ -7,11 +13,6 @@ import com.ntdhtcct.common.exception.UnauthorizedException;
 import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordRequest;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.UserRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class AcceptanceRecordService {
@@ -93,11 +94,23 @@ public class AcceptanceRecordService {
     public AcceptanceRecord returnForChanges(UUID projectId, UUID recordId, String comment) {
         AcceptanceRecord record = findRecord(projectId, recordId);
         requirePendingApproval(record);
+
+        if (comment == null || comment.isBlank()) {
+        throw new BadRequestException(
+                "ACCEPTANCE_RECORD_RETURN_REASON_REQUIRED",
+                "Vui lòng nhập lý do trả lại phiếu nghiệm thu"
+        );
+        }
+
+        String reason = comment.trim();
+
         record.setStatus(AcceptanceRecordStatus.RETURNED);
         AcceptanceRecord saved = recordRepository.save(record);
-        appendAuditLog(saved, AcceptanceRecordAction.RETURN, comment == null ? null : comment.trim());
+
+        appendAuditLog(saved, AcceptanceRecordAction.RETURN, reason);
+
         return saved;
-    }
+}
 
     private AcceptanceRecord findRecord(UUID projectId, UUID recordId) {
         return recordRepository.findByIdAndProjectId(recordId, projectId)

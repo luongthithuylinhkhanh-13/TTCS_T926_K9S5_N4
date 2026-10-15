@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -148,16 +149,18 @@ public class SiteDiaryController {
     }
 
     /**
-     * Xóa nhật ký, chỉ khi bản ghi thuộc đúng dự án và ngày chưa khóa sổ.
+     * Xóa một bản ghi nhật ký công trường.
      */
     @DeleteMapping("/{diaryId}")
-    public ResponseEntity<?> deleteDiary(
+    public ResponseEntity<Void> deleteDiary(
             @PathVariable UUID projectId,
             @PathVariable UUID diaryId
     ) {
-        return siteDiarySyncService.deleteDiary(projectId, diaryId)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+        boolean deleted = siteDiarySyncService.deleteDiary(projectId, diaryId);
+        if (deleted) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
     /**

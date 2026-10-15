@@ -139,6 +139,22 @@ public class FileStorageService {
         return filePath;
     }
 
+    /**
+     * Xóa file trên hệ thống lưu trữ nếu tồn tại.
+     */
+    public void deleteFile(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return;
+        }
+        try {
+            Path filePath = rootStorageDir.resolve(relativePath).normalize();
+            if (filePath.startsWith(rootStorageDir)) {
+                Files.deleteIfExists(filePath);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private byte[] generateThumbnail(BufferedImage source, int maxW, int maxH) throws IOException {
         int w = source.getWidth();
         int h = source.getHeight();

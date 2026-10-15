@@ -1,16 +1,9 @@
 package com.ntdhtcct.domain.acceptance;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ntdhtcct.domain.auth.AuthTokenService;
-import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordRequest;
-import com.ntdhtcct.domain.project.Project;
-import com.ntdhtcct.domain.project.ProjectRepository;
-import com.ntdhtcct.entity.ProjectMember;
-import com.ntdhtcct.entity.Role;
-import com.ntdhtcct.entity.User;
-import com.ntdhtcct.repository.ProjectMemberRepository;
-import com.ntdhtcct.repository.RoleRepository;
-import com.ntdhtcct.repository.UserRepository;
+import java.time.LocalDate;
+
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,16 +12,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDate;
-
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ntdhtcct.domain.acceptance.dto.AcceptanceRecordRequest;
+import com.ntdhtcct.domain.auth.AuthTokenService;
+import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.entity.ProjectMember;
+import com.ntdhtcct.entity.Role;
+import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.ProjectMemberRepository;
+import com.ntdhtcct.repository.RoleRepository;
+import com.ntdhtcct.repository.UserRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -150,6 +150,41 @@ class AcceptanceRecordIntegrationTest {
                 .andExpect(jsonPath("$[1].comment", is("Bổ sung biên bản đo kiểm")))
                 .andExpect(jsonPath("$[2].action", is("EDIT")));
     }
+    @Test
+    void cannotReturnRecordWithoutReason() throws Exception {
+        String recordId = createRecord(manager);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/return")
+                    .header("Authorization", token(manager))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"comment\":\"\"}"))
+            .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+
+        mockMvc.perform(get(recordUrl(recordId) + "/history")
+                    .header("Authorization", token(viewer)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)));
+}
+
+    @Test
+    void cannotReturnRecordWithWhitespaceOnlyReason() throws Exception {
+        String recordId = createRecord(manager);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/return")
+                    .header("Authorization", token(manager))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"comment\":\"   \"}"))
+            .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+
+        mockMvc.perform(get(recordUrl(recordId) + "/history")
+                    .header("Authorization", token(viewer)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)));
+}
 
     @Test
     void onlyProjectManagersCanApprove() throws Exception {
@@ -160,6 +195,39 @@ class AcceptanceRecordIntegrationTest {
                 .andExpect(status().isForbidden());
 
         org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+    }
+    @Test
+    void cannotApproveRecordMoreThanOnce() throws Exception {
+        String recordId = createRecord(engineer);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/approve")
+                        .header("Authorization", token(manager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("APPROVED")));
+
+        mockMvc.perform(post(recordUrl(recordId) + "/approve")
+                        .header("Authorization", token(manager)))
+                .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, auditLogRepository.count());
+    }
+
+    @Test
+    void cannotApproveReturnedRecordBeforeResubmission() throws Exception {
+        String recordId = createRecord(engineer);
+
+        mockMvc.perform(post(recordUrl(recordId) + "/return")
+                        .header("Authorization", token(manager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Can bo sung ho so\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("RETURNED")));
+
+        mockMvc.perform(post(recordUrl(recordId) + "/approve")
+                        .header("Authorization", token(manager)))
+                .andExpect(status().isBadRequest());
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, auditLogRepository.count());
     }
 
     private String createRecord(User actor) throws Exception {

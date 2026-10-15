@@ -28,6 +28,7 @@ import {
   ReloadOutlined,
   EyeOutlined,
   EditOutlined,
+  DeleteOutlined,
   LockOutlined,
   UnlockOutlined,
   SyncOutlined,
@@ -52,6 +53,10 @@ import {
 } from '../services/siteDiaryApi';
 import { isProjectManager } from '../utils/permissions';
 import SyncQueueModal from '../components/sync/SyncQueueModal';
+import ImageUploader from '../components/diary/ImageUploader.jsx';
+import DiaryImageList from '../components/diary/DiaryImageList.jsx';
+import { uploadQueueItemStages } from '../services/diaryUploadService.js';
+import { revokeAllQueueItems } from '../utils/imageQueueUtils.js';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -59,12 +64,14 @@ const { TextArea } = Input;
 const SiteDiaryPage = () => {
   const [form] = Form.useForm();
   const [lockForm] = Form.useForm();
+  const watchedDiaryDate = Form.useWatch('diaryDate', form);
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [diaries, setDiaries] = useState([]);
   const [locks, setLocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [online, setOnline] = useState(() => (
     typeof navigator === 'undefined' || !('onLine' in navigator) || navigator.onLine
   ));
@@ -77,6 +84,8 @@ const SiteDiaryPage = () => {
   const [syncFilter, setSyncFilter] = useState('ALL'); // 'ALL' | 'UNSYNCED' | 'SYNCED'
   const [manualSyncing, setManualSyncing] = useState(false);
   const [queueModalOpen, setQueueModalOpen] = useState(false);
+  const [imageQueue, setImageQueue] = useState([]);
+  const [imageRefreshTrigger, setImageRefreshTrigger] = useState(0);
 
   // Tải danh sách dự án
   useEffect(() => {
@@ -150,6 +159,52 @@ const SiteDiaryPage = () => {
     };
   }, [selectedProjectId]);
 
+  const isDateLocked = targetDate => {
+    if (!targetDate) return false;
+    const dateStr = dayjs(targetDate).format('YYYY-MM-DD');
+    const lockRecord = locks.find(l => l.lockDate === dateStr);
+    return Boolean(lockRecord?.locked || lockRecord?.status === 'LOCKED');
+  };
+
+  const isCurrentFormDateLocked = isDateLocked(watchedDiaryDate);
+
+  const handleRetryDisplay = async (item) => {
+    const targetId = editingDiaryId;
+    if (!targetId || !selectedProjectId) return;
+    await uploadQueueItemStages(
+      selectedProjectId,
+      targetId,
+      item,
+      {
+        onUpdate: (updated) => {
+          setImageQueue((prev) =>
+            prev.map((it) => (it.clientImageId === updated.clientImageId ? updated : it))
+          );
+        },
+      },
+      { displayOnly: true }
+    );
+    setImageRefreshTrigger((v) => v + 1);
+  };
+
+  const handleRetryOriginal = async (item) => {
+    const targetId = editingDiaryId;
+    if (!targetId || !selectedProjectId) return;
+    await uploadQueueItemStages(
+      selectedProjectId,
+      targetId,
+      item,
+      {
+        onUpdate: (updated) => {
+          setImageQueue((prev) =>
+            prev.map((it) => (it.clientImageId === updated.clientImageId ? updated : it))
+          );
+        },
+      },
+      { originalOnly: true }
+    );
+  };
+
   // Xử lý gửi biểu mẫu nhật ký
   const onFinish = async values => {
     if (!selectedProjectId) {
@@ -182,6 +237,8 @@ const SiteDiaryPage = () => {
         workingConditions: values.workingConditions
       };
 
+      let targetDiaryId = editingDiaryId;
+
       if (editingDiaryId) {
         await updateSiteDiary(selectedProjectId, editingDiaryId, payload);
         notification.success({
@@ -189,7 +246,6 @@ const SiteDiaryPage = () => {
           description: 'Nội dung nhật ký đã được cập nhật trên máy chủ.',
           placement: 'bottomRight'
         });
-        setEditingDiaryId(null);
       } else {
         const result = await submitSiteDiary(selectedProjectId, payload);
         if (result.isOfflineQueued) {
@@ -198,7 +254,14 @@ const SiteDiaryPage = () => {
             description: result.message,
             placement: 'bottomRight'
           });
+          if (imageQueue.length > 0) {
+            notification.info({
+              message: 'Lưu ý về ảnh đính kèm',
+              description: 'Đang ngoại tuyến nên các ảnh đính kèm chưa thể tải lên máy chủ. Bạn có thể đính kèm ảnh sau khi có kết nối mạng.'
+            });
+          }
         } else {
+          targetDiaryId = result.data?.serverDiaryId || result.data?.id;
           notification.success({
             message: 'Thành công',
             description: 'Đã ghi nhận nhật ký công trường lên máy chủ thành công.',
@@ -207,9 +270,48 @@ const SiteDiaryPage = () => {
         }
       }
 
-      form.resetFields();
-      form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
-      setDiaryModalOpen(false);
+      // Xử lý tải ảnh trong hàng đợi (S-23: T-61, T-62)
+      let hasFailedImages = false;
+      if (targetDiaryId && imageQueue.length > 0) {
+        for (const item of imageQueue) {
+          if (item.displayStatus === 'completed' && item.originalStatus === 'completed') {
+            continue;
+          }
+          const finalItem = await uploadQueueItemStages(
+            selectedProjectId,
+            targetDiaryId,
+            item,
+            {
+              onUpdate: (updated) => {
+                setImageQueue((prev) =>
+                  prev.map((it) => (it.clientImageId === updated.clientImageId ? updated : it))
+                );
+              },
+            }
+          );
+          if (finalItem.displayStatus === 'failed' || finalItem.originalStatus === 'failed') {
+            hasFailedImages = true;
+          }
+        }
+      }
+
+      if (hasFailedImages) {
+        setEditingDiaryId(targetDiaryId);
+        setImageRefreshTrigger((v) => v + 1);
+        notification.warning({
+          message: 'Một số ảnh tải lên thất bại',
+          description: 'Nhật ký đã lưu nhưng có ảnh tải lên bị lỗi. Bạn có thể bấm nút Thử lại (Retry) trên từng ảnh để tiếp tục tải lên trong phiên hiện tại.',
+          duration: 6
+        });
+      } else {
+        revokeAllQueueItems(imageQueue);
+        setImageQueue([]);
+        setEditingDiaryId(null);
+        form.resetFields();
+        form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+        setDiaryModalOpen(false);
+      }
+
       await loadDiaries();
     } catch (err) {
       notification.error({
@@ -219,13 +321,6 @@ const SiteDiaryPage = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const isDateLocked = targetDate => {
-    if (!targetDate) return false;
-    const dateStr = dayjs(targetDate).format('YYYY-MM-DD');
-    const lockRecord = locks.find(l => l.lockDate === dateStr);
-    return Boolean(lockRecord?.locked || lockRecord?.status === 'LOCKED');
   };
 
   const startEditingDiary = diary => {
@@ -243,6 +338,8 @@ const SiteDiaryPage = () => {
       });
       return;
     }
+    revokeAllQueueItems(imageQueue);
+    setImageQueue([]);
     setDetailDiary(null);
     setEditingDiaryId(diary.id);
     setDiaryModalOpen(true);
@@ -262,13 +359,53 @@ const SiteDiaryPage = () => {
   };
 
   const cancelEditingDiary = () => {
+    revokeAllQueueItems(imageQueue);
+    setImageQueue([]);
     setEditingDiaryId(null);
     setDiaryModalOpen(false);
     form.resetFields();
     form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
   };
 
+  const handleDeleteDiary = async () => {
+    if (!editingDiaryId) return;
+
+    if (isCurrentFormDateLocked) {
+      notification.warning({
+        message: 'Không thể xóa',
+        description: 'Ngày nhật ký này đã bị khóa sổ.'
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await deleteSiteDiary(selectedProjectId, editingDiaryId);
+      notification.success({
+        message: 'Đã xóa nhật ký',
+        description: 'Bản ghi nhật ký đã được xóa thành công.',
+        placement: 'bottomRight'
+      });
+      revokeAllQueueItems(imageQueue);
+      setImageQueue([]);
+      setEditingDiaryId(null);
+      form.resetFields();
+      form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+      setDiaryModalOpen(false);
+      await loadDiaries();
+    } catch (err) {
+      notification.error({
+        message: 'Lỗi xóa nhật ký',
+        description: err.response?.data?.message || err.message || 'Không thể xóa nhật ký.'
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const openNewDiary = () => {
+    revokeAllQueueItems(imageQueue);
+    setImageQueue([]);
     setEditingDiaryId(null);
     form.resetFields();
     form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
@@ -805,7 +942,15 @@ const SiteDiaryPage = () => {
         width={720}
         forceRender
       >
-        {editingDiaryId && (
+        {isCurrentFormDateLocked && (
+          <Alert
+            type="error"
+            showIcon
+            message={`Ngày ${watchedDiaryDate ? dayjs(watchedDiaryDate).format('DD/MM/YYYY') : ''} đã bị khóa sổ. Toàn bộ thao tác cập nhật và tải ảnh đều bị khóa.`}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        {editingDiaryId && !isCurrentFormDateLocked && (
           <Alert
             type="info"
             showIcon
@@ -897,17 +1042,70 @@ const SiteDiaryPage = () => {
             <TextArea rows={2} placeholder="Ghi sự cố, gián đoạn hoặc lưu ý về an toàn (nếu có)..." />
           </Form.Item>
 
-          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={cancelEditingDiary}>Hủy</Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitting}
-              icon={editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
-            >
-              {editingDiaryId ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
-            </Button>
-          </Space>
+          {/* S-23: Danh sách ảnh đã tải lên khi ở chế độ chỉnh sửa */}
+          {editingDiaryId && (
+            <div style={{ marginBottom: 16 }}>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                Ảnh đã đính kèm trên máy chủ:
+              </Text>
+              <DiaryImageList
+                projectId={selectedProjectId}
+                entryId={editingDiaryId}
+                disabled={isCurrentFormDateLocked}
+                refreshTrigger={imageRefreshTrigger}
+              />
+            </div>
+          )}
+
+          {/* S-23: Tải ảnh mới vào nhật ký */}
+          <Form.Item label="Đính kèm ảnh thi công">
+            <ImageUploader
+              items={imageQueue}
+              onChange={setImageQueue}
+              onRetryDisplay={handleRetryDisplay}
+              onRetryOriginal={handleRetryOriginal}
+              disabled={isCurrentFormDateLocked}
+            />
+          </Form.Item>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+            <div>
+              {editingDiaryId && (
+                <Popconfirm
+                  title="Xóa nhật ký công trường"
+                  description="Bạn có chắc chắn muốn xóa bản ghi nhật ký này không? Thao tác này không thể hoàn tác."
+                  onConfirm={handleDeleteDiary}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: true, loading: deleting }}
+                  disabled={isCurrentFormDateLocked || deleting}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={isCurrentFormDateLocked || deleting}
+                    loading={deleting}
+                  >
+                    Xóa nhật ký
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+            <Space>
+              <Button onClick={cancelEditingDiary} disabled={deleting || submitting}>
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={submitting}
+                disabled={isCurrentFormDateLocked || deleting}
+                icon={editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
+              >
+                {editingDiaryId ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
+              </Button>
+            </Space>
+          </div>
         </Form>
       </Modal>
 
@@ -1038,6 +1236,17 @@ const SiteDiaryPage = () => {
             <div>
               <Text strong>Vướng mắc / an toàn:</Text>
               <div style={{ whiteSpace: 'pre-wrap' }}>{detailDiary.issues || 'Không có'}</div>
+            </div>
+            <div>
+              <Text strong>Ảnh đính kèm:</Text>
+              <div style={{ marginTop: 8 }}>
+                <DiaryImageList
+                  projectId={selectedProjectId}
+                  entryId={detailDiary.id}
+                  readOnly={true}
+                  disabled={isDateLocked(detailDiary.diaryDate)}
+                />
+              </div>
             </div>
           </Space>
         )}
