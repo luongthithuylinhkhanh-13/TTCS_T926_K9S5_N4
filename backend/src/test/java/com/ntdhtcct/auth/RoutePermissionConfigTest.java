@@ -111,6 +111,19 @@ class RoutePermissionConfigTest {
     }
 
     @Test
+    void allowsSiteEngineersToDeleteSiteDiariesButNotWorkers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.DELETE.name(),
+                        "/api/projects/123/site-diaries/456"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
     void restrictsSiteDiaryLocksToProjectManagersAndAdmins() {
         String[] lockRoles = routePermissionConfig
                 .findRequiredRoles(

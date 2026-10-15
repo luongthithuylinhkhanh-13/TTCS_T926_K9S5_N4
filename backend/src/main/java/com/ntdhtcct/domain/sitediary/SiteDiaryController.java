@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -144,6 +145,21 @@ public class SiteDiaryController {
         return siteDiarySyncService.updateDiary(projectId, diaryId, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Xóa một bản ghi nhật ký công trường.
+     */
+    @DeleteMapping("/{diaryId}")
+    public ResponseEntity<Void> deleteDiary(
+            @PathVariable UUID projectId,
+            @PathVariable UUID diaryId
+    ) {
+        boolean deleted = siteDiarySyncService.deleteDiary(projectId, diaryId);
+        if (deleted) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
     /**

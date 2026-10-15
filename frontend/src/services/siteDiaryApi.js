@@ -92,6 +92,24 @@ export const updateSiteDiary = async (projectId, diaryId, diaryData) => {
 };
 
 /**
+ * Xóa một bản ghi nhật ký công trường.
+ * Nếu bản ghi đang nằm trong hàng đợi offline -> xóa khỏi hàng đợi.
+ * Nếu đã đồng bộ lên server -> gọi API xóa trên server.
+ */
+export const deleteSiteDiary = async (projectId, diaryId) => {
+  const queue = syncQueueService.getQueue();
+  const offlineItem = queue.find(i => i.id === diaryId || i.clientSyncId === diaryId);
+  if (offlineItem) {
+    syncQueueService.removeItem(offlineItem.id);
+    return { success: true, offlineDeleted: true };
+  }
+  const response = await apiClient.delete(
+    `/api/projects/${projectId}/site-diaries/${diaryId}`
+  );
+  return response.data;
+};
+
+/**
  * Lấy danh sách nhật ký công trường, gộp các bản ghi đang chờ đồng bộ trong hàng đợi
  */
 export const getSiteDiaries = async projectId => {

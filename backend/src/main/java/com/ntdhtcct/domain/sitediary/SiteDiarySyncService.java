@@ -10,6 +10,8 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncStatusResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import com.ntdhtcct.domain.diary.DiaryEntry;
 import com.ntdhtcct.domain.diary.DiaryEntryRepository;
+import com.ntdhtcct.domain.diary.DiaryImage;
+import com.ntdhtcct.domain.diary.DiaryImageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -42,6 +44,7 @@ public class SiteDiarySyncService {
     private final SiteDiaryLockService siteDiaryLockService;
     private final SiteDiaryAdvisoryLockManager advisoryLockManager;
     private final DiaryEntryRepository diaryEntryRepository;
+    private final DiaryImageRepository diaryImageRepository;
     private final Object[] bridgeStripes = new Object[STRIPE_COUNT];
     private final TransactionOperations requiresNewTransactionOperations;
 
@@ -51,11 +54,13 @@ public class SiteDiarySyncService {
             SiteDiaryLockService siteDiaryLockService,
             SiteDiaryAdvisoryLockManager advisoryLockManager,
             @Autowired(required = false) DiaryEntryRepository diaryEntryRepository,
+            @Autowired(required = false) DiaryImageRepository diaryImageRepository,
             @Autowired(required = false) PlatformTransactionManager transactionManager) {
         this.siteDiaryRepository = siteDiaryRepository;
         this.siteDiaryLockService = siteDiaryLockService;
         this.advisoryLockManager = advisoryLockManager;
         this.diaryEntryRepository = diaryEntryRepository;
+        this.diaryImageRepository = diaryImageRepository;
 
         for (int i = 0; i < STRIPE_COUNT; i++) {
             this.bridgeStripes[i] = new Object();
@@ -75,15 +80,24 @@ public class SiteDiarySyncService {
             SiteDiaryRepository siteDiaryRepository,
             SiteDiaryLockService siteDiaryLockService,
             SiteDiaryAdvisoryLockManager advisoryLockManager,
+            DiaryEntryRepository diaryEntryRepository,
+            PlatformTransactionManager transactionManager) {
+        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, diaryEntryRepository, null, transactionManager);
+    }
+
+    public SiteDiarySyncService(
+            SiteDiaryRepository siteDiaryRepository,
+            SiteDiaryLockService siteDiaryLockService,
+            SiteDiaryAdvisoryLockManager advisoryLockManager,
             DiaryEntryRepository diaryEntryRepository) {
-        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, diaryEntryRepository, null);
+        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, diaryEntryRepository, null, null);
     }
 
     public SiteDiarySyncService(
             SiteDiaryRepository siteDiaryRepository,
             SiteDiaryLockService siteDiaryLockService,
             SiteDiaryAdvisoryLockManager advisoryLockManager) {
-        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null);
+        this(siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null, null);
     }
 
     /**
@@ -262,6 +276,58 @@ public class SiteDiarySyncService {
                     }
                 })
                 .map(SiteDiaryResponse::from);
+    }
+
+    /**
+     * Xóa nhật ký công trường, chỉ khi bản ghi thuộc đúng dự án.
+     * S-24: Kiểm tra ngày của nhật ký đã bị khóa sổ hay chưa.
+     * Nếu ngày đã bị khóa -> ném DiaryDateLockedException.
+     * Giữ Shared Advisory Lock trong quá trình xóa.
+     */
+    @Transactional
+    public boolean deleteDiary(UUID projectId, UUID diaryId) {
+        if (diaryId == null || projectId == null) {
+            return false;
+        }
+
+        Optional<SiteDiary> diaryOpt = siteDiaryRepository.findById(diaryId)
+                .filter(d -> d.getProjectId().equals(projectId));
+        if (diaryOpt.isEmpty()) {
+            return false;
+        }
+
+        SiteDiary diary = diaryOpt.get();
+        LocalDate diaryDate = diary.getDiaryDate();
+
+        if (diaryDate != null) {
+            advisoryLockManager.acquireSharedLock(projectId, diaryDate);
+        }
+
+        try {
+            if (diaryDate != null && siteDiaryLockService.isDateLocked(projectId, diaryDate)) {
+                throw new DiaryDateLockedException(
+                        "Nhật ký công trường ngày " + diaryDate + " đã bị khóa sổ. Không thể xóa."
+                );
+            }
+
+            if (diaryImageRepository != null) {
+                List<DiaryImage> images = diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(diaryId);
+                if (images != null && !images.isEmpty()) {
+                    diaryImageRepository.deleteAll(images);
+                }
+            }
+
+            if (diaryEntryRepository != null && diaryEntryRepository.existsById(diaryId)) {
+                diaryEntryRepository.deleteById(diaryId);
+            }
+
+            siteDiaryRepository.delete(diary);
+            return true;
+        } finally {
+            if (diaryDate != null) {
+                advisoryLockManager.releaseSharedLock(projectId, diaryDate);
+            }
+        }
     }
 
     private Object getBridgeLock(UUID entryId) {

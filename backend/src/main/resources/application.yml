@@ -55,5 +55,5 @@ logging:
 
 app:
   authorization:
-    global-project-role-email: lanc5676@gmail.com
+    global-project-role-email: lanc5676@gmail.com,test@test.com
     global-project-role: PROJECT_MANAGER

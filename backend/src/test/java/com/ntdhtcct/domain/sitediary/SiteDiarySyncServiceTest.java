@@ -1,5 +1,6 @@
 package com.ntdhtcct.domain.sitediary;
 
+import com.ntdhtcct.common.exception.DiaryDateLockedException;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.mockito.ArgumentCaptor;
@@ -231,5 +233,59 @@ public class SiteDiarySyncServiceTest {
         assertThat(status.getTotalDiaries()).isEqualTo(5L);
         assertThat(status.getSyncedCount()).isEqualTo(5L);
         assertThat(status.getPendingCount()).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("Xóa nhật ký thành công khi ngày chưa bị khóa")
+    void deleteDiary_Success_ShouldDeleteAndReleaseLock() {
+        UUID diaryId = UUID.randomUUID();
+        LocalDate diaryDate = LocalDate.of(2026, 10, 15);
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(diaryDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, diaryDate)).thenReturn(false);
+
+        boolean result = siteDiarySyncService.deleteDiary(projectId, diaryId);
+
+        assertThat(result).isTrue();
+        verify(advisoryLockManager).acquireSharedLock(projectId, diaryDate);
+        verify(siteDiaryRepository).delete(diary);
+        verify(advisoryLockManager).releaseSharedLock(projectId, diaryDate);
+    }
+
+    @Test
+    @DisplayName("S-24: Từ chối xóa nhật ký khi ngày đã bị khóa sổ")
+    void deleteDiary_WhenDateLocked_ShouldThrowDiaryDateLockedException() {
+        UUID diaryId = UUID.randomUUID();
+        LocalDate diaryDate = LocalDate.of(2026, 10, 15);
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(diaryDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, diaryDate)).thenReturn(true);
+
+        assertThatThrownBy(() -> siteDiarySyncService.deleteDiary(projectId, diaryId))
+                .isInstanceOf(DiaryDateLockedException.class)
+                .hasMessageContaining("đã bị khóa sổ. Không thể xóa.");
+
+        verify(siteDiaryRepository, never()).delete(any());
+        verify(advisoryLockManager).releaseSharedLock(projectId, diaryDate);
+    }
+
+    @Test
+    @DisplayName("Xóa nhật ký không tồn tại trả về false")
+    void deleteDiary_NotFound_ShouldReturnFalse() {
+        UUID diaryId = UUID.randomUUID();
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.empty());
+
+        boolean result = siteDiarySyncService.deleteDiary(projectId, diaryId);
+
+        assertThat(result).isFalse();
+        verify(siteDiaryRepository, never()).delete(any());
     }
 }
