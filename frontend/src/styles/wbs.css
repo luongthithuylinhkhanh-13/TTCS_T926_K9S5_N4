@@ -1191,82 +1191,171 @@
   width: 180px;
 }
 
-/* Stats Cards Grid */
-.stats-grid {
+/* WBS overview */
+.wbs-overview-panel {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(230px, 0.75fr) minmax(220px, 0.8fr) minmax(470px, 1.65fr);
+  gap: 24px;
+  align-items: center;
   margin-bottom: 20px;
-}
-
-.stat-card {
-  background-color: #FFFFFF;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-card);
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: var(--shadow-light);
-  transition: var(--transition-normal);
-}
-
-.stat-card.total { background-color: #EFF6FF; }
-.stat-card.inprogress { background-color: #FFFBEB; }
-.stat-card.completed { background-color: #F0FDF4; }
-.stat-card.notstarted { background-color: #FEE2E2; }
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--dark-navy);
-}
-
-.stat-icon-wrapper {
-  width: 44px;
-  height: 44px;
+  padding: 20px 24px;
+  border: 1px solid #dbe4ee;
+  border-left: 4px solid #2563eb;
   border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.wbs-overview-heading,
+.wbs-overview-title,
+.wbs-progress-copy,
+.wbs-progress-meta,
+.wbs-status-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+}
+
+.wbs-overview-heading {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wbs-overview-title {
+  min-width: 0;
+  gap: 12px;
+}
+
+.wbs-overview-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
   font-size: 20px;
 }
 
-.stat-icon-wrapper.blue {
-  background-color: #EFF6FF;
-  color: #2563EB;
+.wbs-overview-eyebrow {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
-.stat-icon-wrapper.orange {
-  background-color: #FFFBEB;
-  color: #D97706;
+.wbs-overview-title h2 {
+  margin: 3px 0 0;
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
-.stat-icon-wrapper.green {
-  background-color: #F0FDF4;
-  color: #16A34A;
+.wbs-overview-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.stat-icon-wrapper.gray {
-  background-color: #F8FAFC;
-  color: #64748B;
+.wbs-overview-total strong {
+  color: #0f172a;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.wbs-progress-copy {
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wbs-progress-copy strong {
+  color: #2563eb;
+  font-size: 20px;
+}
+
+.wbs-progress-track {
+  position: relative;
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.wbs-progress-track span {
+  display: block;
+  height: 100%;
+}
+
+.wbs-progress-completed { background: #16a34a; }
+.wbs-progress-active { background: #2563eb; }
+
+.wbs-progress-meta {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.wbs-progress-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wbs-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.wbs-dot.completed { background: #16a34a; }
+.wbs-dot.active { background: #2563eb; }
+.wbs-dot.pending { background: #94a3b8; }
+
+.wbs-status-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  gap: 12px 32px;
+}
+
+.wbs-status-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  gap: 8px;
+  color: #475569;
+  font-size: 12px;
+  cursor: help;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.wbs-status-row:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.wbs-status-icon { color: #64748b; }
+.wbs-status-row.inprogress .wbs-status-icon { color: #2563eb; }
+.wbs-status-row.completed .wbs-status-icon { color: #16a34a; }
+.wbs-status-row.paused .wbs-status-icon { color: #d97706; }
+
+.wbs-status-label {
+  white-space: nowrap;
+}
+
+.wbs-status-row strong {
+  color: #0f172a;
+  font-size: 15px;
 }
 
 /* WBS Main Card & Toolbar */
@@ -1683,9 +1772,14 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 991px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 1100px) {
+  .wbs-overview-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wbs-status-list {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1697,9 +1791,20 @@
   .page-content {
     padding: 16px;
   }
-  .stats-grid {
+  .wbs-overview-panel {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 18px;
   }
+
+  .wbs-status-list {
+    grid-column: auto;
+  }
+
+  .wbs-status-row {
+    min-width: 0;
+  }
+
   .wbs-toolbar {
     flex-direction: column;
     align-items: stretch;

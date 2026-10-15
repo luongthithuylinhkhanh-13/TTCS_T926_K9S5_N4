@@ -7,6 +7,8 @@ import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+
+import java.util.Optional;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -49,7 +51,14 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
         }
 
         var demoUser = userRepository.findByEmailIgnoreCase("test@test.com");
-        var adminUser = userRepository.findByEmailIgnoreCase("lanc5676@gmail.com");
+        var projectManagers = java.util.List.of(
+                "lanc5676@gmail.com",
+                "linh.work@gmail.com",
+                "kien.work@gmail.com",
+                "bach.work@gmail.com",
+                "chinh.work@gmail.com",
+                "lan.work@gmail.com"
+        );
         var adminRole = roleRepository.findByName("PROJECT_MANAGER");
 
         if (adminRole.isEmpty()) {
@@ -58,7 +67,10 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 
         projectRepository.findAll().forEach(project -> {
             demoUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
-            adminUser.ifPresent(user -> upsertAdminMember(project, user, adminRole.get()));
+            projectManagers.stream()
+                    .map(userRepository::findByEmailIgnoreCase)
+                    .flatMap(Optional::stream)
+                    .forEach(user -> upsertAdminMember(project, user, adminRole.get()));
         });
     }
 

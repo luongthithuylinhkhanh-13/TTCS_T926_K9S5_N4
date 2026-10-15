@@ -92,6 +92,27 @@ class GlobalProjectViewerAuthorizationTest {
     }
 
     @Test
+    void supportsMultipleConfiguredGlobalProjectManagerEmails() {
+        AuthorizationService multiEmailService = new AuthorizationService(
+                projectRepository,
+                projectMemberRepository,
+                userRepository,
+                "linh.work@gmail.com, lanc5676@gmail.com",
+                "PROJECT_MANAGER"
+        );
+
+        viewer.setEmail("linh.work@gmail.com");
+
+        String role = multiEmailService.checkProjectAccess(
+                projectId,
+                viewerId,
+                new String[]{"ADMIN", "PROJECT_MANAGER"}
+        );
+
+        assertThat(role).isEqualTo("PROJECT_MANAGER");
+    }
+
+    @Test
     void doesNotGrantConfiguredAccountAccessWhenRoleIsNotAllowed() {
         assertThatThrownBy(() -> authorizationService.checkProjectAccess(
                 projectId,
