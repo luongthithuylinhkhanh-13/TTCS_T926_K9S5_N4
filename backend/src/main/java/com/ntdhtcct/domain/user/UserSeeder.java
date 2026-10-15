@@ -48,5 +48,12 @@ public class UserSeeder implements CommandLineRunner {
                     user.setRole(role);
                     userRepository.save(user);
                 }));
+
+        userRepository.findByEmailIgnoreCase("test@test.com")
+            .ifPresent(user -> roleRepository.findByName("PROJECT_MANAGER")
+                .ifPresent(role -> {
+                    user.setRole(role);
+                    userRepository.save(user);
+                }));
     }
 }

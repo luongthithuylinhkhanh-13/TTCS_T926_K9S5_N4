@@ -981,7 +981,7 @@ const handleFormSubmit = async formData => {
       >
         <Spin
           size="large"
-          tip={t('─Éang tß║úi dß╗▒ ├ín...')}
+          tip={t('Đang tải dự án...')}
         />
       </div>
     );
@@ -998,11 +998,11 @@ const handleFormSubmit = async formData => {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            {t('C├óy c╞í cß║Ñu c├┤ng viß╗çc')}
+            {t('Cây cơ cấu công việc')}
           </h1>
 
           <p className="page-subtitle">
-            {t('Quß║ún l├╜ v├á theo d├╡i cß║Ñu tr├║c ph├ón r├ú c├┤ng viß╗çc (Work Breakdown Structure) cß╗ºa dß╗▒ ├ín')}
+            {t('Quản lý và theo dõi cấu trúc phân rã công việc (Work Breakdown Structure) của dự án')}
           </p>
         </div>
 
@@ -1012,7 +1012,7 @@ const handleFormSubmit = async formData => {
             onClick={handleExport}
             disabled={!currentProject}
           >
-            {t('Xuß║Ñt dß╗» liß╗çu')}
+            {t('Xuất dữ liệu')}
           </Button>
 
           <Button
@@ -1021,7 +1021,7 @@ const handleFormSubmit = async formData => {
             onClick={() => handleOpenAddModal(null)}
             disabled={!currentProject}
           >
-            + {t('Th├¬m c├┤ng viß╗çc')}
+            {t('Thêm công việc')}
           </Button>
         </div>
       </div>
@@ -1032,7 +1032,7 @@ const handleFormSubmit = async formData => {
           type="error"
           showIcon
           closable
-          message={t('Kh├┤ng thß╗â tß║úi dß╗» liß╗çu')}
+          message={t('Không thể tải dữ liệu')}
           description={pageError}
           style={{
             marginBottom: 16
@@ -1062,7 +1062,7 @@ const handleFormSubmit = async formData => {
           <div className="wbs-card-title-box">
 
             <span className="wbs-card-title">
-              {t('C╞í cß║Ñu ph├ón r├ú c├┤ng viß╗çc')}
+              {t('Cơ cấu phân rã công việc')}
             </span>
 
             <span className="wbs-card-subtitle">

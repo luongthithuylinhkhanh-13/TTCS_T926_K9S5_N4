@@ -17,7 +17,8 @@ import {
   Typography,
   Space,
   Tooltip,
-  Badge
+  Badge,
+  Popconfirm
 } from 'antd';
 import {
   BookOutlined,
@@ -27,6 +28,7 @@ import {
   ReloadOutlined,
   EyeOutlined,
   EditOutlined,
+  DeleteOutlined,
   LockOutlined,
   UnlockOutlined,
   SyncOutlined,
@@ -41,6 +43,7 @@ import {
   submitSiteDiary,
   getSiteDiaries,
   updateSiteDiary,
+  deleteSiteDiary,
   lockSiteDiaryDate,
   unlockSiteDiaryDate,
   getProjectDiaryLocks,
@@ -67,6 +70,7 @@ const SiteDiaryPage = () => {
   const [locks, setLocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [online, setOnline] = useState(() => (
     typeof navigator === 'undefined' || !('onLine' in navigator) || navigator.onLine
   ));
@@ -360,6 +364,42 @@ const SiteDiaryPage = () => {
     setDiaryModalOpen(false);
     form.resetFields();
     form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+  };
+
+  const handleDeleteDiary = async () => {
+    if (!editingDiaryId) return;
+
+    if (isCurrentFormDateLocked) {
+      notification.warning({
+        message: 'Không thể xóa',
+        description: 'Ngày nhật ký này đã bị khóa sổ.'
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await deleteSiteDiary(selectedProjectId, editingDiaryId);
+      notification.success({
+        message: 'Đã xóa nhật ký',
+        description: 'Bản ghi nhật ký đã được xóa thành công.',
+        placement: 'bottomRight'
+      });
+      revokeAllQueueItems(imageQueue);
+      setImageQueue([]);
+      setEditingDiaryId(null);
+      form.resetFields();
+      form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
+      setDiaryModalOpen(false);
+      await loadDiaries();
+    } catch (err) {
+      notification.error({
+        message: 'Lỗi xóa nhật ký',
+        description: err.response?.data?.message || err.message || 'Không thể xóa nhật ký.'
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const openNewDiary = () => {
@@ -987,18 +1027,44 @@ const SiteDiaryPage = () => {
             />
           </Form.Item>
 
-          <Space style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-            <Button onClick={cancelEditingDiary}>Hủy</Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitting}
-              disabled={isCurrentFormDateLocked}
-              icon={editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
-            >
-              {editingDiaryId ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
-            </Button>
-          </Space>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+            <div>
+              {editingDiaryId && (
+                <Popconfirm
+                  title="Xóa nhật ký công trường"
+                  description="Bạn có chắc chắn muốn xóa bản ghi nhật ký này không? Thao tác này không thể hoàn tác."
+                  onConfirm={handleDeleteDiary}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: true, loading: deleting }}
+                  disabled={isCurrentFormDateLocked || deleting}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={isCurrentFormDateLocked || deleting}
+                    loading={deleting}
+                  >
+                    Xóa nhật ký
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+            <Space>
+              <Button onClick={cancelEditingDiary} disabled={deleting || submitting}>
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={submitting}
+                disabled={isCurrentFormDateLocked || deleting}
+                icon={editingDiaryId ? <EditOutlined /> : <CloudUploadOutlined />}
+              >
+                {editingDiaryId ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
+              </Button>
+            </Space>
+          </div>
         </Form>
       </Modal>
 

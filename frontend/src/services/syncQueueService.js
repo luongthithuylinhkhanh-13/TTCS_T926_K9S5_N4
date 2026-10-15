@@ -131,6 +131,15 @@ class SyncQueueService {
   }
 
   /**
+   * Xóa một bản ghi khỏi hàng đợi đồng bộ
+   */
+  removeItem(id) {
+    let queue = this.getQueue();
+    queue = queue.filter(i => i.id !== id && i.clientSyncId !== id);
+    this.saveQueue(queue);
+  }
+
+  /**
    * Đánh dấu item đồng bộ thất bại, tăng số lần thử lại (retry count)
    */
   markFailed(id, errorMessage) {
