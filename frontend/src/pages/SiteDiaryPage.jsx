@@ -35,8 +35,7 @@ import {
   CloseCircleOutlined,
   CloudSyncOutlined,
   UnorderedListOutlined,
-  LoadingOutlined,
-  DeleteOutlined
+  LoadingOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
@@ -437,7 +436,7 @@ const SiteDiaryPage = () => {
     }
   };
 
-  const handleDeleteDiary = async diary => {
+  const handleDeleteTableDiary = async diary => {
     try {
       await deleteSiteDiary(selectedProjectId, diary.id);
       notification.success({
@@ -645,7 +644,7 @@ const SiteDiaryPage = () => {
                     cancelText="Hủy"
                     okButtonProps={{ danger: true }}
                     disabled={locked || diary._isPendingSync}
-                    onConfirm={() => handleDeleteDiary(diary)}
+                    onConfirm={() => handleDeleteTableDiary(diary)}
                   >
                     <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể xóa.' : ''}>
                       <Button
