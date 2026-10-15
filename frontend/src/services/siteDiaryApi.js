@@ -91,6 +91,10 @@ export const updateSiteDiary = async (projectId, diaryId, diaryData) => {
   return response.data;
 };
 
+export const deleteSiteDiary = async (projectId, diaryId) => {
+  await apiClient.delete(`/api/projects/${projectId}/site-diaries/${diaryId}`);
+};
+
 /**
  * Lấy danh sách nhật ký công trường, gộp các bản ghi đang chờ đồng bộ trong hàng đợi
  */

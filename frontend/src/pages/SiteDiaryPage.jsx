@@ -17,7 +17,8 @@ import {
   Typography,
   Space,
   Tooltip,
-  Badge
+  Badge,
+  Popconfirm
 } from 'antd';
 import {
   BookOutlined,
@@ -33,7 +34,8 @@ import {
   CloseCircleOutlined,
   CloudSyncOutlined,
   UnorderedListOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
@@ -41,6 +43,7 @@ import {
   submitSiteDiary,
   getSiteDiaries,
   updateSiteDiary,
+  deleteSiteDiary,
   lockSiteDiaryDate,
   unlockSiteDiaryDate,
   getProjectDiaryLocks,
@@ -297,6 +300,23 @@ const SiteDiaryPage = () => {
     }
   };
 
+  const handleDeleteDiary = async diary => {
+    try {
+      await deleteSiteDiary(selectedProjectId, diary.id);
+      notification.success({
+        message: 'Đã xóa nhật ký',
+        description: 'Nhật ký công trường đã được xóa khỏi máy chủ.',
+        placement: 'bottomRight'
+      });
+      await loadDiaries();
+    } catch (err) {
+      notification.error({
+        message: 'Lỗi xóa nhật ký',
+        description: err.response?.data?.message || err.message
+      });
+    }
+  };
+
   const pendingDiaries = diaries.filter(d => d._isPendingSync);
   const syncedDiaries = diaries.filter(d => !d._isPendingSync);
   const failedDiaries = pendingDiaries.filter(d => d.rawSyncStatus === 'FAILED');
@@ -345,7 +365,7 @@ const SiteDiaryPage = () => {
       title: 'Nội dung thi công',
       dataIndex: 'workSummary',
       key: 'workSummary',
-      width: 420,
+      width: 260,
       render: (text, r) => (
         <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
           <div
@@ -375,7 +395,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Trạng thái đồng bộ',
       key: 'syncStatus',
-      width: 170,
+      width: 135,
       render: (_, r) => {
         if (r._isRejectedLocked) {
           return (
@@ -423,7 +443,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Khóa sổ',
       key: 'lockStatus',
-      width: 130,
+      width: 95,
       render: (_, r) => {
         const isLocked = isDateLocked(r.diaryDate);
         if (isLocked) {
@@ -443,7 +463,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 190,
+      width: 220,
       render: (_, diary) => {
         const locked = isDateLocked(diary.diaryDate);
         return (
@@ -470,15 +490,38 @@ const SiteDiaryPage = () => {
                 Thử lại
               </Button>
             ) : (
-              <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.' : ''}>
-                <Button
-                  icon={<EditOutlined />}
-                  disabled={locked || diary._isPendingSync}
-                  onClick={() => startEditingDiary(diary)}
-                >
-                  Sửa
-                </Button>
-              </Tooltip>
+              <Space>
+                <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.' : ''}>
+                  <Button
+                    icon={<EditOutlined />}
+                    disabled={locked || diary._isPendingSync}
+                    onClick={() => startEditingDiary(diary)}
+                  >
+                    Sửa
+                  </Button>
+                </Tooltip>
+                {isProjectManager() && (
+                  <Popconfirm
+                    title="Xóa nhật ký này?"
+                    description="Thao tác này không thể hoàn tác."
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                    disabled={locked || diary._isPendingSync}
+                    onConfirm={() => handleDeleteDiary(diary)}
+                  >
+                    <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể xóa.' : ''}>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        disabled={locked || diary._isPendingSync}
+                      >
+                        Xóa
+                      </Button>
+                    </Tooltip>
+                  </Popconfirm>
+                )}
+              </Space>
             )}
           </Space>
         );
@@ -744,7 +787,7 @@ const SiteDiaryPage = () => {
           loading={loading}
           pagination={{ pageSize: 6, showSizeChanger: true, pageSizeOptions: [6, 10, 20] }}
           size="middle"
-          scroll={{ x: 1180 }}
+          scroll={{ x: 1050 }}
           tableLayout="fixed"
         />
       </Card>

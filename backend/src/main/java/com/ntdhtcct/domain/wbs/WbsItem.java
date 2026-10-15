@@ -15,6 +15,8 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -74,6 +76,7 @@ public class WbsItem {
     private String unit;
 
     @Column(name = "unit_price")
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     private Double unitPrice;
 
 

@@ -16,6 +16,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -144,6 +145,19 @@ public class SiteDiaryController {
         return siteDiarySyncService.updateDiary(projectId, diaryId, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Xóa nhật ký, chỉ khi bản ghi thuộc đúng dự án và ngày chưa khóa sổ.
+     */
+    @DeleteMapping("/{diaryId}")
+    public ResponseEntity<?> deleteDiary(
+            @PathVariable UUID projectId,
+            @PathVariable UUID diaryId
+    ) {
+        return siteDiarySyncService.deleteDiary(projectId, diaryId)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     /**

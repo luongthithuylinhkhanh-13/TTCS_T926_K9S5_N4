@@ -83,6 +83,7 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries/batch-sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.PUT, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
         // S-36 (NTDHTCT-220, T-83, T-84, T-85): Lập phiếu nghiệm thu theo đợt
         addRule(HttpMethod.GET, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
