@@ -18,7 +18,8 @@ import {
   Space,
   Tooltip,
   Badge,
-  Popconfirm
+  Popconfirm,
+  Dropdown
 } from 'antd';
 import {
   BookOutlined,
@@ -35,7 +36,8 @@ import {
   CloseCircleOutlined,
   CloudSyncOutlined,
   UnorderedListOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects } from '../services/wbsApi';
@@ -56,6 +58,7 @@ import ImageUploader from '../components/diary/ImageUploader.jsx';
 import DiaryImageList from '../components/diary/DiaryImageList.jsx';
 import { uploadQueueItemStages } from '../services/diaryUploadService.js';
 import { revokeAllQueueItems } from '../utils/imageQueueUtils.js';
+import syncQueueService from '../services/syncQueueService.js';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -402,6 +405,43 @@ const SiteDiaryPage = () => {
     }
   };
 
+  const handleDeleteRow = async (diary) => {
+    if (!diary) return;
+
+    if (isDateLocked(diary.diaryDate)) {
+      notification.warning({
+        message: 'Không thể xóa',
+        description: 'Ngày nhật ký này đã bị khóa sổ.'
+      });
+      return;
+    }
+
+    try {
+      if (diary._isPendingSync) {
+        syncQueueService.removeItem(diary.clientSyncId || diary.id);
+        notification.success({
+          message: 'Đã xóa khỏi hàng đợi',
+          description: 'Bản ghi nhật ký chờ đồng bộ đã được xóa thành công.'
+        });
+        await loadDiaries();
+        return;
+      }
+
+      await deleteSiteDiary(selectedProjectId, diary.id);
+      notification.success({
+        message: 'Đã xóa nhật ký',
+        description: 'Bản ghi nhật ký đã được xóa thành công.',
+        placement: 'bottomRight'
+      });
+      await loadDiaries();
+    } catch (err) {
+      notification.error({
+        message: 'Lỗi xóa nhật ký',
+        description: err.response?.data?.message || err.message || 'Không thể xóa nhật ký.'
+      });
+    }
+  };
+
   const openNewDiary = () => {
     revokeAllQueueItems(imageQueue);
     setImageQueue([]);
@@ -471,15 +511,15 @@ const SiteDiaryPage = () => {
       title: 'Ngày ghi',
       dataIndex: 'diaryDate',
       key: 'diaryDate',
-      width: 120,
+      width: 100,
       render: date => (date ? dayjs(date).format('DD/MM/YYYY') : '--')
     },
     {
       title: 'Thời tiết',
       key: 'weather',
-      width: 130,
+      width: 110,
       render: (_, r) => (
-        <span>
+        <span style={{ fontSize: '13px' }}>
           {r.weather || 'Bình thường'} {r.temperature ? `(${r.temperature})` : ''}
         </span>
       )
@@ -488,12 +528,11 @@ const SiteDiaryPage = () => {
       title: 'Nhân công',
       dataIndex: 'workerCount',
       key: 'workerCount',
-      width: 180,
+      width: 140,
       render: (_, diary) => (
-        <div>
-          <div>Kỹ sư: {diary.engineerCount ?? '--'}</div>
-          <div>Công nhân: {diary.workerCount ?? '--'}</div>
-          <div>Tổ đội: {diary.crewCount ?? '--'}</div>
+        <div style={{ fontSize: '12px', lineHeight: 1.35 }}>
+          <div>Kỹ sư: <b>{diary.engineerCount ?? '--'}</b> | Thợ: <b>{diary.workerCount ?? '--'}</b></div>
+          <div style={{ color: '#595959' }}>Tổ đội: <b>{diary.crewCount ?? '--'}</b></div>
         </div>
       )
     },
@@ -503,25 +542,25 @@ const SiteDiaryPage = () => {
       key: 'workSummary',
       width: 260,
       render: (text, r) => (
-        <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+        <div style={{ minWidth: 0, overflowWrap: 'anywhere', fontSize: '13px' }}>
           <div
             style={{
               fontWeight: 500,
               display: '-webkit-box',
               WebkitBoxOrient: 'vertical',
-              WebkitLineClamp: 3,
+              WebkitLineClamp: 2,
               overflow: 'hidden'
             }}
           >
             {text}
           </div>
           {r.equipmentStatus && (
-            <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+            <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
               Thiết bị: {r.equipmentStatus}
             </div>
           )}
           {r.issues && (
-            <div style={{ fontSize: '12px', color: '#ff4d4f' }}>
+            <div style={{ fontSize: '11px', color: '#ff4d4f' }}>
               Vướng mắc: {r.issues}
             </div>
           )}
@@ -529,7 +568,7 @@ const SiteDiaryPage = () => {
       )
     },
     {
-      title: 'Trạng thái đồng bộ',
+      title: 'Đồng bộ',
       key: 'syncStatus',
       width: 135,
       render: (_, r) => {
@@ -599,74 +638,85 @@ const SiteDiaryPage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 220,
+      width: 90,
+      align: 'center',
       render: (_, diary) => {
         const locked = isDateLocked(diary.diaryDate);
+        const menuItems = [
+          {
+            key: 'detail',
+            icon: <EyeOutlined />,
+            label: 'Xem chi tiết',
+            onClick: () => setDetailDiary(diary)
+          },
+          ...(diary._isRejectedLocked
+            ? [
+                {
+                  key: 'retry',
+                  icon: <SyncOutlined />,
+                  label: 'Thử lại đồng bộ',
+                  onClick: async () => {
+                    retryQueueItem(diary.id);
+                    notification.info({
+                      message: 'Đã đưa vào hàng đợi',
+                      description: 'Bản ghi đã được chuyển về trạng thái chờ đồng bộ.'
+                    });
+                    await loadDiaries();
+                  }
+                }
+              ]
+            : [
+                {
+                  key: 'edit',
+                  icon: <EditOutlined />,
+                  label: 'Chỉnh sửa',
+                  disabled: locked || diary._isPendingSync,
+                  onClick: () => startEditingDiary(diary)
+                }
+              ]),
+          ...(isProjectManager()
+            ? [
+                {
+                  type: 'divider'
+                },
+                {
+                  key: 'delete',
+                  icon: <DeleteOutlined />,
+                  label: 'Xóa nhật ký',
+                  danger: true,
+                  disabled: locked,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: 'Xóa nhật ký công trường?',
+                      content: `Bạn có chắc chắn muốn xóa nhật ký ngày ${diary.diaryDate ? dayjs(diary.diaryDate).format('DD/MM/YYYY') : ''}? Thao tác này không thể hoàn tác.`,
+                      okText: 'Xóa',
+                      okType: 'danger',
+                      cancelText: 'Hủy',
+                      onOk: () => handleDeleteRow(diary)
+                    });
+                  }
+                }
+              ]
+            : [])
+        ];
+
         return (
-          <Space>
+          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
             <Button
-              icon={<EyeOutlined />}
-              onClick={() => setDetailDiary(diary)}
-            >
-              Chi tiết
-            </Button>
-            {diary._isRejectedLocked ? (
-              <Button
-                type="link"
-                size="small"
-                onClick={async () => {
-                  retryQueueItem(diary.id);
-                  notification.info({
-                    message: 'Đã đưa vào hàng đợi',
-                    description: 'Bản ghi đã được chuyển về trạng thái chờ đồng bộ.'
-                  });
-                  await loadDiaries();
-                }}
-              >
-                Thử lại
-              </Button>
-            ) : (
-              <Space>
-                <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể chỉnh sửa.' : ''}>
-                  <Button
-                    icon={<EditOutlined />}
-                    disabled={locked || diary._isPendingSync}
-                    onClick={() => startEditingDiary(diary)}
-                  >
-                    Sửa
-                  </Button>
-                </Tooltip>
-                {isProjectManager() && (
-                  <Popconfirm
-                    title="Xóa nhật ký này?"
-                    description="Thao tác này không thể hoàn tác."
-                    okText="Xóa"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                    disabled={locked || diary._isPendingSync}
-                    onConfirm={() => handleDeleteTableDiary(diary)}
-                  >
-                    <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể xóa.' : ''}>
-                      <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        disabled={locked || diary._isPendingSync}
-                      >
-                        Xóa
-                      </Button>
-                    </Tooltip>
-                  </Popconfirm>
-                )}
-              </Space>
-            )}
-          </Space>
+              type="text"
+              size="small"
+              shape="circle"
+              icon={<MoreOutlined style={{ fontSize: 18 }} />}
+              title="Thao tác"
+            />
+          </Dropdown>
         );
       }
     }
   ];
 
   return (
-    <div style={{ padding: '24px', width: '100%', maxWidth: '1440px', margin: '0 auto', boxSizing: 'border-box' }}>
+    <div style={{ padding: '16px', width: '100%', maxWidth: '1440px', margin: '0 auto', boxSizing: 'border-box' }}>
       {/* Tiêu đề */}
       {!online && (
         <Alert
@@ -674,7 +724,7 @@ const SiteDiaryPage = () => {
           showIcon
           title="Đang ngoại tuyến"
           description="Bạn vẫn có thể tạo nhật ký. Nội dung sẽ được lưu trên thiết bị và tự đồng bộ khi có mạng."
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
         />
       )}
       <div
@@ -682,26 +732,26 @@ const SiteDiaryPage = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '20px',
+          marginBottom: '12px',
           flexWrap: 'wrap',
-          gap: '12px'
+          gap: '8px'
         }}
       >
         <div>
-          <Title level={2} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <BookOutlined style={{ color: '#1890ff' }} /> Nhật ký thi công
           </Title>
-          <Text type="secondary">
+          <Text type="secondary" style={{ fontSize: '13px' }}>
             Theo dõi công việc thi công hằng ngày theo từng dự án.
           </Text>
         </div>
       </div>
 
       {/* Chọn dự án và thao tác nhật ký */}
-      <Card size="small" style={{ marginBottom: '20px', background: '#fafafa' }}>
-        <Row gutter={[16, 12]} align="middle">
+      <Card size="small" style={{ marginBottom: '12px', background: '#fafafa' }}>
+        <Row gutter={[12, 8]} align="middle">
           <Col xs={24} md={9} lg={10}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
               <Text strong style={{ flexShrink: 0 }}>Dự án:</Text>
               <Select
                 value={selectedProjectId}
@@ -716,7 +766,7 @@ const SiteDiaryPage = () => {
           </Col>
 
           <Col xs={24} md={15} lg={14}>
-            <Space wrap style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Space wrap size="small" style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button icon={<ReloadOutlined />} onClick={loadDiaries}>
                 Làm mới
               </Button>
@@ -767,10 +817,10 @@ const SiteDiaryPage = () => {
         <Alert
           type="warning"
           showIcon
-          icon={<ClockCircleOutlined style={{ fontSize: 20, color: '#fa8c16' }} />}
+          icon={<ClockCircleOutlined style={{ fontSize: 18, color: '#fa8c16' }} />}
           message={
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 600, fontSize: '15px' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>
                 Đang có {pendingCount} mục nhật ký chờ đồng bộ lên máy chủ
               </span>
               {failedCount > 0 && (
@@ -779,13 +829,13 @@ const SiteDiaryPage = () => {
             </div>
           }
           description={
-            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <span style={{ color: '#595959' }}>
+            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ color: '#595959', fontSize: '12px' }}>
                 {online
                   ? 'Dữ liệu được lưu trữ an toàn trên thiết bị và sẽ tự động gửi. Bạn cũng có thể nhấn đồng bộ thủ công ngay lập tức.'
                   : 'Thiết bị đang ngoại tuyến. Dữ liệu sẽ tự động được gửi lên máy chủ khi kết nối mạng trở lại.'}
               </span>
-              <Space wrap>
+              <Space wrap size="small">
                 <Button
                   size="small"
                   icon={<UnorderedListOutlined />}
@@ -808,12 +858,12 @@ const SiteDiaryPage = () => {
               </Space>
             </div>
           }
-          style={{ marginBottom: '20px', border: '1px solid #ffe58f', background: '#fffbe6' }}
+          style={{ marginBottom: '12px', border: '1px solid #ffe58f', background: '#fffbe6', padding: '8px 12px' }}
         />
       )}
 
       {/* T-72 & T-73: Thẻ tóm tắt số lượng mục đồng bộ */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '20px' }}>
+      <Row gutter={[12, 12]} style={{ marginBottom: '12px' }}>
         <Col xs={24} sm={8}>
           <Card
             size="small"
@@ -828,10 +878,10 @@ const SiteDiaryPage = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <Text type="secondary" style={{ fontSize: '13px' }}>Tổng số nhật ký</Text>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#262626' }}>{diaries.length}</div>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Tổng số nhật ký</Text>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#262626' }}>{diaries.length}</div>
               </div>
-              <BookOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+              <BookOutlined style={{ fontSize: '22px', color: '#1890ff' }} />
             </div>
           </Card>
         </Col>
@@ -850,13 +900,13 @@ const SiteDiaryPage = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <Text type="secondary" style={{ fontSize: '13px' }}>Chờ đồng bộ (T-73)</Text>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: pendingCount > 0 ? '#d48806' : '#595959', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Chờ đồng bộ (T-73)</Text>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: pendingCount > 0 ? '#d48806' : '#595959', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{pendingCount} mục</span>
                   {pendingCount > 0 && <Badge status="warning" />}
                 </div>
               </div>
-              <ClockCircleOutlined style={{ fontSize: '24px', color: '#faad14' }} />
+              <ClockCircleOutlined style={{ fontSize: '22px', color: '#faad14' }} />
             </div>
           </Card>
         </Col>
@@ -875,20 +925,21 @@ const SiteDiaryPage = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <Text type="secondary" style={{ fontSize: '13px' }}>Đã đồng bộ</Text>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#389e0d' }}>{syncedCount} mục</div>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Đã đồng bộ</Text>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#389e0d' }}>{syncedCount} mục</div>
               </div>
-              <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+              <CheckCircleOutlined style={{ fontSize: '22px', color: '#52c41a' }} />
             </div>
           </Card>
         </Col>
       </Row>
 
       <Card
+        size="small"
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Space align="center">
-              <span>Lịch sử nhật ký</span>
+              <span style={{ fontWeight: 600 }}>Lịch sử nhật ký</span>
               {pendingCount > 0 && (
                 <Badge
                   count={`${pendingCount} chờ đồng bộ`}
@@ -896,24 +947,26 @@ const SiteDiaryPage = () => {
                 />
               )}
             </Space>
-            <Space wrap align="center">
-              <span style={{ fontSize: '13px', color: '#595959' }}>Lọc đồng bộ:</span>
+            <Space wrap align="center" size="small">
+              <span style={{ fontSize: '12px', color: '#595959' }}>Lọc đồng bộ:</span>
               <Select
+                size="small"
                 value={syncFilter}
                 onChange={setSyncFilter}
-                style={{ width: 180 }}
+                style={{ width: 170 }}
                 options={[
                   { label: `Tất cả (${diaries.length})`, value: 'ALL' },
                   { label: `Chưa đồng bộ (${pendingCount})`, value: 'UNSYNCED' },
                   { label: `Đã đồng bộ (${syncedCount})`, value: 'SYNCED' }
                 ]}
               />
-              <Text type="secondary" style={{ fontSize: '13px' }}>
-                Hiển thị: {filteredDiaries.length}/{diaries.length} bản ghi
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {filteredDiaries.length}/{diaries.length} bản ghi
               </Text>
             </Space>
           </div>
         }
+        styles={{ body: { padding: '8px' } }}
         style={{ width: '100%' }}
       >
         <Table
@@ -1113,6 +1166,29 @@ const SiteDiaryPage = () => {
         open={Boolean(detailDiary)}
         onCancel={() => setDetailDiary(null)}
         footer={[
+          detailDiary && (
+            <Popconfirm
+              key="delete"
+              title="Xóa nhật ký này?"
+              description={`Bạn có chắc muốn xóa nhật ký ngày ${dayjs(detailDiary.diaryDate).format('DD/MM/YYYY')}?`}
+              onConfirm={async () => {
+                await handleDeleteRow(detailDiary);
+                setDetailDiary(null);
+              }}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              disabled={isDateLocked(detailDiary.diaryDate)}
+            >
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isDateLocked(detailDiary.diaryDate)}
+              >
+                Xóa
+              </Button>
+            </Popconfirm>
+          ),
           <Button key="close" onClick={() => setDetailDiary(null)}>
             Đóng
           </Button>,
