@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * DTO cập nhật phiếu nghiệm thu (T-83, T-84, T-85)
@@ -21,6 +22,11 @@ public class UpdateAcceptanceReportRequest {
 
     private String status;
     private String notes;
+    private String location;
+    private String ownerRepresentativeName;
+    private String supervisorRepresentativeName;
+    private String contractorRepresentativeName;
+    private UUID acceptanceRecordId;
 
     @Valid
     private List<AcceptanceItemRequest> items = new ArrayList<>();
@@ -72,6 +78,46 @@ public class UpdateAcceptanceReportRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getOwnerRepresentativeName() {
+        return ownerRepresentativeName;
+    }
+
+    public void setOwnerRepresentativeName(String ownerRepresentativeName) {
+        this.ownerRepresentativeName = ownerRepresentativeName;
+    }
+
+    public String getSupervisorRepresentativeName() {
+        return supervisorRepresentativeName;
+    }
+
+    public void setSupervisorRepresentativeName(String supervisorRepresentativeName) {
+        this.supervisorRepresentativeName = supervisorRepresentativeName;
+    }
+
+    public String getContractorRepresentativeName() {
+        return contractorRepresentativeName;
+    }
+
+    public void setContractorRepresentativeName(String contractorRepresentativeName) {
+        this.contractorRepresentativeName = contractorRepresentativeName;
+    }
+
+    public UUID getAcceptanceRecordId() {
+        return acceptanceRecordId;
+    }
+
+    public void setAcceptanceRecordId(UUID acceptanceRecordId) {
+        this.acceptanceRecordId = acceptanceRecordId;
     }
 
     public List<AcceptanceItemRequest> getItems() {
