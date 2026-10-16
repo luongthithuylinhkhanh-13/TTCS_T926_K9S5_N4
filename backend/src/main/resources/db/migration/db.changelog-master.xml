@@ -118,4 +118,8 @@
     <!-- Email verification for self-service registration -->
     <include file="db/migration/v22/V22_0__add_email_verification.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-50: Hồ sơ nghiệm thu theo hạng mục -->
+    <include file="db/migration/v23/V23_0__add_acceptance_dossier_details.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

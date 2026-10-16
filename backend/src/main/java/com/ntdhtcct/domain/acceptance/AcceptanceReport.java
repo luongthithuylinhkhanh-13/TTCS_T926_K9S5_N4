@@ -67,6 +67,21 @@ public class AcceptanceReport {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "location", length = 500)
+    private String location;
+
+    @Column(name = "owner_representative_name", length = 255)
+    private String ownerRepresentativeName;
+
+    @Column(name = "supervisor_representative_name", length = 255)
+    private String supervisorRepresentativeName;
+
+    @Column(name = "contractor_representative_name", length = 255)
+    private String contractorRepresentativeName;
+
+    @Column(name = "acceptance_record_id")
+    private UUID acceptanceRecordId;
+
     @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -226,6 +241,46 @@ public class AcceptanceReport {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getOwnerRepresentativeName() {
+        return ownerRepresentativeName;
+    }
+
+    public void setOwnerRepresentativeName(String ownerRepresentativeName) {
+        this.ownerRepresentativeName = ownerRepresentativeName;
+    }
+
+    public String getSupervisorRepresentativeName() {
+        return supervisorRepresentativeName;
+    }
+
+    public void setSupervisorRepresentativeName(String supervisorRepresentativeName) {
+        this.supervisorRepresentativeName = supervisorRepresentativeName;
+    }
+
+    public String getContractorRepresentativeName() {
+        return contractorRepresentativeName;
+    }
+
+    public void setContractorRepresentativeName(String contractorRepresentativeName) {
+        this.contractorRepresentativeName = contractorRepresentativeName;
+    }
+
+    public UUID getAcceptanceRecordId() {
+        return acceptanceRecordId;
+    }
+
+    public void setAcceptanceRecordId(UUID acceptanceRecordId) {
+        this.acceptanceRecordId = acceptanceRecordId;
     }
 
     public BigDecimal getTotalAmount() {

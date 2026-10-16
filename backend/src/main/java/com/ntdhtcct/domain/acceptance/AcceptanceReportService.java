@@ -26,13 +26,16 @@ import java.util.stream.Collectors;
 public class AcceptanceReportService {
 
     private final AcceptanceReportRepository acceptanceReportRepository;
+    private final AcceptanceRecordRepository acceptanceRecordRepository;
     private final ProjectRepository projectRepository;
 
     public AcceptanceReportService(
             AcceptanceReportRepository acceptanceReportRepository,
+            AcceptanceRecordRepository acceptanceRecordRepository,
             ProjectRepository projectRepository
     ) {
         this.acceptanceReportRepository = acceptanceReportRepository;
+        this.acceptanceRecordRepository = acceptanceRecordRepository;
         this.projectRepository = projectRepository;
     }
 
@@ -75,6 +78,15 @@ public class AcceptanceReportService {
                 request.getStatus(),
                 creatorId,
                 request.getNotes()
+        );
+        applyDossierFields(
+                report,
+                projectId,
+                request.getLocation(),
+                request.getOwnerRepresentativeName(),
+                request.getSupervisorRepresentativeName(),
+                request.getContractorRepresentativeName(),
+                request.getAcceptanceRecordId()
         );
 
         // T-84 & T-85: Thêm các hạng mục và tự động tính giá trị
@@ -142,6 +154,15 @@ public class AcceptanceReportService {
                         report.setStatus(request.getStatus());
                     }
                     report.setNotes(request.getNotes());
+                    applyDossierFields(
+                            report,
+                            projectId,
+                            request.getLocation(),
+                            request.getOwnerRepresentativeName(),
+                            request.getSupervisorRepresentativeName(),
+                            request.getContractorRepresentativeName(),
+                            request.getAcceptanceRecordId()
+                    );
 
                     // Cập nhật lại danh sách hạng mục (T-84, T-85)
                     if (request.getItems() != null) {
@@ -230,5 +251,29 @@ public class AcceptanceReportService {
         if (item.getUnitPrice() != null && item.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Đơn giá không được âm: " + item.getItemName());
         }
+    }
+
+    private void applyDossierFields(
+            AcceptanceReport report,
+            UUID projectId,
+            String location,
+            String ownerRepresentativeName,
+            String supervisorRepresentativeName,
+            String contractorRepresentativeName,
+            UUID acceptanceRecordId
+    ) {
+        if (acceptanceRecordId != null
+                && acceptanceRecordRepository.findByIdAndProjectId(acceptanceRecordId, projectId).isEmpty()) {
+            throw new IllegalArgumentException("Phiếu S-39 không thuộc dự án đang chọn");
+        }
+        report.setLocation(trimToNull(location));
+        report.setOwnerRepresentativeName(trimToNull(ownerRepresentativeName));
+        report.setSupervisorRepresentativeName(trimToNull(supervisorRepresentativeName));
+        report.setContractorRepresentativeName(trimToNull(contractorRepresentativeName));
+        report.setAcceptanceRecordId(acceptanceRecordId);
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

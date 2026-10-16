@@ -32,6 +32,9 @@ public class AcceptanceReportServiceTest {
     private AcceptanceReportRepository acceptanceReportRepository;
 
     @Mock
+    private AcceptanceRecordRepository acceptanceRecordRepository;
+
+    @Mock
     private ProjectRepository projectRepository;
 
     private AcceptanceReportService acceptanceReportService;
@@ -41,7 +44,11 @@ public class AcceptanceReportServiceTest {
 
     @BeforeEach
     void setUp() {
-        acceptanceReportService = new AcceptanceReportService(acceptanceReportRepository, projectRepository);
+        acceptanceReportService = new AcceptanceReportService(
+                acceptanceReportRepository,
+                acceptanceRecordRepository,
+                projectRepository
+        );
     }
 
     @Test
