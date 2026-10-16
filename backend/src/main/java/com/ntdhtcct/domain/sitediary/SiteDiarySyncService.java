@@ -5,12 +5,14 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -62,6 +64,10 @@ public class SiteDiarySyncService {
                     request.getClientSyncId(),
                     offlineTime
             );
+            diary.setEngineerCount(request.getEngineerCount());
+            diary.setCrewCount(request.getCrewCount());
+            diary.setCrewDetails(request.getCrewDetails());
+            diary.setWorkingConditions(request.getWorkingConditions());
 
             SiteDiary saved = siteDiaryRepository.save(diary);
             return SiteDiarySyncResult.created(request.getClientSyncId(), saved.getId());
@@ -118,8 +124,36 @@ public class SiteDiarySyncService {
      */
     @Transactional(readOnly = true)
     public Optional<SiteDiaryResponse> getDiaryById(UUID projectId, UUID diaryId) {
-        return siteDiaryRepository.findById(diaryId)
+        return siteDiaryRepository.findById(Objects.requireNonNull(diaryId))
                 .filter(d -> d.getProjectId().equals(projectId))
+                .map(SiteDiaryResponse::from);
+    }
+
+    /**
+     * Cập nhật nội dung nhật ký, chỉ khi bản ghi thuộc đúng dự án.
+     */
+    @Transactional
+    public Optional<SiteDiaryResponse> updateDiary(
+            UUID projectId,
+            UUID diaryId,
+            SiteDiaryUpdateRequest request
+    ) {
+        return siteDiaryRepository.findById(Objects.requireNonNull(diaryId))
+                .filter(diary -> diary.getProjectId().equals(projectId))
+                .map(diary -> {
+                    diary.setDiaryDate(request.diaryDate());
+                    diary.setWeather(request.weather());
+                    diary.setTemperature(request.temperature());
+                    diary.setEngineerCount(request.engineerCount());
+                    diary.setWorkerCount(request.workerCount());
+                    diary.setCrewCount(request.crewCount());
+                    diary.setCrewDetails(request.crewDetails());
+                    diary.setEquipmentStatus(request.equipmentStatus());
+                    diary.setWorkingConditions(request.workingConditions());
+                    diary.setWorkSummary(request.workSummary());
+                    diary.setIssues(request.issues());
+                    return siteDiaryRepository.save(diary);
+                })
                 .map(SiteDiaryResponse::from);
     }
 }

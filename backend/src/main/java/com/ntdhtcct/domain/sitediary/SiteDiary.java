@@ -45,11 +45,23 @@ public class SiteDiary {
     @Column(name = "temperature", length = 50)
     private String temperature;
 
+    @Column(name = "engineer_count")
+    private Integer engineerCount;
+
     @Column(name = "worker_count")
     private Integer workerCount;
 
+    @Column(name = "crew_count")
+    private Integer crewCount;
+
+    @Column(name = "crew_details", columnDefinition = "TEXT")
+    private String crewDetails;
+
     @Column(name = "equipment_status", columnDefinition = "TEXT")
     private String equipmentStatus;
+
+    @Column(name = "working_conditions", columnDefinition = "TEXT")
+    private String workingConditions;
 
     @NotBlank(message = "Nội dung thi công không được để trống")
     @Column(name = "work_summary", nullable = false, columnDefinition = "TEXT")
@@ -175,6 +187,14 @@ public class SiteDiary {
         this.temperature = temperature;
     }
 
+    public Integer getEngineerCount() {
+        return engineerCount;
+    }
+
+    public void setEngineerCount(Integer engineerCount) {
+        this.engineerCount = engineerCount;
+    }
+
     public Integer getWorkerCount() {
         return workerCount;
     }
@@ -183,12 +203,36 @@ public class SiteDiary {
         this.workerCount = workerCount;
     }
 
+    public Integer getCrewCount() {
+        return crewCount;
+    }
+
+    public void setCrewCount(Integer crewCount) {
+        this.crewCount = crewCount;
+    }
+
+    public String getCrewDetails() {
+        return crewDetails;
+    }
+
+    public void setCrewDetails(String crewDetails) {
+        this.crewDetails = crewDetails;
+    }
+
     public String getEquipmentStatus() {
         return equipmentStatus;
     }
 
     public void setEquipmentStatus(String equipmentStatus) {
         this.equipmentStatus = equipmentStatus;
+    }
+
+    public String getWorkingConditions() {
+        return workingConditions;
+    }
+
+    public void setWorkingConditions(String workingConditions) {
+        this.workingConditions = workingConditions;
     }
 
     public String getWorkSummary() {

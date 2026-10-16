@@ -6,12 +6,14 @@ import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncResult;
+import com.ntdhtcct.domain.sitediary.dto.SiteDiaryUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -104,6 +106,20 @@ public class SiteDiaryController {
     @GetMapping("/{diaryId}")
     public ResponseEntity<?> getDiaryById(@PathVariable UUID projectId, @PathVariable UUID diaryId) {
         return siteDiarySyncService.getDiaryById(projectId, diaryId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Cập nhật nhật ký đã ghi trong dự án.
+     */
+    @PutMapping("/{diaryId}")
+    public ResponseEntity<?> updateDiary(
+            @PathVariable UUID projectId,
+            @PathVariable UUID diaryId,
+            @Valid @RequestBody SiteDiaryUpdateRequest request
+    ) {
+        return siteDiarySyncService.updateDiary(projectId, diaryId, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

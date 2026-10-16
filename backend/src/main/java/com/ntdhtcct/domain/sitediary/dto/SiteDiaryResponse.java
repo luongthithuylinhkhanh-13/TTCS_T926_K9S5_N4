@@ -14,8 +14,12 @@ public class SiteDiaryResponse {
     private LocalDate diaryDate;
     private String weather;
     private String temperature;
+    private Integer engineerCount;
     private Integer workerCount;
+    private Integer crewCount;
+    private String crewDetails;
     private String equipmentStatus;
+    private String workingConditions;
     private String workSummary;
     private String issues;
     private String clientSyncId;
@@ -35,8 +39,12 @@ public class SiteDiaryResponse {
         res.setDiaryDate(diary.getDiaryDate());
         res.setWeather(diary.getWeather());
         res.setTemperature(diary.getTemperature());
+        res.setEngineerCount(diary.getEngineerCount());
         res.setWorkerCount(diary.getWorkerCount());
+        res.setCrewCount(diary.getCrewCount());
+        res.setCrewDetails(diary.getCrewDetails());
         res.setEquipmentStatus(diary.getEquipmentStatus());
+        res.setWorkingConditions(diary.getWorkingConditions());
         res.setWorkSummary(diary.getWorkSummary());
         res.setIssues(diary.getIssues());
         res.setClientSyncId(diary.getClientSyncId());
@@ -96,6 +104,14 @@ public class SiteDiaryResponse {
         this.temperature = temperature;
     }
 
+    public Integer getEngineerCount() {
+        return engineerCount;
+    }
+
+    public void setEngineerCount(Integer engineerCount) {
+        this.engineerCount = engineerCount;
+    }
+
     public Integer getWorkerCount() {
         return workerCount;
     }
@@ -104,12 +120,36 @@ public class SiteDiaryResponse {
         this.workerCount = workerCount;
     }
 
+    public Integer getCrewCount() {
+        return crewCount;
+    }
+
+    public void setCrewCount(Integer crewCount) {
+        this.crewCount = crewCount;
+    }
+
+    public String getCrewDetails() {
+        return crewDetails;
+    }
+
+    public void setCrewDetails(String crewDetails) {
+        this.crewDetails = crewDetails;
+    }
+
     public String getEquipmentStatus() {
         return equipmentStatus;
     }
 
     public void setEquipmentStatus(String equipmentStatus) {
         this.equipmentStatus = equipmentStatus;
+    }
+
+    public String getWorkingConditions() {
+        return workingConditions;
+    }
+
+    public void setWorkingConditions(String workingConditions) {
+        this.workingConditions = workingConditions;
     }
 
     public String getWorkSummary() {

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V17.0-extend-site-diaries" author="S-22">
+        <addColumn tableName="site_diaries">
+            <column name="engineer_count" type="INTEGER"/>
+            <column name="crew_count" type="INTEGER"/>
+            <column name="crew_details" type="TEXT"/>
+            <column name="working_conditions" type="TEXT"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="site_diaries" columnName="working_conditions"/>
+            <dropColumn tableName="site_diaries" columnName="crew_details"/>
+            <dropColumn tableName="site_diaries" columnName="crew_count"/>
+            <dropColumn tableName="site_diaries" columnName="engineer_count"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

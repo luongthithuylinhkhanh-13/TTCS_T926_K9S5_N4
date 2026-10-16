@@ -69,8 +69,8 @@ const Sidebar = ({ collapsed }) => {
       <div className="sidebar-menu">
         {!collapsed && <div className="sidebar-section-label">{t('TỔNG QUAN')}</div>}
         <div
-          className="sidebar-item"
-          onClick={() => handleNonWbsClick(t('Dashboard'))}
+          className={`sidebar-item ${location.pathname === '/investor-dashboard' ? 'active' : ''}`}
+          onClick={() => navigate('/investor-dashboard')}
           title={collapsed ? t('Dashboard') : ''}
         >
           <DashboardOutlined />

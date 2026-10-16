@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 public class SiteDiarySyncServiceTest {
@@ -52,20 +53,30 @@ public class SiteDiarySyncServiceTest {
                 "Không",
                 OffsetDateTime.now()
         );
+        req.setEngineerCount(2);
+        req.setCrewCount(3);
+        req.setCrewDetails("Tổ cốt thép: 8 người");
+        req.setWorkingConditions("Mưa làm mặt bằng trơn");
 
         when(siteDiaryRepository.findByClientSyncId(syncId)).thenReturn(Optional.empty());
-
-        SiteDiary savedDiary = new SiteDiary();
-        savedDiary.setId(UUID.randomUUID());
-        savedDiary.setClientSyncId(syncId);
-        when(siteDiaryRepository.save(any(SiteDiary.class))).thenReturn(savedDiary);
+        when(siteDiaryRepository.save(any(SiteDiary.class))).thenAnswer(invocation -> {
+            SiteDiary diary = invocation.getArgument(0);
+            diary.setId(UUID.randomUUID());
+            return diary;
+        });
 
         SiteDiarySyncResult result = siteDiarySyncService.syncSingleDiary(projectId, reporterId, req);
 
         assertThat(result.getStatus()).isEqualTo("CREATED");
         assertThat(result.getClientSyncId()).isEqualTo(syncId);
+        ArgumentCaptor<SiteDiary> diaryCaptor = ArgumentCaptor.forClass(SiteDiary.class);
+        verify(siteDiaryRepository).save(diaryCaptor.capture());
+        SiteDiary savedDiary = diaryCaptor.getValue();
         assertThat(result.getServerDiaryId()).isEqualTo(savedDiary.getId());
-        verify(siteDiaryRepository, times(1)).save(any(SiteDiary.class));
+        assertThat(savedDiary.getEngineerCount()).isEqualTo(2);
+        assertThat(savedDiary.getCrewCount()).isEqualTo(3);
+        assertThat(savedDiary.getCrewDetails()).isEqualTo("Tổ cốt thép: 8 người");
+        assertThat(savedDiary.getWorkingConditions()).isEqualTo("Mưa làm mặt bằng trơn");
     }
 
     @Test
