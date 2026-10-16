@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Table,
@@ -31,13 +31,15 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  FilePdfOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects, getProjectWbs } from '../services/wbsApi';
 import {
   getAcceptanceReports,
   getAcceptanceReport,
+  getAcceptanceDossier,
   getAcceptanceSummary,
   getNextPeriod,
   createAcceptanceReport,
@@ -46,6 +48,8 @@ import {
   calculateItemAmount,
   calculateTotalAmount
 } from '../services/acceptanceApi';
+import { getAcceptanceRecords } from '../services/acceptanceRecordApi';
+import AcceptanceDossierDocument from '../components/acceptance/AcceptanceDossierDocument.jsx';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -60,6 +64,7 @@ const AcceptancePage = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [reports, setReports] = useState([]);
+  const [acceptanceRecords, setAcceptanceRecords] = useState([]);
   const [wbsItems, setWbsItems] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -72,6 +77,9 @@ const AcceptancePage = () => {
 
   // State cho Modal Chi tiết
   const [detailReport, setDetailReport] = useState(null);
+  const [pdfExportData, setPdfExportData] = useState(null);
+  const [pdfExportingId, setPdfExportingId] = useState(null);
+  const pdfDocumentRef = useRef(null);
 
   // State cho Modal chọn hạng mục WBS (T-84)
   const [wbsSelectModalOpen, setWbsSelectModalOpen] = useState(false);
@@ -105,6 +113,16 @@ const AcceptancePage = () => {
       setReports(reportsData);
       setSummary(summaryData);
       setWbsItems(Array.isArray(wbsData) ? wbsData : []);
+      try {
+        const recordsData = await getAcceptanceRecords(selectedProjectId);
+        setAcceptanceRecords(Array.isArray(recordsData) ? recordsData : []);
+      } catch (err) {
+        setAcceptanceRecords([]);
+        notification.warning({
+          message: 'Không thể tải phiếu duyệt S-39',
+          description: err.response?.data?.message || err.message
+        });
+      }
     } catch (err) {
       console.error('Lỗi tải dữ liệu nghiệm thu:', err);
       notification.error({
@@ -163,7 +181,12 @@ const AcceptancePage = () => {
         periodNumber: detail.periodNumber,
         acceptanceDate: detail.acceptanceDate ? dayjs(detail.acceptanceDate) : dayjs(),
         status: detail.status,
-        notes: detail.notes
+        notes: detail.notes,
+        location: detail.location,
+        ownerRepresentativeName: detail.ownerRepresentativeName,
+        supervisorRepresentativeName: detail.supervisorRepresentativeName,
+        contractorRepresentativeName: detail.contractorRepresentativeName,
+        acceptanceRecordId: detail.acceptanceRecordId
       });
       setItems(detail.items || []);
       setModalOpen(true);
@@ -265,6 +288,11 @@ const AcceptancePage = () => {
         acceptanceDate: values.acceptanceDate.format('YYYY-MM-DD'),
         status: values.status,
         notes: values.notes,
+        location: values.location,
+        ownerRepresentativeName: values.ownerRepresentativeName,
+        supervisorRepresentativeName: values.supervisorRepresentativeName,
+        contractorRepresentativeName: values.contractorRepresentativeName,
+        acceptanceRecordId: values.acceptanceRecordId || null,
         items: items.map(item => ({
           wbsItemId: item.wbsItemId,
           taskId: item.taskId,
@@ -317,6 +345,60 @@ const AcceptancePage = () => {
       });
     }
   };
+
+  const handleExportDossier = async report => {
+    setPdfExportingId(report.id);
+    try {
+      const dossier = await getAcceptanceDossier(report.id);
+      setPdfExportData(dossier);
+    } catch (err) {
+      setPdfExportingId(null);
+      notification.error({
+        message: 'Không thể xuất hồ sơ nghiệm thu',
+        description: err.response?.data?.message || err.message
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!pdfExportData || !pdfDocumentRef.current) return;
+
+    const generatePdf = async () => {
+      try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        const safeReportNumber = String(pdfExportData.reportNumber || 'nghiem-thu')
+          .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-');
+        await html2pdf()
+          .set({
+            margin: 0,
+            filename: `Bien-ban-nghiem-thu-${safeReportNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff',
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+          })
+          .from(pdfDocumentRef.current)
+          .save();
+        notification.success({ message: 'Đã tải biên bản nghiệm thu PDF' });
+      } catch (err) {
+        notification.error({
+          message: 'Tạo PDF thất bại',
+          description: err.message || 'Không thể tạo tệp PDF.'
+        });
+      } finally {
+        setPdfExportData(null);
+        setPdfExportingId(null);
+      }
+    };
+
+    generatePdf();
+  }, [pdfExportData]);
 
   // Cột bảng danh sách phiếu nghiệm thu
   const columns = [
@@ -382,7 +464,7 @@ const AcceptancePage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 180,
+      width: 240,
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -402,6 +484,15 @@ const AcceptancePage = () => {
             disabled={record.status === 'APPROVED'}
           >
             Sửa
+          </Button>
+          <Button
+            size="small"
+            icon={<FilePdfOutlined />}
+            loading={pdfExportingId === record.id}
+            disabled={pdfExportingId !== null && pdfExportingId !== record.id}
+            onClick={() => handleExportDossier(record)}
+          >
+            Xuất PDF
           </Button>
           <Popconfirm
             title="Xác nhận xóa phiếu nghiệm thu này?"
@@ -600,6 +691,48 @@ const AcceptancePage = () => {
 
           <Form.Item name="notes" label="Ghi chú / Nhận xét nghiệm thu">
             <TextArea rows={2} placeholder="Ghi nhận đánh giá hiện trường hoặc ghi chú hồ sơ..." />
+          </Form.Item>
+
+          <Divider orientation="left" style={{ margin: '12px 0' }}>
+            Thông tin hồ sơ nghiệm thu
+          </Divider>
+          <Form.Item name="location" label="Vị trí / đoạn thi công">
+            <Input placeholder="Ví dụ: Trục A-B, tầng 2, khu vực phía Đông..." />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col xs={24} md={8}>
+              <Form.Item name="ownerRepresentativeName" label="Đại diện Chủ đầu tư">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="supervisorRepresentativeName" label="Đại diện Tư vấn giám sát">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="contractorRepresentativeName" label="Đại diện Nhà thầu">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="acceptanceRecordId" label="Liên kết phiếu nghiệm thu / phê duyệt S-39">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Chọn phiếu S-39 để đưa kết quả và người duyệt vào hồ sơ"
+              options={acceptanceRecords.map(acceptanceRecord => ({
+                value: acceptanceRecord.id,
+                label: `${acceptanceRecord.title} · ${acceptanceRecord.inspectionDate ? dayjs(acceptanceRecord.inspectionDate).format('DD/MM/YYYY') : 'Chưa có ngày'} · ${
+                  acceptanceRecord.status === 'APPROVED'
+                    ? 'Đã duyệt'
+                    : acceptanceRecord.status === 'RETURNED'
+                      ? 'Trả lại'
+                      : 'Chờ duyệt'
+                }`
+              }))}
+            />
           </Form.Item>
 
           <Divider orientation="left" style={{ margin: '16px 0 12px 0' }}>
@@ -841,6 +974,14 @@ const AcceptancePage = () => {
           ]}
         />
       </Modal>
+
+      <div className="acceptance-dossier-export-host" aria-hidden="true">
+        {pdfExportData && (
+          <div ref={pdfDocumentRef}>
+            <AcceptanceDossierDocument dossier={pdfExportData} />
+          </div>
+        )}
+      </div>
 
       {/* Modal Xem Chi Tiết Phiếu Nghiệm Thu */}
       <Modal

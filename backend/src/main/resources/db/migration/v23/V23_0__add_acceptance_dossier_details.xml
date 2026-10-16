@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V23.0-add-acceptance-dossier-details" author="S-50">
+        <addColumn tableName="acceptance_reports">
+            <column name="location" type="VARCHAR(500)"/>
+            <column name="owner_representative_name" type="VARCHAR(255)"/>
+            <column name="supervisor_representative_name" type="VARCHAR(255)"/>
+            <column name="contractor_representative_name" type="VARCHAR(255)"/>
+            <column name="acceptance_record_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="acceptance_reports"
+            baseColumnNames="acceptance_record_id"
+            referencedTableName="acceptance_records"
+            referencedColumnNames="id"
+            constraintName="fk_acceptance_reports_acceptance_record"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="acceptance_reports" indexName="idx_acceptance_reports_acceptance_record">
+            <column name="acceptance_record_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropForeignKeyConstraint
+                baseTableName="acceptance_reports"
+                constraintName="fk_acceptance_reports_acceptance_record"/>
+            <dropIndex tableName="acceptance_reports" indexName="idx_acceptance_reports_acceptance_record"/>
+            <dropColumn tableName="acceptance_reports" columnName="location"/>
+            <dropColumn tableName="acceptance_reports" columnName="owner_representative_name"/>
+            <dropColumn tableName="acceptance_reports" columnName="supervisor_representative_name"/>
+            <dropColumn tableName="acceptance_reports" columnName="contractor_representative_name"/>
+            <dropColumn tableName="acceptance_reports" columnName="acceptance_record_id"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

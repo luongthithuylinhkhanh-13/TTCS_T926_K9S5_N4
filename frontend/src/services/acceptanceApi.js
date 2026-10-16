@@ -49,6 +49,14 @@ export const getAcceptanceReport = async (projectId, reportId) => {
 };
 
 /**
+ * T-105: Lấy dữ liệu đầy đủ để lập hồ sơ nghiệm thu.
+ */
+export const getAcceptanceDossier = async reportId => {
+  const response = await apiClient.get(`/api/acceptance-reports/${reportId}`);
+  return response.data;
+};
+
+/**
  * Lấy tóm tắt thống kê nghiệm thu của dự án
  */
 export const getAcceptanceSummary = async projectId => {
