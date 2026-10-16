@@ -10,6 +10,7 @@ import {
   CalendarOutlined,
   BookOutlined,
   AuditOutlined,
+  SettingOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
@@ -166,6 +167,16 @@ const Sidebar = ({ collapsed }) => {
           <AuditOutlined />
           {!collapsed && <span>{t('Nghiệm thu khối lượng')}</span>}
         </div>
+        {user?.roleName?.toUpperCase() === 'ADMIN' && (
+          <div
+            className={`sidebar-item ${location.pathname === '/admin/system-health' ? 'active' : ''}`}
+            onClick={() => navigate('/admin/system-health')}
+            title={collapsed ? 'Sức khỏe hệ thống' : ''}
+          >
+            <SettingOutlined />
+            {!collapsed && <span>Sức khỏe hệ thống</span>}
+          </div>
+        )}
       </div>
 
       {/* Bottom Gradient placeholder */}

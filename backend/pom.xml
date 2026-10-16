@@ -55,6 +55,12 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- Health probes for the database, mail server, and application runtime -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Password Hashing: Argon2id -->
         <dependency>
             <groupId>org.springframework.security</groupId>
