@@ -511,13 +511,13 @@ const SiteDiaryPage = () => {
       title: 'Ngày ghi',
       dataIndex: 'diaryDate',
       key: 'diaryDate',
-      width: 100,
+      width: 90,
       render: date => (date ? dayjs(date).format('DD/MM/YYYY') : '--')
     },
     {
       title: 'Thời tiết',
       key: 'weather',
-      width: 110,
+      width: 100,
       render: (_, r) => (
         <span style={{ fontSize: '13px' }}>
           {r.weather || 'Bình thường'} {r.temperature ? `(${r.temperature})` : ''}
@@ -528,7 +528,7 @@ const SiteDiaryPage = () => {
       title: 'Nhân công',
       dataIndex: 'workerCount',
       key: 'workerCount',
-      width: 140,
+      width: 125,
       render: (_, diary) => (
         <div style={{ fontSize: '12px', lineHeight: 1.35 }}>
           <div>Kỹ sư: <b>{diary.engineerCount ?? '--'}</b> | Thợ: <b>{diary.workerCount ?? '--'}</b></div>
@@ -540,7 +540,7 @@ const SiteDiaryPage = () => {
       title: 'Nội dung thi công',
       dataIndex: 'workSummary',
       key: 'workSummary',
-      width: 260,
+      width: 220,
       render: (text, r) => (
         <div style={{ minWidth: 0, overflowWrap: 'anywhere', fontSize: '13px' }}>
           <div
@@ -618,7 +618,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Khóa sổ',
       key: 'lockStatus',
-      width: 95,
+      width: 90,
       render: (_, r) => {
         const isLocked = isDateLocked(r.diaryDate);
         if (isLocked) {
@@ -638,7 +638,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 90,
+      width: 64,
       align: 'center',
       render: (_, diary) => {
         const locked = isDateLocked(diary.diaryDate);
@@ -707,7 +707,7 @@ const SiteDiaryPage = () => {
               size="small"
               shape="circle"
               icon={<MoreOutlined style={{ fontSize: 18 }} />}
-              title="Thao tác"
+              aria-label="Thao tác"
             />
           </Dropdown>
         );
@@ -976,7 +976,7 @@ const SiteDiaryPage = () => {
           loading={loading}
           pagination={{ pageSize: 6, showSizeChanger: true, pageSizeOptions: [6, 10, 20] }}
           size="middle"
-          scroll={{ x: 1050 }}
+          scroll={{ x: 'max-content' }}
           tableLayout="fixed"
         />
       </Card>
