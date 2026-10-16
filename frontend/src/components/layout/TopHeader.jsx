@@ -27,7 +27,9 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
     .slice(0, 2)
     .map(part => part[0].toUpperCase())
     .join('');
-  const currentSection = location.pathname === '/progress'
+  const currentSection = location.pathname === '/investor-dashboard'
+    ? t('Dashboard')
+    : location.pathname === '/progress'
     ? t('Tiến độ')
     : location.pathname === '/progress/milestones'
       ? t('Mốc tiến độ')

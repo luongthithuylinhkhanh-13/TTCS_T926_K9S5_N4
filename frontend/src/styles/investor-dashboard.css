@@ -1,0 +1,637 @@
+.investor-dashboard {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 4px 0 28px;
+  color: var(--text-primary);
+}
+
+.investor-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 22px;
+}
+
+.investor-eyebrow {
+  color: #3478f6;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+
+.investor-page-header h1 {
+  margin: 5px 0 4px;
+  font-size: 25px;
+  line-height: 1.3;
+}
+
+.investor-page-header > div:first-child > p,
+.investor-panel-heading p {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.investor-project-meta {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.2fr) minmax(180px, 1fr) minmax(190px, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-light);
+}
+
+.investor-project-name {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.investor-project-icon,
+.investor-summary-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #3478f6;
+  font-size: 17px;
+}
+
+.investor-project-name > span:last-child,
+.investor-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.investor-project-meta small,
+.investor-meta-item > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.investor-project-meta strong {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.investor-meta-item > span svg {
+  margin-right: 4px;
+}
+
+.investor-updated strong {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.investor-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.investor-summary-card {
+  min-height: 126px;
+  padding: 15px 17px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-light);
+}
+
+.investor-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.investor-summary-percent {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.investor-summary-value {
+  display: block;
+  margin-top: 10px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.investor-summary-label {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.investor-summary-card.green .investor-summary-icon { background: #eaf8f0; color: #159455; }
+.investor-summary-card.orange .investor-summary-icon { background: #fff6e8; color: #d98a05; }
+.investor-summary-card.red .investor-summary-icon { background: #fff0ef; color: #dc4545; }
+
+.investor-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-light);
+}
+
+.investor-overall-panel {
+  margin-bottom: 14px;
+}
+
+.investor-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.investor-panel-heading h2 {
+  margin-bottom: 3px;
+  font-size: 15px;
+}
+
+.investor-panel-heading p {
+  font-size: 11px;
+}
+
+.investor-trend,
+.investor-task-count {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  align-items: center;
+  color: #16824f;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.investor-task-count {
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: var(--text-secondary);
+}
+
+.investor-progress-track,
+.category-progress-track {
+  overflow: hidden;
+  height: 10px;
+  border-radius: 10px;
+  background: #edf1f6;
+}
+
+.investor-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3478f6, #21ad79);
+  transition: width .3s ease;
+}
+
+.investor-overall-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.investor-overall-stats strong {
+  color: #2868dc;
+  font-size: 20px;
+}
+
+.investor-overall-stats span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.investor-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, .9fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.investor-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.investor-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.investor-table th {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.investor-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.investor-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.investor-table td strong {
+  font-weight: 600;
+}
+
+.investor-table-detail {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.category-progress {
+  display: flex;
+  min-width: 120px;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-progress-track {
+  flex: 1;
+  height: 6px;
+}
+
+.category-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #3478f6;
+}
+
+.category-progress strong {
+  min-width: 31px;
+  font-size: 10px;
+}
+
+.investor-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: #eef6ff;
+  color: #2868dc;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.investor-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.investor-task-statuses {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.investor-deadline-label {
+  padding-left: 14px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.investor-deadline-label.due-soon { color: #a96700; }
+.investor-deadline-label.overdue { color: #c83d3d; }
+
+.status-on-track { background: #eef6ff; color: #2868dc; }
+.status-completed { background: #eaf8f0; color: #16824f; }
+.status-delayed,
+.status-overdue { background: #fff0ef; color: #c83d3d; }
+.status-due-soon { background: #fff6e5; color: #a96700; }
+.status-normal { background: #f1f5f9; color: #667085; }
+
+.investor-timeline {
+  list-style: none;
+  padding: 2px 0 0;
+}
+
+.investor-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding-bottom: 22px;
+}
+
+.investor-timeline li:not(:last-child)::after {
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: 9px;
+  width: 2px;
+  background: #e5eaf1;
+  content: '';
+}
+
+.investor-timeline-marker {
+  z-index: 1;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  background: var(--card-bg);
+  color: #fff;
+  font-size: 9px;
+}
+
+.investor-timeline li.completed .investor-timeline-marker {
+  border-color: #18a365;
+  background: #18a365;
+}
+
+.investor-timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.investor-timeline-content strong {
+  font-size: 11px;
+}
+
+.investor-timeline-content > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.investor-milestone-state {
+  grid-column: 2;
+  width: fit-content;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.investor-milestone-state.is-completed {
+  color: #16824f;
+}
+
+.investor-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.chart-panel {
+  min-height: 240px;
+}
+
+.investor-pie-layout {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 55px);
+}
+
+.investor-pie-chart {
+  width: 142px;
+  height: 142px;
+  flex: 0 0 auto;
+}
+
+.investor-chart-legend {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+}
+
+.investor-chart-legend li {
+  display: grid;
+  grid-template-columns: 9px minmax(85px, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.investor-chart-legend li > span:first-child {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.investor-chart-legend strong {
+  color: var(--text-primary);
+}
+
+.investor-bar-chart {
+  position: relative;
+  height: 172px;
+  margin: 4px 4px 0 27px;
+}
+
+.investor-chart-tick {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px dashed var(--border-color);
+}
+
+.investor-chart-tick > span {
+  position: absolute;
+  top: -8px;
+  left: -26px;
+  color: var(--text-secondary);
+  font-size: 8px;
+}
+
+.investor-bars {
+  position: absolute;
+  inset: 0 0 0 4px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+}
+
+.investor-bar-column {
+  position: relative;
+  display: flex;
+  width: min(18%, 58px);
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.investor-bar-column > strong {
+  position: absolute;
+  bottom: calc(100% * var(--bar-progress) + 5px);
+  color: var(--text-secondary);
+  font-size: 8px;
+}
+
+.investor-bar {
+  z-index: 1;
+  width: min(65%, 28px);
+  min-height: 3px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #5a91fa, #3478f6);
+}
+
+.investor-bar-label {
+  position: absolute;
+  top: calc(100% + 8px);
+  width: 100%;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 8px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-table th:first-child,
+.upcoming-table td:first-child {
+  min-width: 240px;
+}
+
+.upcoming-table td {
+  white-space: normal;
+}
+
+.upcoming-table td:nth-child(2),
+.upcoming-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.task-row-due-soon td {
+  background: #fffaf0;
+}
+
+.task-row-overdue td {
+  background: #fff5f4;
+}
+
+.investor-data-note {
+  padding-top: 12px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-align: right;
+}
+
+[data-theme='dark'] .investor-summary-card,
+[data-theme='dark'] .investor-panel,
+[data-theme='dark'] .investor-project-meta {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .task-row-due-soon td { background: rgba(169, 103, 0, .12); }
+[data-theme='dark'] .task-row-overdue td { background: rgba(200, 61, 61, .12); }
+[data-theme='dark'] .investor-task-count { background: #273449; }
+[data-theme='dark'] .investor-progress-track,
+[data-theme='dark'] .category-progress-track { background: #374151; }
+
+@media (max-width: 1150px) {
+  .investor-page-header {
+    flex-direction: column;
+  }
+
+  .investor-project-meta {
+    width: 100%;
+  }
+
+  .investor-content-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+  }
+}
+
+@media (max-width: 850px) {
+  .investor-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .investor-content-grid,
+  .investor-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .investor-dashboard {
+    padding-top: 0;
+  }
+
+  .investor-page-header h1 {
+    font-size: 21px;
+  }
+
+  .investor-project-meta {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .investor-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .investor-summary-card {
+    min-height: 108px;
+  }
+
+  .investor-panel {
+    padding: 14px;
+  }
+
+  .investor-overall-stats {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .investor-table {
+    min-width: 500px;
+  }
+
+  .upcoming-table {
+    min-width: 680px;
+  }
+
+  .investor-pie-layout {
+    gap: 20px;
+  }
+
+  .investor-pie-chart {
+    width: 120px;
+    height: 120px;
+  }
+}

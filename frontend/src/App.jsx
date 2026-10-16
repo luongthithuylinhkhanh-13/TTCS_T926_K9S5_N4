@@ -7,6 +7,7 @@ import WorkingCalendarPage from './pages/WorkingCalendarPage';
 import AssignedTasksPage from './pages/AssignedTasksPage';
 import MilestonesPage from './pages/MilestonesPage';
 import SiteDiaryPage from './pages/SiteDiaryPage';
+import InvestorDashboardPage from './pages/InvestorDashboardPage';
 import { isAuthenticated } from './utils/auth';
 
 const ProtectedRoute = ({ children }) => {
@@ -30,6 +31,7 @@ function App() {
         }
       >
         <Route index element={<Navigate to="/wbs" replace />} />
+        <Route path="investor-dashboard" element={<InvestorDashboardPage />} />
         <Route path="wbs" element={<WBSPage />} />
         <Route path="progress" element={<ProgressPage />} />
         <Route path="working-calendar" element={<WorkingCalendarPage />} />
