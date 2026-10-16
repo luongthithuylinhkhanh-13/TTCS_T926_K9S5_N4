@@ -51,6 +51,20 @@ spring:
             trust: ${MAIL_HOST:smtp.gmail.com}
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
 
 server:
   address: ${APP_ADDRESS:0.0.0.0}
