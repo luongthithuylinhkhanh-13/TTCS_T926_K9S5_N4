@@ -338,4 +338,212 @@ class ImageMetadataValidatorTest {
         );
         assertThat(validator.determineStatus(metaBadLat, false)).isEqualTo(ImageMetadataValidator.MetadataStatus.INVALID);
     }
+
+    @Test
+    @DisplayName("T-76 - Test 1: Ảnh hợp lệ -> determineReasons trả về danh sách rỗng (không có cảnh báo)")
+    void determineReasons_ReturnsEmpty_WhenValid() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "valid.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                21.02,
+                105.85,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, false);
+        assertThat(reasons).isEmpty();
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 2: Thiếu capturedAt -> determineReasons chứa 'Thiếu thời gian chụp'")
+    void determineReasons_ContainsMissingCapturedAt_WhenCapturedAtNull() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "no_time.jpg",
+                "image/jpeg",
+                500_000L,
+                null,
+                21.02,
+                105.85,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, false);
+        assertThat(reasons).contains("Thiếu thời gian chụp");
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 3: requireGps=true và không có GPS -> determineReasons chứa 'Thiếu thông tin vị trí GPS'")
+    void determineReasons_ContainsMissingGps_WhenRequiredAndMissing() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "no_gps.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                null,
+                null,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, true);
+        assertThat(reasons).contains("Thiếu thông tin vị trí GPS");
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 4: capturedAt ở tương lai -> determineReasons chứa 'Thời gian chụp ở tương lai'")
+    void determineReasons_ContainsFutureCaptureTime_WhenInFuture() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "future.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().plusDays(2),
+                21.02,
+                105.85,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, false);
+        assertThat(reasons).contains("Thời gian chụp ở tương lai");
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 5: Latitude ngoài phạm vi -> determineReasons chứa 'Vĩ độ GPS ngoài phạm vi -90 đến 90'")
+    void determineReasons_ContainsInvalidLatitude_WhenOutOfRange() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "bad_lat.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                95.0,
+                105.85,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, false);
+        assertThat(reasons).contains("Vĩ độ GPS ngoài phạm vi -90 đến 90");
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 6: Longitude ngoài phạm vi -> determineReasons chứa 'Kinh độ GPS ngoài phạm vi -180 đến 180'")
+    void determineReasons_ContainsInvalidLongitude_WhenOutOfRange() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "bad_lon.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                21.02,
+                195.0,
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(meta, false);
+        assertThat(reasons).contains("Kinh độ GPS ngoài phạm vi -180 đến 180");
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 7: Chỉ có latitude hoặc longitude -> cảnh báo tọa độ GPS không đầy đủ")
+    void determineReasons_ContainsIncompleteGps_WhenUnpaired() {
+        ImageMetadataValidator.ImageMetadata metaLatOnly = new ImageMetadataValidator.ImageMetadata(
+                "lat_only.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                21.02,
+                null,
+                800,
+                600
+        );
+
+        java.util.List<String> reasonsLatOnly = validator.determineReasons(metaLatOnly, false);
+        assertThat(reasonsLatOnly).anyMatch(r -> r.contains("Thiếu kinh độ GPS") && r.contains("tọa độ GPS không đầy đủ"));
+
+        ImageMetadataValidator.ImageMetadata metaLonOnly = new ImageMetadataValidator.ImageMetadata(
+                "lon_only.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                null,
+                105.85,
+                800,
+                600
+        );
+
+        java.util.List<String> reasonsLonOnly = validator.determineReasons(metaLonOnly, false);
+        assertThat(reasonsLonOnly).anyMatch(r -> r.contains("Thiếu vĩ độ GPS") && r.contains("tọa độ GPS không đầy đủ"));
+    }
+
+    @Test
+    @DisplayName("T-76 - Test 8: Có nhiều lỗi cùng lúc -> determineReasons trả về đầy đủ các lý do, không chỉ lỗi đầu tiên")
+    void determineReasons_ContainsMultipleReasons_WhenMultipleErrorsPresent() {
+        ImageMetadataValidator.ImageMetadata metaMultiple = new ImageMetadataValidator.ImageMetadata(
+                "multiple_errors.jpg",
+                "image/jpeg",
+                0L, // file rỗng
+                null, // thiếu thời gian
+                95.0, // vĩ độ sai
+                195.0, // kinh độ sai
+                800,
+                600
+        );
+
+        java.util.List<String> reasons = validator.determineReasons(metaMultiple, false);
+        assertThat(reasons).contains(
+                "File ảnh rỗng",
+                "Thiếu thời gian chụp",
+                "Vĩ độ GPS ngoài phạm vi -90 đến 90",
+                "Kinh độ GPS ngoài phạm vi -180 đến 180"
+        );
+        assertThat(reasons.size()).isGreaterThanOrEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("T-76: DiaryImageResponse tự động tính toán metadataStatus và metadataReasons")
+    void diaryImageResponse_ComputesStatusAndReasonsCorrectly() {
+        com.ntdhtcct.domain.diary.dto.DiaryImageResponse respValid = new com.ntdhtcct.domain.diary.dto.DiaryImageResponse(
+                java.util.UUID.randomUUID(),
+                java.util.UUID.randomUUID(),
+                "img-1",
+                "valid.jpg",
+                "COMPLETED",
+                "COMPLETED",
+                500_000L,
+                2_000_000L,
+                1920,
+                1080,
+                OffsetDateTime.now().minusHours(1),
+                21.0285,
+                105.8542,
+                OffsetDateTime.now(),
+                OffsetDateTime.now()
+        );
+        assertThat(respValid.metadataStatus()).isEqualTo("VALID");
+        assertThat(respValid.metadataReasons()).isEmpty();
+
+        com.ntdhtcct.domain.diary.dto.DiaryImageResponse respMissing = new com.ntdhtcct.domain.diary.dto.DiaryImageResponse(
+                java.util.UUID.randomUUID(),
+                java.util.UUID.randomUUID(),
+                "img-2",
+                "missing.jpg",
+                "COMPLETED",
+                "COMPLETED",
+                500_000L,
+                2_000_000L,
+                1920,
+                1080,
+                null, // thiếu capturedAt
+                21.0285,
+                105.8542,
+                OffsetDateTime.now(),
+                OffsetDateTime.now()
+        );
+        assertThat(respMissing.metadataStatus()).isEqualTo("MISSING");
+        assertThat(respMissing.metadataReasons()).contains("Thiếu thời gian chụp");
+    }
 }

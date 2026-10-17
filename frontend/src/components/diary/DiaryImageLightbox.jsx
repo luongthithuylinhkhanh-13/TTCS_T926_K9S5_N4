@@ -146,25 +146,47 @@ export default function DiaryImageLightbox({
             )}
             {(() => {
               const metaStatus = determineImageMetadataStatus(currentImage);
-              if (metaStatus.status === 'VALID') {
+              const badge = (() => {
+                if (metaStatus.status === 'VALID') {
+                  return (
+                    <Tag color="success" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                      ✓ Meta: Hợp lệ
+                    </Tag>
+                  );
+                }
+                if (metaStatus.status === 'MISSING') {
+                  return (
+                    <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                      ⚠ Meta: Thiếu
+                    </Tag>
+                  );
+                }
                 return (
-                  <Tag color="success" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
-                    ✓ Meta: Hợp lệ
+                  <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                    ⚠ Meta: Không hợp lệ
                   </Tag>
                 );
-              }
-              if (metaStatus.status === 'MISSING') {
+              })();
+
+              if (metaStatus.reasons && metaStatus.reasons.length > 0) {
                 return (
-                  <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
-                    ⚠ Meta: Thiếu
-                  </Tag>
+                  <Tooltip
+                    title={
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 2 }}>{metaStatus.label}:</div>
+                        <ul style={{ margin: 0, paddingLeft: 14 }}>
+                          {metaStatus.reasons.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    }
+                  >
+                    {badge}
+                  </Tooltip>
                 );
               }
-              return (
-                <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
-                  ⚠ Meta: Không hợp lệ
-                </Tag>
-              );
+              return badge;
             })()}
           </div>
 
@@ -197,6 +219,69 @@ export default function DiaryImageLightbox({
             />
           </Space>
         </div>
+
+        {/* T-76: Banner cảnh báo chi tiết lý do metadata không hợp lệ / thiếu */}
+        {(() => {
+          const metaStatus = determineImageMetadataStatus(currentImage);
+          if (metaStatus.status === 'VALID' || !metaStatus.reasons || metaStatus.reasons.length === 0) {
+            return null;
+          }
+          const isMissing = metaStatus.status === 'MISSING';
+          return (
+            <div
+              className="lightbox-metadata-warning-banner"
+              style={{
+                background: isMissing ? 'rgba(113, 63, 18, 0.4)' : 'rgba(127, 29, 29, 0.4)',
+                borderBottom: `1px solid ${isMissing ? 'rgba(234, 179, 8, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+                padding: '8px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '12px',
+                flexWrap: 'wrap',
+                zIndex: 9,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                <span style={{ color: '#d1d5db' }}>Trạng thái metadata:</span>
+                {isMissing ? (
+                  <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 8px' }}>
+                    ⚠ Meta: Thiếu
+                  </Tag>
+                ) : (
+                  <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 8px' }}>
+                    ⚠ Meta: Không hợp lệ
+                  </Tag>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: isMissing ? '#fde047' : '#fca5a5' }}>
+                  Lý do:
+                </span>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {metaStatus.reasons.map((r, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        color: '#f9fafb',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'rgba(0,0,0,0.25)',
+                        padding: '1px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      <span style={{ color: isMissing ? '#facc15' : '#f87171', fontWeight: 'bold' }}>•</span>
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Khu vực hiển thị ảnh chính */}
         <div

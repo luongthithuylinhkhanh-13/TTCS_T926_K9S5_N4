@@ -8,6 +8,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { formatFileSize, createQueueItem, revokeQueueItem, revokeAllQueueItems } from '../../utils/imageQueueUtils.js';
 import { extractImageMetadata, validateImageMetadata } from '../../utils/imageMetadataExtractor.js';
@@ -359,6 +360,54 @@ export default function ImageUploader({
                     </div>
                   </div>
                 )}
+
+                {/* T-76: Khu vực cảnh báo lý do metadata không hợp lệ / thiếu */}
+                {(() => {
+                  const metaStatus = item.metadataValidation?.status || (item.metadataValidation?.valid ? 'VALID' : 'INVALID');
+                  const reasons = item.metadataValidation?.reasons || [];
+                  if (metaStatus === 'VALID' || reasons.length === 0) {
+                    return null;
+                  }
+                  const isMissing = metaStatus === 'MISSING';
+                  return (
+                    <div
+                      className="metadata-warning-box"
+                      style={{
+                        background: isMissing ? '#fffbe6' : '#fff2f0',
+                        border: `1px solid ${isMissing ? '#ffe58f' : '#ffccc7'}`,
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        fontSize: '10px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: isMissing ? '#d46b08' : '#cf1322',
+                          marginBottom: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <WarningOutlined style={{ fontSize: '11px' }} />
+                        <span>Lý do:</span>
+                      </div>
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingLeft: '14px',
+                          color: isMissing ? '#873800' : '#820014',
+                          lineHeight: '1.35',
+                        }}
+                      >
+                        {reasons.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 {/* Trạng thái hai giai đoạn: Hiển thị & Ảnh gốc */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
