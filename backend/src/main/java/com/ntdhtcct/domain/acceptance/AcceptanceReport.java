@@ -202,6 +202,23 @@ public class AcceptanceReport {
         return calculateRetentionAmount();
     }
 
+    /**
+     * T-87 (S-45): Tự động tính giá trị thanh toán sau tạm giữ
+     * paymentAfterRetention = totalAmount - retentionAmount
+     */
+    public BigDecimal calculatePaymentAfterRetention() {
+        if (this.totalAmount == null || this.totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal retention = calculateRetentionAmount();
+        BigDecimal payment = this.totalAmount.subtract(retention).setScale(2, RoundingMode.HALF_UP);
+        return payment.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : payment;
+    }
+
+    public BigDecimal getPaymentAfterRetention() {
+        return calculatePaymentAfterRetention();
+    }
+
     // Getters and Setters
     public UUID getId() {
         return id;

@@ -309,6 +309,19 @@ public class AcceptanceReportService {
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * T-87 (S-45): Tự động tính giá trị thanh toán sau tạm giữ
+     * paymentAfterRetention = acceptedAmount - retentionAmount
+     */
+    public static BigDecimal calculatePaymentAfterRetention(BigDecimal acceptedAmount, BigDecimal retentionRate) {
+        if (acceptedAmount == null || acceptedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal retention = calculateRetentionAmount(acceptedAmount, retentionRate);
+        BigDecimal payment = acceptedAmount.subtract(retention).setScale(2, RoundingMode.HALF_UP);
+        return payment.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : payment;
+    }
+
     private String trimToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }

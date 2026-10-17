@@ -450,4 +450,87 @@ public class AcceptanceReportServiceTest {
         assertThat(response.getRetentionRate()).isEqualByComparingTo(new BigDecimal("7.50"));
         assertThat(response.getRetentionAmount()).isEqualByComparingTo(new BigDecimal("7500000.00"));
     }
+
+    // ==========================================
+    // T-87: GIÁ TRỊ THANH TOÁN SAU TẠM GIỮ
+    // ==========================================
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 1 (100,000,000 - 5,000,000 = 95,000,000)")
+    void calculatePaymentAfterRetention_Case1_Success() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = new BigDecimal("5.00");
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(new BigDecimal("95000000.00"));
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 2 (100,000,000 - 7,500,000 = 92,500,000)")
+    void calculatePaymentAfterRetention_Case2_Success() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = new BigDecimal("7.50");
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(new BigDecimal("92500000.00"));
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 3 (100,000,000 - 0 = 100,000,000)")
+    void calculatePaymentAfterRetention_Case3_ZeroRate() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = BigDecimal.ZERO;
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(new BigDecimal("100000000.00"));
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 4 (0 - 0 = 0)")
+    void calculatePaymentAfterRetention_Case4_ZeroTotal() {
+        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal rate = new BigDecimal("7.50");
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 5 (50,000,000 - 5,000,000 = 45,000,000)")
+    void calculatePaymentAfterRetention_Case5_Success() {
+        BigDecimal total = new BigDecimal("50000000.00");
+        BigDecimal rate = new BigDecimal("10.00");
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(new BigDecimal("45000000.00"));
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): Tính thanh toán sau tạm giữ CASE 6 (Rounding 100.55 - 7.54 = 93.01)")
+    void calculatePaymentAfterRetention_Case6_Rounding() {
+        BigDecimal total = new BigDecimal("100.55");
+        BigDecimal rate = new BigDecimal("7.50");
+        // 100.55 - 7.54 = 93.01
+        BigDecimal payment = AcceptanceReportService.calculatePaymentAfterRetention(total, rate);
+        assertThat(payment).isEqualByComparingTo(new BigDecimal("93.01"));
+    }
+
+    @Test
+    @DisplayName("T-87 (S-45): AcceptanceReportResponse tự động tính và trả về paymentAfterRetention")
+    void acceptanceReportResponse_CalculatesPaymentAfterRetention() {
+        AcceptanceReport report = new AcceptanceReport(
+                projectId,
+                "NT-T87",
+                "Phiếu nghiệm thu T-87",
+                1,
+                LocalDate.now(),
+                "DRAFT",
+                creatorId,
+                ""
+        );
+        report.setTotalAmount(new BigDecimal("100000000.00"));
+        report.setRetentionRate(new BigDecimal("7.50"));
+
+        AcceptanceReportResponse response = AcceptanceReportResponse.from(report);
+
+        assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("100000000.00"));
+        assertThat(response.getRetentionRate()).isEqualByComparingTo(new BigDecimal("7.50"));
+        assertThat(response.getRetentionAmount()).isEqualByComparingTo(new BigDecimal("7500000.00"));
+        assertThat(response.getPaymentAfterRetention()).isEqualByComparingTo(new BigDecimal("92500000.00"));
+    }
 }

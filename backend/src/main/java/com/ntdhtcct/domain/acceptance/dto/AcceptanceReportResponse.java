@@ -32,6 +32,7 @@ public class AcceptanceReportResponse {
     private BigDecimal totalAmount;
     private BigDecimal retentionRate;
     private BigDecimal retentionAmount;
+    private BigDecimal paymentAfterRetention;
     private int itemCount;
     private List<AcceptanceItemResponse> items = new ArrayList<>();
     private OffsetDateTime createdAt;
@@ -59,6 +60,7 @@ public class AcceptanceReportResponse {
         res.setTotalAmount(report.getTotalAmount());
         res.setRetentionRate(report.getRetentionRate());
         res.setRetentionAmount(report.calculateRetentionAmount());
+        res.setPaymentAfterRetention(report.calculatePaymentAfterRetention());
         if (report.getItems() != null) {
             res.setItemCount(report.getItems().size());
             res.setItems(report.getItems().stream()
@@ -230,6 +232,14 @@ public class AcceptanceReportResponse {
 
     public void setRetentionAmount(BigDecimal retentionAmount) {
         this.retentionAmount = retentionAmount;
+    }
+
+    public BigDecimal getPaymentAfterRetention() {
+        return paymentAfterRetention;
+    }
+
+    public void setPaymentAfterRetention(BigDecimal paymentAfterRetention) {
+        this.paymentAfterRetention = paymentAfterRetention;
     }
 
     public OffsetDateTime getUpdatedAt() {

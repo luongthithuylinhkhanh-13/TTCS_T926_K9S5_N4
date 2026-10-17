@@ -68,6 +68,24 @@ export const calculateRetentionAmount = (acceptedAmount, retentionRate) => {
 };
 
 /**
+ * S-45 (T-87): Tự động tính giá trị thanh toán sau tạm giữ
+ * paymentAfterRetention = acceptedAmount - retentionAmount
+ * Quy tắc:
+ *   - Nếu acceptedAmount <= 0 -> trả về 0
+ *   - Làm tròn 2 chữ số thập phân
+ *   - Tránh NaN, số âm, Infinity
+ */
+export const calculatePaymentAfterRetention = (acceptedAmount, retentionRate) => {
+  const amount = Number(acceptedAmount);
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  const retention = calculateRetentionAmount(amount, retentionRate);
+  const payment = amount - retention;
+  return payment <= 0 ? 0 : Math.round(payment * 100) / 100;
+};
+
+/**
  * Lấy danh sách phiếu nghiệm thu theo đợt của một dự án
  */
 export const getAcceptanceReports = async projectId => {
