@@ -126,4 +126,8 @@
     <!-- S-45 (T-85): Cấu hình tỷ lệ tạm giữ theo hợp đồng -->
     <include file="db/migration/v24/V24_0__add_retention_rate_to_acceptance_reports.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-47 (NTDHTCT-237, T-94, T-95, T-96): Ghi nhận chi phí thực tế gắn với hạng mục -->
+    <include file="db/migration/v25/V25_0__create_actual_costs_table.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
