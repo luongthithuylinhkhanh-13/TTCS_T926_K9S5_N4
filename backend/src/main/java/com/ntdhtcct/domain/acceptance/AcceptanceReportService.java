@@ -89,6 +89,14 @@ public class AcceptanceReportService {
                 request.getAcceptanceRecordId()
         );
 
+        BigDecimal retentionRate = request.getRetentionRate();
+        if (retentionRate == null) {
+            retentionRate = new BigDecimal("5.00");
+        } else {
+            validateRetentionRate(retentionRate);
+        }
+        report.setRetentionRate(retentionRate);
+
         // T-84 & T-85: Thêm các hạng mục và tự động tính giá trị
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (AcceptanceItemRequest itemReq : request.getItems()) {
@@ -163,6 +171,11 @@ public class AcceptanceReportService {
                             request.getContractorRepresentativeName(),
                             request.getAcceptanceRecordId()
                     );
+
+                    if (request.getRetentionRate() != null) {
+                        validateRetentionRate(request.getRetentionRate());
+                        report.setRetentionRate(request.getRetentionRate());
+                    }
 
                     // Cập nhật lại danh sách hạng mục (T-84, T-85)
                     if (request.getItems() != null) {
@@ -271,6 +284,12 @@ public class AcceptanceReportService {
         report.setSupervisorRepresentativeName(trimToNull(supervisorRepresentativeName));
         report.setContractorRepresentativeName(trimToNull(contractorRepresentativeName));
         report.setAcceptanceRecordId(acceptanceRecordId);
+    }
+
+    private void validateRetentionRate(BigDecimal rate) {
+        if (rate.compareTo(BigDecimal.ZERO) < 0 || rate.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("Tỷ lệ tạm giữ phải từ 0% đến 100%");
+        }
     }
 
     private String trimToNull(String value) {

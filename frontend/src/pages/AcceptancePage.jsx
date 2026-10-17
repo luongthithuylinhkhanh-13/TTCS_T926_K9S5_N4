@@ -164,7 +164,8 @@ const AcceptancePage = () => {
       periodNumber: defaultPeriod,
       acceptanceDate: dayjs(),
       status: 'DRAFT',
-      notes: ''
+      notes: '',
+      retentionRate: 5
     });
 
     setModalOpen(true);
@@ -186,7 +187,8 @@ const AcceptancePage = () => {
         ownerRepresentativeName: detail.ownerRepresentativeName,
         supervisorRepresentativeName: detail.supervisorRepresentativeName,
         contractorRepresentativeName: detail.contractorRepresentativeName,
-        acceptanceRecordId: detail.acceptanceRecordId
+        acceptanceRecordId: detail.acceptanceRecordId,
+        retentionRate: detail.retentionRate != null ? Number(detail.retentionRate) : 5
       });
       setItems(detail.items || []);
       setModalOpen(true);
@@ -293,6 +295,7 @@ const AcceptancePage = () => {
         supervisorRepresentativeName: values.supervisorRepresentativeName,
         contractorRepresentativeName: values.contractorRepresentativeName,
         acceptanceRecordId: values.acceptanceRecordId || null,
+        retentionRate: values.retentionRate !== undefined && values.retentionRate !== null ? Number(values.retentionRate) : 5,
         items: items.map(item => ({
           wbsItemId: item.wbsItemId,
           taskId: item.taskId,
@@ -441,6 +444,18 @@ const AcceptancePage = () => {
         <span style={{ fontWeight: 700, color: '#389e0d', fontSize: '14px' }}>
           {formatCurrency(amount)}
         </span>
+      )
+    },
+    {
+      title: 'Tỷ lệ tạm giữ',
+      dataIndex: 'retentionRate',
+      key: 'retentionRate',
+      width: 130,
+      align: 'center',
+      render: rate => (
+        <Tag color="orange" style={{ fontWeight: 600 }}>
+          {rate != null ? Number(rate) : 5}%
+        </Tag>
       )
     },
     {
@@ -667,7 +682,7 @@ const AcceptancePage = () => {
           </Row>
 
           <Row gutter={12}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="acceptanceDate"
                 label="Ngày nghiệm thu"
@@ -676,7 +691,7 @@ const AcceptancePage = () => {
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item name="status" label="Trạng thái">
                 <Select
                   options={[
@@ -684,6 +699,41 @@ const AcceptancePage = () => {
                     { label: 'Gửi phê duyệt (SUBMITTED)', value: 'SUBMITTED' },
                     { label: 'Đã phê duyệt (APPROVED)', value: 'APPROVED' }
                   ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                name="retentionRate"
+                label="Tỷ lệ tạm giữ theo hợp đồng (%)"
+                extra="Tỷ lệ phần trăm được giữ lại từ giá trị thanh toán theo điều khoản hợp đồng."
+                rules={[
+                  { required: true, message: 'Tỷ lệ tạm giữ không được để trống' },
+                  {
+                    validator: (_, value) => {
+                      if (value === undefined || value === null || value === '') {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ không được để trống'));
+                      }
+                      const num = Number(value);
+                      if (isNaN(num)) {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ phải là số hợp lệ'));
+                      }
+                      if (num < 0 || num > 100) {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ phải từ 0% đến 100%'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  precision={2}
+                  style={{ width: '100%' }}
+                  placeholder="5.00"
+                  addonAfter="%"
                 />
               </Form.Item>
             </Col>
@@ -1027,6 +1077,15 @@ const AcceptancePage = () => {
               </Col>
               <Col span={12}>
                 <Text strong>Ghi chú: </Text>{detailReport.notes || 'Không có'}
+              </Col>
+              <Col span={12}>
+                <Text strong>Tỷ lệ tạm giữ theo hợp đồng: </Text>
+                <Tag color="orange" style={{ fontWeight: 600 }}>
+                  {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
+                </Tag>
+                <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
+                  Tỷ lệ phần trăm được giữ lại từ giá trị thanh toán theo điều khoản hợp đồng.
+                </div>
               </Col>
             </Row>
 

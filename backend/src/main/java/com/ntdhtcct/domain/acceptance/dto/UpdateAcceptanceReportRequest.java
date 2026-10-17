@@ -1,9 +1,12 @@
 package com.ntdhtcct.domain.acceptance.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +30,10 @@ public class UpdateAcceptanceReportRequest {
     private String supervisorRepresentativeName;
     private String contractorRepresentativeName;
     private UUID acceptanceRecordId;
+
+    @DecimalMin(value = "0.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @DecimalMax(value = "100.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    private BigDecimal retentionRate;
 
     @Valid
     private List<AcceptanceItemRequest> items = new ArrayList<>();
@@ -126,5 +133,13 @@ public class UpdateAcceptanceReportRequest {
 
     public void setItems(List<AcceptanceItemRequest> items) {
         this.items = items;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
     }
 }

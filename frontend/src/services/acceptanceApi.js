@@ -33,6 +33,24 @@ export const calculateTotalAmount = items => {
 };
 
 /**
+ * S-45 (T-85): Hàm kiểm tra tính hợp lệ của Tỷ lệ tạm giữ theo hợp đồng (%)
+ * Quy tắc: 0 <= retentionRate <= 100, không được rỗng, không được chứa ký tự không hợp lệ.
+ */
+export const validateRetentionRate = rate => {
+  if (rate === undefined || rate === null || rate === '') {
+    return { valid: false, error: 'Vui lòng nhập tỷ lệ tạm giữ theo hợp đồng' };
+  }
+  const num = Number(rate);
+  if (isNaN(num)) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải là số hợp lệ' };
+  }
+  if (num < 0 || num > 100) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải từ 0% đến 100%' };
+  }
+  return { valid: true, value: num };
+};
+
+/**
  * Lấy danh sách phiếu nghiệm thu theo đợt của một dự án
  */
 export const getAcceptanceReports = async projectId => {

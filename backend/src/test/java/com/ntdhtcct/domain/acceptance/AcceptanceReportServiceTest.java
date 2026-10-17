@@ -259,4 +259,117 @@ public class AcceptanceReportServiceTest {
         assertThat(summary.getTotalAmount()).isEqualByComparingTo(new BigDecimal("500000000.00"));
         assertThat(summary.getApprovedAmount()).isEqualByComparingTo(new BigDecimal("350000000.00"));
     }
+
+    @Test
+    @DisplayName("T-85 (S-45): Tạo phiếu nghiệm thu với các giá trị tỷ lệ tạm giữ hợp lệ (5, 0, 100, 7.5)")
+    void createAcceptanceReport_ValidRetentionRates_Success() {
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(acceptanceReportRepository.existsByProjectIdAndReportNumber(any(UUID.class), any(String.class))).thenReturn(false);
+        when(acceptanceReportRepository.save(any(AcceptanceReport.class))).thenAnswer(invocation -> {
+            AcceptanceReport report = invocation.getArgument(0);
+            report.setId(UUID.randomUUID());
+            return report;
+        });
+
+        List<BigDecimal> validRates = List.of(
+                new BigDecimal("5"),
+                new BigDecimal("0"),
+                new BigDecimal("100"),
+                new BigDecimal("7.5")
+        );
+
+        for (int i = 0; i < validRates.size(); i++) {
+            BigDecimal rate = validRates.get(i);
+            CreateAcceptanceReportRequest req = new CreateAcceptanceReportRequest(
+                    "NT-RATE-" + i,
+                    "Phiếu test rate " + rate,
+                    i + 1,
+                    LocalDate.now(),
+                    "DRAFT",
+                    "",
+                    List.of()
+            );
+            req.setRetentionRate(rate);
+
+            AcceptanceReportResponse res = acceptanceReportService.createAcceptanceReport(projectId, creatorId, req);
+            assertThat(res.getRetentionRate()).isEqualByComparingTo(rate);
+        }
+    }
+
+    @Test
+    @DisplayName("T-85 (S-45): Từ chối tạo phiếu khi tỷ lệ tạm giữ âm (retentionRate = -1)")
+    void createAcceptanceReport_NegativeRetentionRate_ThrowsException() {
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+
+        CreateAcceptanceReportRequest req = new CreateAcceptanceReportRequest(
+                "NT-NEG",
+                "Phiếu test rate âm",
+                1,
+                LocalDate.now(),
+                "DRAFT",
+                "",
+                List.of()
+        );
+        req.setRetentionRate(new BigDecimal("-1"));
+
+        assertThatThrownBy(() -> acceptanceReportService.createAcceptanceReport(projectId, creatorId, req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Tỷ lệ tạm giữ phải từ 0% đến 100%");
+    }
+
+    @Test
+    @DisplayName("T-85 (S-45): Từ chối tạo phiếu khi tỷ lệ tạm giữ vượt quá 100% (retentionRate = 101)")
+    void createAcceptanceReport_Over100RetentionRate_ThrowsException() {
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+
+        CreateAcceptanceReportRequest req = new CreateAcceptanceReportRequest(
+                "NT-OVER",
+                "Phiếu test rate vượt 100",
+                1,
+                LocalDate.now(),
+                "DRAFT",
+                "",
+                List.of()
+        );
+        req.setRetentionRate(new BigDecimal("101"));
+
+        assertThatThrownBy(() -> acceptanceReportService.createAcceptanceReport(projectId, creatorId, req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Tỷ lệ tạm giữ phải từ 0% đến 100%");
+    }
+
+    @Test
+    @DisplayName("T-85 (S-45): Cập nhật tỷ lệ tạm giữ thành công")
+    void updateAcceptanceReport_RetentionRate_Success() {
+        UUID reportId = UUID.randomUUID();
+        AcceptanceReport existingReport = new AcceptanceReport(
+                projectId,
+                "NT-05",
+                "Phiếu nghiệm thu cũ",
+                5,
+                LocalDate.now(),
+                "DRAFT",
+                creatorId,
+                ""
+        );
+        existingReport.setId(reportId);
+        existingReport.setRetentionRate(new BigDecimal("5.00"));
+
+        when(acceptanceReportRepository.findById(reportId)).thenReturn(Optional.of(existingReport));
+        when(acceptanceReportRepository.save(any(AcceptanceReport.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateAcceptanceReportRequest updateRequest = new UpdateAcceptanceReportRequest(
+                "Phiếu cập nhật tỷ lệ",
+                LocalDate.now(),
+                "DRAFT",
+                "",
+                List.of()
+        );
+        updateRequest.setRetentionRate(new BigDecimal("7.50"));
+
+        Optional<AcceptanceReportResponse> updated = acceptanceReportService.updateAcceptanceReport(projectId, reportId, updateRequest);
+
+        assertThat(updated).isPresent();
+        assertThat(updated.get().getRetentionRate()).isEqualByComparingTo(new BigDecimal("7.50"));
+    }
 }
