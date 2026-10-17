@@ -318,17 +318,28 @@ export default function ImageUploader({
                       <Text style={{ fontSize: '10px', color: '#595959' }}>
                         Chụp: {item.metadata.capturedAt ? item.metadata.capturedAt.slice(0, 16).replace('T', ' ') : 'Chưa có'}
                       </Text>
-                      {item.metadataValidation?.valid ? (
-                        <Tag color="cyan" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
-                          Meta: Hợp lệ
-                        </Tag>
-                      ) : (
-                        <Tooltip title={item.metadataValidation?.errors?.join(', ') || 'Lỗi siêu dữ liệu'}>
-                          <Tag color="error" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px', cursor: 'pointer' }}>
-                            Meta: Lỗi
+                      {(() => {
+                        const status = item.metadataValidation?.status || (item.metadataValidation?.valid ? 'VALID' : 'INVALID');
+                        if (status === 'VALID') {
+                          return (
+                            <Tag color="success" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                              ✓ Meta: Hợp lệ
+                            </Tag>
+                          );
+                        }
+                        if (status === 'MISSING') {
+                          return (
+                            <Tag color="warning" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                              ⚠ Meta: Thiếu
+                            </Tag>
+                          );
+                        }
+                        return (
+                          <Tag color="error" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                            ⚠ Meta: Không hợp lệ
                           </Tag>
-                        </Tooltip>
-                      )}
+                        );
+                      })()}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       {typeof item.metadata.latitude === 'number' && typeof item.metadata.longitude === 'number' ? (

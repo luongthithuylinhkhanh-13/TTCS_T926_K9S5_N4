@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Modal, Button, Spin, Typography, Space, Tooltip, message } from 'antd';
+import { Modal, Button, Spin, Typography, Space, Tooltip, Tag, message } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
@@ -8,6 +8,7 @@ import {
   FileImageOutlined,
 } from '@ant-design/icons';
 import { getDisplayImageUrl, getOriginalImageUrl } from '../../services/diaryApi.js';
+import { determineImageMetadataStatus } from '../../utils/imageMetadataExtractor.js';
 import apiClient from '../../services/apiClient.js';
 import { formatFileSize } from '../../utils/imageQueueUtils.js';
 
@@ -143,6 +144,28 @@ export default function DiaryImageLightbox({
                 📍 {currentImage.latitude.toFixed(4)}, {currentImage.longitude.toFixed(4)}
               </Text>
             )}
+            {(() => {
+              const metaStatus = determineImageMetadataStatus(currentImage);
+              if (metaStatus.status === 'VALID') {
+                return (
+                  <Tag color="success" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                    ✓ Meta: Hợp lệ
+                  </Tag>
+                );
+              }
+              if (metaStatus.status === 'MISSING') {
+                return (
+                  <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                    ⚠ Meta: Thiếu
+                  </Tag>
+                );
+              }
+              return (
+                <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                  ⚠ Meta: Không hợp lệ
+                </Tag>
+              );
+            })()}
           </div>
 
           <Space>

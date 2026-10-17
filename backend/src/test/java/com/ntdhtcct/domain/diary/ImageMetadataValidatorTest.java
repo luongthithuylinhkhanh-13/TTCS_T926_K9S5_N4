@@ -209,4 +209,133 @@ class ImageMetadataValidatorTest {
         );
         assertThat(exEmpty.getCode()).isEqualTo("EMPTY_FILE");
     }
+
+    // =========================================================================
+    // TEST SUITE: T-75 Xác định và đánh dấu ảnh thiếu metadata (S-42)
+    // =========================================================================
+
+    @Test
+    @DisplayName("T-75 - Test 1: Ảnh đầy đủ metadata -> determineStatus trả về VALID")
+    void determineStatus_ReturnsValid_WhenFullMetadata() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "valid_photo.jpg",
+                "image/jpeg",
+                1024L * 1024L,
+                OffsetDateTime.now().minusHours(1),
+                21.0285,
+                105.8542,
+                1920,
+                1080
+        );
+
+        ImageMetadataValidator.MetadataStatus status = validator.determineStatus(meta, true);
+        assertThat(status).isEqualTo(ImageMetadataValidator.MetadataStatus.VALID);
+        assertThat(status.getLabel()).isEqualTo("Meta: Hợp lệ");
+    }
+
+    @Test
+    @DisplayName("T-75 - Test 2: Ảnh thiếu metadata bắt buộc (capturedAt) -> determineStatus trả về MISSING")
+    void determineStatus_ReturnsMissing_WhenMissingCapturedAt() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "no_date.jpg",
+                "image/jpeg",
+                500_000L,
+                null,
+                21.02,
+                105.85,
+                800,
+                600
+        );
+
+        ImageMetadataValidator.MetadataStatus status = validator.determineStatus(meta, false);
+        assertThat(status).isEqualTo(ImageMetadataValidator.MetadataStatus.MISSING);
+        assertThat(status.getLabel()).isEqualTo("Meta: Thiếu");
+    }
+
+    @Test
+    @DisplayName("T-75 - Test 3: Ảnh có metadata nhưng giá trị sai (thời gian tương lai) -> determineStatus trả về INVALID")
+    void determineStatus_ReturnsInvalid_WhenFutureCapturedAt() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "future.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().plusDays(10),
+                21.02,
+                105.85,
+                800,
+                600
+        );
+
+        ImageMetadataValidator.MetadataStatus status = validator.determineStatus(meta, false);
+        assertThat(status).isEqualTo(ImageMetadataValidator.MetadataStatus.INVALID);
+        assertThat(status.getLabel()).isEqualTo("Meta: Không hợp lệ");
+    }
+
+    @Test
+    @DisplayName("T-75 - Test 4: Ảnh không có GPS nhưng GPS không bắt buộc -> determineStatus trả về VALID")
+    void determineStatus_ReturnsValid_WhenNoGpsAndNotRequired() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "optional_gps.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(10),
+                null,
+                null,
+                800,
+                600
+        );
+
+        ImageMetadataValidator.MetadataStatus status = validator.determineStatus(meta, false);
+        assertThat(status).isEqualTo(ImageMetadataValidator.MetadataStatus.VALID);
+        assertThat(status.getLabel()).isEqualTo("Meta: Hợp lệ");
+    }
+
+    @Test
+    @DisplayName("T-75 - Test 5: Ảnh không có GPS và requireGps=true -> determineStatus trả về MISSING")
+    void determineStatus_ReturnsMissing_WhenNoGpsAndRequired() {
+        ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                "strict_gps.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(10),
+                null,
+                null,
+                800,
+                600
+        );
+
+        ImageMetadataValidator.MetadataStatus status = validator.determineStatus(meta, true);
+        assertThat(status).isEqualTo(ImageMetadataValidator.MetadataStatus.MISSING);
+        assertThat(status.getLabel()).isEqualTo("Meta: Thiếu");
+    }
+
+    @Test
+    @DisplayName("T-75: determineStatus trả về INVALID khi tọa độ GPS khuyết một nửa hoặc ngoài biên")
+    void determineStatus_ReturnsInvalid_WhenGpsAbnormal() {
+        // Khuyết một nửa
+        ImageMetadataValidator.ImageMetadata metaUnpaired = new ImageMetadataValidator.ImageMetadata(
+                "unpaired.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                21.02,
+                null,
+                800,
+                600
+        );
+        assertThat(validator.determineStatus(metaUnpaired, false)).isEqualTo(ImageMetadataValidator.MetadataStatus.INVALID);
+
+        // Vĩ độ ngoài -90..90
+        ImageMetadataValidator.ImageMetadata metaBadLat = new ImageMetadataValidator.ImageMetadata(
+                "bad_lat.jpg",
+                "image/jpeg",
+                500_000L,
+                OffsetDateTime.now().minusMinutes(5),
+                95.0,
+                105.0,
+                800,
+                600
+        );
+        assertThat(validator.determineStatus(metaBadLat, false)).isEqualTo(ImageMetadataValidator.MetadataStatus.INVALID);
+    }
 }
