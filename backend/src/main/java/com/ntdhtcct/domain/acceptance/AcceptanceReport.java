@@ -10,6 +10,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -85,6 +87,12 @@ public class AcceptanceReport {
     @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    @NotNull(message = "Tỷ lệ tạm giữ không được để trống")
+    @DecimalMin(value = "0.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @DecimalMax(value = "100.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @Column(name = "retention_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal retentionRate = new BigDecimal("5.00");
+
     @OneToMany(mappedBy = "acceptanceReport", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AcceptanceItem> items = new ArrayList<>();
 
@@ -132,6 +140,9 @@ public class AcceptanceReport {
         }
         if (this.totalAmount == null) {
             this.totalAmount = BigDecimal.ZERO;
+        }
+        if (this.retentionRate == null) {
+            this.retentionRate = new BigDecimal("5.00");
         }
     }
 
@@ -297,6 +308,14 @@ public class AcceptanceReport {
 
     public void setItems(List<AcceptanceItem> items) {
         this.items = items;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
     }
 
     public OffsetDateTime getCreatedAt() {

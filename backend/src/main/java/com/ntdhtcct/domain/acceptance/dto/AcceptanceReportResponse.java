@@ -30,6 +30,7 @@ public class AcceptanceReportResponse {
     private String contractorRepresentativeName;
     private UUID acceptanceRecordId;
     private BigDecimal totalAmount;
+    private BigDecimal retentionRate;
     private int itemCount;
     private List<AcceptanceItemResponse> items = new ArrayList<>();
     private OffsetDateTime createdAt;
@@ -55,6 +56,7 @@ public class AcceptanceReportResponse {
         res.setContractorRepresentativeName(report.getContractorRepresentativeName());
         res.setAcceptanceRecordId(report.getAcceptanceRecordId());
         res.setTotalAmount(report.getTotalAmount());
+        res.setRetentionRate(report.getRetentionRate());
         if (report.getItems() != null) {
             res.setItemCount(report.getItems().size());
             res.setItems(report.getItems().stream()
@@ -210,6 +212,14 @@ public class AcceptanceReportResponse {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
     }
 
     public OffsetDateTime getUpdatedAt() {

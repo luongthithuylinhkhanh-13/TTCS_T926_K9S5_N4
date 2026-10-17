@@ -122,4 +122,8 @@
     <!-- S-50: Hồ sơ nghiệm thu theo hạng mục -->
     <include file="db/migration/v23/V23_0__add_acceptance_dossier_details.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-45 (T-85): Cấu hình tỷ lệ tạm giữ theo hợp đồng -->
+    <include file="db/migration/v24/V24_0__add_retention_rate_to_acceptance_reports.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
