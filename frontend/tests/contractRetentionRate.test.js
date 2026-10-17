@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateRetentionRate, calculateRetentionAmount } from '../src/services/acceptanceApi.js';
+import {
+  validateRetentionRate,
+  calculateRetentionAmount,
+  calculatePaymentAfterRetention
+} from '../src/services/acceptanceApi.js';
 
 test('T-85 (S-45): retentionRate = 5 -> hợp lệ', () => {
   const result = validateRetentionRate(5);
@@ -113,4 +117,56 @@ test('T-86 (S-45) CASE 8: Giá trị âm hoặc không hợp lệ -> trả về 
   assert.equal(calculateRetentionAmount('abc', 5), 0);
   assert.equal(calculateRetentionAmount(100, 'xyz'), 0);
   assert.equal(calculateRetentionAmount(null, undefined), 0);
+});
+
+// ==========================================
+// T-87: GIÁ TRỊ THANH TOÁN SAU TẠM GIỮ
+// ==========================================
+
+test('T-87 (S-45) CASE 1: 100,000,000 VNĐ, Tạm giữ 5% -> Thanh toán sau tạm giữ = 95,000,000 VNĐ', () => {
+  const payment = calculatePaymentAfterRetention(100000000, 5);
+  assert.equal(payment, 95000000);
+});
+
+test('T-87 (S-45) CASE 2: 100,000,000 VNĐ, Tạm giữ 7.5% -> Thanh toán sau tạm giữ = 92,500,000 VNĐ', () => {
+  const payment = calculatePaymentAfterRetention(100000000, 7.5);
+  assert.equal(payment, 92500000);
+});
+
+test('T-87 (S-45) CASE 3: 100,000,000 VNĐ, Tạm giữ 0% -> Thanh toán sau tạm giữ = 100,000,000 VNĐ', () => {
+  const payment = calculatePaymentAfterRetention(100000000, 0);
+  assert.equal(payment, 100000000);
+});
+
+test('T-87 (S-45) CASE 4: 0 VNĐ, Tạm giữ 7.5% -> Thanh toán sau tạm giữ = 0 VNĐ', () => {
+  const payment = calculatePaymentAfterRetention(0, 7.5);
+  assert.equal(payment, 0);
+});
+
+test('T-87 (S-45) CASE 5: 50,000,000 VNĐ, Tạm giữ 10% -> Thanh toán sau tạm giữ = 45,000,000 VNĐ', () => {
+  const payment = calculatePaymentAfterRetention(50000000, 10);
+  assert.equal(payment, 45000000);
+});
+
+test('T-87 (S-45) CASE 6: Rounding với số thập phân (100.55 - 7.54 = 93.01 VNĐ)', () => {
+  const payment = calculatePaymentAfterRetention(100.55, 7.5);
+  assert.equal(payment, 93.01);
+});
+
+test('T-87 (S-45) CASE 7: Thay đổi tỷ lệ từ 5% -> 7.5% làm cập nhật thanh toán sau tạm giữ', () => {
+  const total = 100000000;
+  let rate = 5;
+  let payment = calculatePaymentAfterRetention(total, rate);
+  assert.equal(payment, 95000000);
+
+  rate = 7.5;
+  payment = calculatePaymentAfterRetention(total, rate);
+  assert.equal(payment, 92500000);
+});
+
+test('T-87 (S-45) CASE 8: Giá trị âm hoặc không hợp lệ -> trả về 0', () => {
+  assert.equal(calculatePaymentAfterRetention(-100, 5), 0);
+  assert.equal(calculatePaymentAfterRetention(0, 5), 0);
+  assert.equal(calculatePaymentAfterRetention('abc', 5), 0);
+  assert.equal(calculatePaymentAfterRetention(null, undefined), 0);
 });

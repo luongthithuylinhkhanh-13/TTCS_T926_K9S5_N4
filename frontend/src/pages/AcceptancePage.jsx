@@ -47,7 +47,8 @@ import {
   deleteAcceptanceReport,
   calculateItemAmount,
   calculateTotalAmount,
-  calculateRetentionAmount
+  calculateRetentionAmount,
+  calculatePaymentAfterRetention
 } from '../services/acceptanceApi';
 import { getAcceptanceRecords } from '../services/acceptanceRecordApi';
 import AcceptanceDossierDocument from '../components/acceptance/AcceptanceDossierDocument.jsx';
@@ -267,12 +268,13 @@ const AcceptancePage = () => {
   // T-85: Tổng giá trị nghiệm thu tự động tính của toàn bộ phiếu
   const currentTotalAmount = calculateTotalAmount(items);
 
-  // T-85 & T-86: Tỷ lệ tạm giữ và Số tiền tạm giữ tự động tính realtime
+  // T-85 & T-86 & T-87: Tỷ lệ tạm giữ, Số tiền tạm giữ và Thanh toán sau tạm giữ tự động tính realtime
   const watchedRetentionRate = Form.useWatch('retentionRate', form);
   const currentRetentionRate = watchedRetentionRate !== undefined && watchedRetentionRate !== null && watchedRetentionRate !== ''
     ? Number(watchedRetentionRate)
     : 5;
   const currentRetentionAmount = calculateRetentionAmount(currentTotalAmount, currentRetentionRate);
+  const currentPaymentAfterRetention = calculatePaymentAfterRetention(currentTotalAmount, currentRetentionRate);
 
   // 6. Gửi biểu mẫu tạo hoặc cập nhật phiếu nghiệm thu
   const onFinish = async values => {
@@ -483,6 +485,22 @@ const AcceptancePage = () => {
       }
     },
     {
+      title: 'Thanh toán sau tạm giữ (T-87)',
+      key: 'paymentAfterRetention',
+      width: 190,
+      align: 'right',
+      render: (_, record) => {
+        const payment = record.paymentAfterRetention != null
+          ? record.paymentAfterRetention
+          : calculatePaymentAfterRetention(record.totalAmount, record.retentionRate);
+        return (
+          <span style={{ fontWeight: 700, color: '#389e0d', fontSize: '14px' }}>
+            {formatCurrency(payment)}
+          </span>
+        );
+      }
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
@@ -656,7 +674,7 @@ const AcceptancePage = () => {
           loading={loading}
           pagination={{ pageSize: 6, showSizeChanger: true }}
           size="middle"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1250 }}
         />
       </Card>
 
@@ -979,6 +997,20 @@ const AcceptancePage = () => {
                 {formatCurrency(currentRetentionAmount)}
               </div>
             </div>
+
+            <Divider style={{ margin: '8px 0', borderColor: '#ffe58f' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: 14, color: '#389e0d' }}>Thanh toán sau tạm giữ (T-87):</strong>
+                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  Tự động tính = Giá trị nghiệm thu - Số tiền tạm giữ (Read-only)
+                </div>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#389e0d' }}>
+                {formatCurrency(currentPaymentAfterRetention)}
+              </div>
+            </div>
           </div>
 
           <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -1115,16 +1147,16 @@ const AcceptancePage = () => {
               <Col span={12}>
                 <Text strong>Ghi chú: </Text>{detailReport.notes || 'Không có'}
               </Col>
-              <Col span={12}>
-                <Text strong>Tỷ lệ tạm giữ theo hợp đồng: </Text>
+              <Col span={8}>
+                <Text strong>Tỷ lệ tạm giữ: </Text>
                 <Tag color="orange" style={{ fontWeight: 600 }}>
                   {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
                 </Tag>
                 <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
-                  Tỷ lệ phần trăm được giữ lại từ giá trị thanh toán theo điều khoản hợp đồng.
+                  Tỷ lệ tạm giữ theo hợp đồng
                 </div>
               </Col>
-              <Col span={12}>
+              <Col span={8}>
                 <Text strong>Số tiền tạm giữ (T-86): </Text>
                 <span style={{ fontWeight: 700, color: '#ad4e00', fontSize: '15px' }}>
                   {formatCurrency(
@@ -1134,7 +1166,20 @@ const AcceptancePage = () => {
                   )}
                 </span>
                 <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
-                  Tự động tính = Giá trị nghiệm thu × {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
+                  Tự động tính = Giá trị × {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
+                </div>
+              </Col>
+              <Col span={8}>
+                <Text strong>Thanh toán sau tạm giữ (T-87): </Text>
+                <span style={{ fontWeight: 700, color: '#389e0d', fontSize: '15px' }}>
+                  {formatCurrency(
+                    detailReport.paymentAfterRetention != null
+                      ? detailReport.paymentAfterRetention
+                      : calculatePaymentAfterRetention(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+                <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
+                  Tự động tính = Giá trị - Tạm giữ
                 </div>
               </Col>
             </Row>
@@ -1196,18 +1241,28 @@ const AcceptancePage = () => {
               }}
             >
               <div>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Tổng giá trị nghiệm thu phiếu: </span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: '#389e0d' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Tổng giá trị nghiệm thu: </span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#389e0d' }}>
                   {formatCurrency(detailReport.totalAmount)}
                 </span>
               </div>
               <div>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Số tiền tạm giữ ({detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%): </span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: '#ad4e00' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Số tiền tạm giữ ({detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%): </span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#ad4e00' }}>
                   {formatCurrency(
                     detailReport.retentionAmount != null
                       ? detailReport.retentionAmount
                       : calculateRetentionAmount(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>Thanh toán sau tạm giữ (T-87): </span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: '#389e0d' }}>
+                  {formatCurrency(
+                    detailReport.paymentAfterRetention != null
+                      ? detailReport.paymentAfterRetention
+                      : calculatePaymentAfterRetention(detailReport.totalAmount, detailReport.retentionRate)
                   )}
                 </span>
               </div>
