@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +45,7 @@ public class DiaryService {
     private final SiteDiaryRepository siteDiaryRepository;
     private final SiteDiaryLockService siteDiaryLockService;
     private final SiteDiaryAdvisoryLockManager advisoryLockManager;
+    private final ImageMetadataValidator imageMetadataValidator;
     private final Object[] bridgeStripes = new Object[STRIPE_COUNT];
     private final Object[] imageStripes = new Object[STRIPE_COUNT];
     private final TransactionOperations requiresNewTransactionOperations;
@@ -56,7 +58,8 @@ public class DiaryService {
                         SiteDiaryRepository siteDiaryRepository,
                         SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager,
-                        @Autowired(required = false) PlatformTransactionManager transactionManager) {
+                        @Autowired(required = false) PlatformTransactionManager transactionManager,
+                        @Autowired(required = false) ImageMetadataValidator imageMetadataValidator) {
         this.diaryEntryRepository = diaryEntryRepository;
         this.diaryImageRepository = diaryImageRepository;
         this.projectRepository = projectRepository;
@@ -64,6 +67,7 @@ public class DiaryService {
         this.siteDiaryRepository = siteDiaryRepository;
         this.siteDiaryLockService = siteDiaryLockService;
         this.advisoryLockManager = advisoryLockManager;
+        this.imageMetadataValidator = imageMetadataValidator != null ? imageMetadataValidator : new ImageMetadataValidator();
 
         for (int i = 0; i < STRIPE_COUNT; i++) {
             this.bridgeStripes[i] = new Object();
@@ -86,9 +90,21 @@ public class DiaryService {
                         FileStorageService fileStorageService,
                         SiteDiaryRepository siteDiaryRepository,
                         SiteDiaryLockService siteDiaryLockService,
+                        SiteDiaryAdvisoryLockManager advisoryLockManager,
+                        PlatformTransactionManager transactionManager) {
+        this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, transactionManager, null);
+    }
+
+    public DiaryService(DiaryEntryRepository diaryEntryRepository,
+                        DiaryImageRepository diaryImageRepository,
+                        ProjectRepository projectRepository,
+                        FileStorageService fileStorageService,
+                        SiteDiaryRepository siteDiaryRepository,
+                        SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager) {
         this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
-                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null);
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null);
     }
 
     @Transactional
@@ -140,6 +156,17 @@ public class DiaryService {
     @Transactional
     public DiaryImageResponse uploadDisplayImage(UUID projectId, UUID entryId, String clientImageId,
                                                 String filename, MultipartFile file) throws IOException {
+        return uploadDisplayImage(projectId, entryId, clientImageId, filename, file, null, null, null, false);
+    }
+
+    /**
+     * Upload ảnh hiển thị kèm siêu dữ liệu (T-74 / S-42).
+     */
+    @Transactional
+    public DiaryImageResponse uploadDisplayImage(UUID projectId, UUID entryId, String clientImageId,
+                                                String filename, MultipartFile file,
+                                                OffsetDateTime capturedAt, Double latitude, Double longitude,
+                                                boolean requireGps) throws IOException {
         LocalDate diaryDate = resolveDiaryDate(projectId, entryId);
 
         advisoryLockManager.acquireSharedLock(projectId, diaryDate);
@@ -163,10 +190,29 @@ public class DiaryService {
                 throw new BadRequestException("FILE_TOO_LARGE", "Ảnh hiển thị phải có dung lượng nhỏ hơn 1 MiB");
             }
 
+            // T-74: Trích xuất và kiểm tra siêu dữ liệu (metadata) của ảnh hiện trường
+            ExifMetadataExtractor.ParsedExif parsedExif = ExifMetadataExtractor.extract(file.getBytes());
+            OffsetDateTime effectiveCapturedAt = capturedAt != null ? capturedAt : parsedExif.capturedAt();
+            Double effectiveLat = latitude != null ? latitude : parsedExif.latitude();
+            Double effectiveLon = longitude != null ? longitude : parsedExif.longitude();
+
+            ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                    filename,
+                    file.getContentType(),
+                    file.getSize(),
+                    effectiveCapturedAt,
+                    effectiveLat,
+                    effectiveLon,
+                    null,
+                    null
+            );
+            imageMetadataValidator.validate(meta, requireGps, false);
+
             UUID attemptId = UUID.randomUUID();
 
-            // Lấy hoặc khởi tạo bản ghi DiaryImage
-            DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType());
+            // Lấy hoặc khởi tạo bản ghi DiaryImage với siêu dữ liệu
+            DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType(),
+                    effectiveCapturedAt, effectiveLat, effectiveLon);
             diaryImageRepository.startDisplayUpload(image.getId(), attemptId, java.time.OffsetDateTime.now());
 
             // Lưu file vật lý và sinh thumbnail ngoài filesystem
@@ -204,6 +250,17 @@ public class DiaryService {
     @Transactional
     public DiaryImageResponse uploadOriginalImage(UUID projectId, UUID entryId, String clientImageId,
                                                  String filename, MultipartFile file) throws IOException {
+        return uploadOriginalImage(projectId, entryId, clientImageId, filename, file, null, null, null, false);
+    }
+
+    /**
+     * Upload ảnh gốc kèm siêu dữ liệu (T-74 / S-42).
+     */
+    @Transactional
+    public DiaryImageResponse uploadOriginalImage(UUID projectId, UUID entryId, String clientImageId,
+                                                 String filename, MultipartFile file,
+                                                 OffsetDateTime capturedAt, Double latitude, Double longitude,
+                                                 boolean requireGps) throws IOException {
         LocalDate diaryDate = resolveDiaryDate(projectId, entryId);
 
         advisoryLockManager.acquireSharedLock(projectId, diaryDate);
@@ -227,10 +284,29 @@ public class DiaryService {
                 throw new BadRequestException("FILE_TOO_LARGE", "Ảnh gốc vượt quá giới hạn tối đa 20 MiB");
             }
 
+            // T-74: Trích xuất và kiểm tra siêu dữ liệu (metadata) của ảnh hiện trường
+            ExifMetadataExtractor.ParsedExif parsedExif = ExifMetadataExtractor.extract(file.getBytes());
+            OffsetDateTime effectiveCapturedAt = capturedAt != null ? capturedAt : parsedExif.capturedAt();
+            Double effectiveLat = latitude != null ? latitude : parsedExif.latitude();
+            Double effectiveLon = longitude != null ? longitude : parsedExif.longitude();
+
+            ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
+                    filename,
+                    file.getContentType(),
+                    file.getSize(),
+                    effectiveCapturedAt,
+                    effectiveLat,
+                    effectiveLon,
+                    null,
+                    null
+            );
+            imageMetadataValidator.validate(meta, requireGps, false);
+
             UUID attemptId = UUID.randomUUID();
 
-            // Lấy hoặc khởi tạo bản ghi DiaryImage
-            DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType());
+            // Lấy hoặc khởi tạo bản ghi DiaryImage với siêu dữ liệu
+            DiaryImage image = getOrCreateImageRecord(entry.getId(), clientImageId, filename, file.getContentType(),
+                    effectiveCapturedAt, effectiveLat, effectiveLon);
             diaryImageRepository.startOriginalUpload(image.getId(), attemptId, java.time.OffsetDateTime.now());
 
             // Lưu file nguyên trạng ngoài filesystem
@@ -494,16 +570,55 @@ public class DiaryService {
     }
 
     private DiaryImage getOrCreateImageRecord(UUID entryId, String clientImageId, String filename, String contentType) {
+        return getOrCreateImageRecord(entryId, clientImageId, filename, contentType, null, null, null);
+    }
+
+    private DiaryImage getOrCreateImageRecord(UUID entryId, String clientImageId, String filename, String contentType,
+                                              OffsetDateTime capturedAt, Double latitude, Double longitude) {
         Optional<DiaryImage> existing = diaryImageRepository.findByDiaryEntryIdAndClientImageId(entryId, clientImageId);
         if (existing.isPresent()) {
-            return existing.get();
+            DiaryImage img = existing.get();
+            boolean changed = false;
+            if (img.getCapturedAt() == null && capturedAt != null) {
+                img.setCapturedAt(capturedAt);
+                changed = true;
+            }
+            if (img.getLatitude() == null && latitude != null) {
+                img.setLatitude(latitude);
+                changed = true;
+            }
+            if (img.getLongitude() == null && longitude != null) {
+                img.setLongitude(longitude);
+                changed = true;
+            }
+            if (changed) {
+                return diaryImageRepository.save(img);
+            }
+            return img;
         }
 
         Object lock = getImageLock(entryId, clientImageId);
         synchronized (lock) {
             existing = diaryImageRepository.findByDiaryEntryIdAndClientImageId(entryId, clientImageId);
             if (existing.isPresent()) {
-                return existing.get();
+                DiaryImage img = existing.get();
+                boolean changed = false;
+                if (img.getCapturedAt() == null && capturedAt != null) {
+                    img.setCapturedAt(capturedAt);
+                    changed = true;
+                }
+                if (img.getLatitude() == null && latitude != null) {
+                    img.setLatitude(latitude);
+                    changed = true;
+                }
+                if (img.getLongitude() == null && longitude != null) {
+                    img.setLongitude(longitude);
+                    changed = true;
+                }
+                if (changed) {
+                    return diaryImageRepository.save(img);
+                }
+                return img;
             }
 
             try {
@@ -518,6 +633,9 @@ public class DiaryService {
                             filename != null ? filename : "image.jpg",
                             contentType != null ? contentType : "image/jpeg"
                     );
+                    newImage.setCapturedAt(capturedAt);
+                    newImage.setLatitude(latitude);
+                    newImage.setLongitude(longitude);
                     return diaryImageRepository.save(newImage);
                 });
             } catch (Exception e) {
@@ -539,6 +657,9 @@ public class DiaryService {
                 img.getOriginalFileSize(),
                 img.getWidth(),
                 img.getHeight(),
+                img.getCapturedAt(),
+                img.getLatitude(),
+                img.getLongitude(),
                 img.getCreatedAt(),
                 img.getUpdatedAt()
         );

@@ -126,13 +126,23 @@ export default function DiaryImageLightbox({
             zIndex: 10,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-            <Text ellipsis style={{ color: '#fff', fontSize: '15px', fontWeight: 500, maxWidth: '400px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flexWrap: 'wrap' }}>
+            <Text ellipsis style={{ color: '#fff', fontSize: '15px', fontWeight: 500, maxWidth: '350px' }}>
               {currentImage.originalFilename || 'Ảnh nhật ký'}
             </Text>
             <Text style={{ color: '#aaa', fontSize: '12px' }}>
               ({currentIndex + 1} / {images.length})
             </Text>
+            {currentImage.capturedAt && (
+              <Text style={{ color: '#4ade80', fontSize: '12px' }}>
+                📅 {currentImage.capturedAt.slice(0, 16).replace('T', ' ')}
+              </Text>
+            )}
+            {typeof currentImage.latitude === 'number' && typeof currentImage.longitude === 'number' && (
+              <Text style={{ color: '#60a5fa', fontSize: '12px' }}>
+                📍 {currentImage.latitude.toFixed(4)}, {currentImage.longitude.toFixed(4)}
+              </Text>
+            )}
           </div>
 
           <Space>

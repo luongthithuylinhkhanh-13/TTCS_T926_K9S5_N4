@@ -20,12 +20,16 @@ export async function createDiaryEntry(projectId, entryData) {
  * @param {string} clientImageId
  * @param {string} filename
  * @param {Blob|File} displayBlob
+ * @param {object} [metadata]
  */
-export async function uploadDisplayImage(projectId, entryId, clientImageId, filename, displayBlob) {
+export async function uploadDisplayImage(projectId, entryId, clientImageId, filename, displayBlob, metadata = {}) {
   const formData = new FormData();
   formData.append('clientImageId', clientImageId);
   formData.append('filename', filename);
   formData.append('file', displayBlob, filename);
+  if (metadata?.capturedAt) formData.append('capturedAt', metadata.capturedAt);
+  if (typeof metadata?.latitude === 'number') formData.append('latitude', String(metadata.latitude));
+  if (typeof metadata?.longitude === 'number') formData.append('longitude', String(metadata.longitude));
 
   const response = await apiClient.post(
     `/api/projects/${projectId}/diary-entries/${entryId}/images/display`,
@@ -46,12 +50,16 @@ export async function uploadDisplayImage(projectId, entryId, clientImageId, file
  * @param {string} clientImageId
  * @param {string} filename
  * @param {File} originalFile
+ * @param {object} [metadata]
  */
-export async function uploadOriginalImage(projectId, entryId, clientImageId, filename, originalFile) {
+export async function uploadOriginalImage(projectId, entryId, clientImageId, filename, originalFile, metadata = {}) {
   const formData = new FormData();
   formData.append('clientImageId', clientImageId);
   formData.append('filename', filename);
   formData.append('file', originalFile, filename);
+  if (metadata?.capturedAt) formData.append('capturedAt', metadata.capturedAt);
+  if (typeof metadata?.latitude === 'number') formData.append('latitude', String(metadata.latitude));
+  if (typeof metadata?.longitude === 'number') formData.append('longitude', String(metadata.longitude));
 
   const response = await apiClient.post(
     `/api/projects/${projectId}/diary-entries/${entryId}/images/original`,

@@ -55,10 +55,16 @@ public class DiaryController {
             @PathVariable UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "capturedAt", required = false) String capturedAtStr,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
+            @RequestParam(value = "requireGps", required = false, defaultValue = "false") boolean requireGps
     ) throws IOException {
+        java.time.OffsetDateTime capturedAt = parseOffsetDateTime(capturedAtStr);
         DiaryImageResponse response =
-                diaryService.uploadDisplayImage(projectId, entryId, clientImageId, filename, file);
+                diaryService.uploadDisplayImage(projectId, entryId, clientImageId, filename, file,
+                        capturedAt, latitude, longitude, requireGps);
         return ResponseEntity.ok(ApiResponse.ok("Tải ảnh hiển thị thành công", response));
     }
 
@@ -69,10 +75,16 @@ public class DiaryController {
             @PathVariable UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "capturedAt", required = false) String capturedAtStr,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
+            @RequestParam(value = "requireGps", required = false, defaultValue = "false") boolean requireGps
     ) throws IOException {
+        java.time.OffsetDateTime capturedAt = parseOffsetDateTime(capturedAtStr);
         DiaryImageResponse response =
-                diaryService.uploadOriginalImage(projectId, entryId, clientImageId, filename, file);
+                diaryService.uploadOriginalImage(projectId, entryId, clientImageId, filename, file,
+                        capturedAt, latitude, longitude, requireGps);
         return ResponseEntity.ok(ApiResponse.ok("Tải ảnh gốc thành công", response));
     }
 
@@ -123,5 +135,21 @@ public class DiaryController {
     ) {
         diaryService.deleteDiaryImage(projectId, entryId, imageId);
         return ResponseEntity.ok(ApiResponse.ok("Xóa ảnh thành công", null));
+    }
+
+    private java.time.OffsetDateTime parseOffsetDateTime(String str) {
+        if (str == null || str.isBlank()) {
+            return null;
+        }
+        try {
+            return java.time.OffsetDateTime.parse(str);
+        } catch (Exception e) {
+            try {
+                java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(str);
+                return ldt.atZone(java.time.ZoneId.systemDefault()).toOffsetDateTime();
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 }

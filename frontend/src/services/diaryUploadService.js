@@ -47,7 +47,8 @@ export async function uploadQueueItemStages(
         entryId,
         currentItem.clientImageId,
         currentItem.name,
-        blob
+        blob,
+        currentItem.metadata
       );
       currentItem = {
         ...currentItem,
@@ -84,7 +85,8 @@ export async function uploadQueueItemStages(
         entryId,
         currentItem.clientImageId,
         currentItem.name,
-        currentItem.file
+        currentItem.file,
+        currentItem.metadata
       );
       currentItem = {
         ...currentItem,
