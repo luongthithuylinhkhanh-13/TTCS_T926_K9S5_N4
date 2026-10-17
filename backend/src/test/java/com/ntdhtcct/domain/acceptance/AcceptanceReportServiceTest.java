@@ -372,4 +372,82 @@ public class AcceptanceReportServiceTest {
         assertThat(updated).isPresent();
         assertThat(updated.get().getRetentionRate()).isEqualByComparingTo(new BigDecimal("7.50"));
     }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 1 (100,000,000 x 5% = 5,000,000)")
+    void calculateRetentionAmount_Case1_Success() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = new BigDecimal("5.00");
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(new BigDecimal("5000000.00"));
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 2 (100,000,000 x 7.5% = 7,500,000)")
+    void calculateRetentionAmount_Case2_Success() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = new BigDecimal("7.50");
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(new BigDecimal("7500000.00"));
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 3 (100,000,000 x 0% = 0)")
+    void calculateRetentionAmount_Case3_ZeroRate() {
+        BigDecimal total = new BigDecimal("100000000.00");
+        BigDecimal rate = BigDecimal.ZERO;
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 4 (0 x 7.5% = 0)")
+    void calculateRetentionAmount_Case4_ZeroTotal() {
+        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal rate = new BigDecimal("7.50");
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 5 (50,000,000 x 10% = 5,000,000)")
+    void calculateRetentionAmount_Case5_Success() {
+        BigDecimal total = new BigDecimal("50000000.00");
+        BigDecimal rate = new BigDecimal("10.00");
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(new BigDecimal("5000000.00"));
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): Tính số tiền tạm giữ CASE 6 (Rounding 100.55 x 7.5% = 7.54)")
+    void calculateRetentionAmount_Case6_Rounding() {
+        BigDecimal total = new BigDecimal("100.55");
+        BigDecimal rate = new BigDecimal("7.50");
+        // 100.55 * 0.075 = 7.54125 -> 7.54
+        BigDecimal retentionAmount = AcceptanceReportService.calculateRetentionAmount(total, rate);
+        assertThat(retentionAmount).isEqualByComparingTo(new BigDecimal("7.54"));
+    }
+
+    @Test
+    @DisplayName("T-86 (S-45): AcceptanceReportResponse tự động tính và trả về retentionAmount")
+    void acceptanceReportResponse_CalculatesRetentionAmount() {
+        AcceptanceReport report = new AcceptanceReport(
+                projectId,
+                "NT-T86",
+                "Phiếu nghiệm thu T-86",
+                1,
+                LocalDate.now(),
+                "DRAFT",
+                creatorId,
+                ""
+        );
+        report.setTotalAmount(new BigDecimal("100000000.00"));
+        report.setRetentionRate(new BigDecimal("7.50"));
+
+        AcceptanceReportResponse response = AcceptanceReportResponse.from(report);
+
+        assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("100000000.00"));
+        assertThat(response.getRetentionRate()).isEqualByComparingTo(new BigDecimal("7.50"));
+        assertThat(response.getRetentionAmount()).isEqualByComparingTo(new BigDecimal("7500000.00"));
+    }
 }

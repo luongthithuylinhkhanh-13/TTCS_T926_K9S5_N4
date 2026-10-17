@@ -17,6 +17,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -179,6 +180,26 @@ public class AcceptanceReport {
             }
         }
         this.totalAmount = sum;
+    }
+
+    /**
+     * T-86 (S-45): Tự động tính số tiền tạm giữ theo hợp đồng
+     * retentionAmount = totalAmount * (retentionRate / 100)
+     */
+    public BigDecimal calculateRetentionAmount() {
+        if (this.totalAmount == null || this.totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (this.retentionRate == null || this.retentionRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return this.totalAmount
+                .multiply(this.retentionRate)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getRetentionAmount() {
+        return calculateRetentionAmount();
     }
 
     // Getters and Setters
