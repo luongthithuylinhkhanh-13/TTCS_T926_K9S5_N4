@@ -250,6 +250,11 @@ export default function DiaryImageList({
                   {img.originalFilename || 'Ảnh'}
                 </Text>
               </Tooltip>
+              {img.capturedAt && (
+                <Text style={{ fontSize: '10px', color: '#8c8c8c', display: 'block', marginTop: 2 }}>
+                  📅 {img.capturedAt.slice(0, 10)} {img.capturedAt.slice(11, 16)}
+                </Text>
+              )}
             </Card>
           );
         })}

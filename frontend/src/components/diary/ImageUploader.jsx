@@ -10,9 +10,12 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import { formatFileSize, createQueueItem, revokeQueueItem, revokeAllQueueItems } from '../../utils/imageQueueUtils.js';
+import { extractImageMetadata, validateImageMetadata } from '../../utils/imageMetadataExtractor.js';
 
 const { Dragger } = Upload;
 const { Text } = Typography;
+
+export { validateImageMetadata };
 
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const ALLOWED_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
@@ -70,6 +73,7 @@ export default function ImageUploader({
   onRetryOriginal,
   disabled = false,
   maxCount = null,
+  requireGps = false,
 }) {
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -115,7 +119,7 @@ export default function ImageUploader({
       return;
     }
 
-    const newItem = createQueueItem(file);
+    const newItem = createQueueItem(file, undefined, null, { requireGps });
     const updated = [...itemsRef.current, newItem];
     itemsRef.current = updated;
 
@@ -125,6 +129,27 @@ export default function ImageUploader({
     if (onSuccess) {
       onSuccess('ok');
     }
+
+    // T-74: Trích xuất siêu dữ liệu EXIF / GPS / kích thước ảnh bất đồng bộ
+    extractImageMetadata(file).then((extractedMeta) => {
+      const validation = validateImageMetadata(extractedMeta, { requireGps });
+      const currentList = itemsRef.current;
+      const targetIdx = currentList.findIndex((it) => it.clientImageId === newItem.clientImageId);
+      if (targetIdx >= 0) {
+        const nextList = [...currentList];
+        nextList[targetIdx] = {
+          ...nextList[targetIdx],
+          metadata: extractedMeta,
+          metadataValidation: validation,
+        };
+        itemsRef.current = nextList;
+        if (onChange) {
+          onChange(nextList);
+        }
+      }
+    }).catch(() => {
+      // Bỏ qua lỗi trích xuất
+    });
   };
 
   const handleDrop = (e) => {
@@ -285,6 +310,44 @@ export default function ImageUploader({
                     title="Xóa ảnh khỏi hàng đợi"
                   />
                 </div>
+
+                {/* T-74: Thông tin và trạng thái kiểm tra siêu dữ liệu ảnh hiện trường */}
+                {item.metadata && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '4px 6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: '10px', color: '#595959' }}>
+                        Chụp: {item.metadata.capturedAt ? item.metadata.capturedAt.slice(0, 16).replace('T', ' ') : 'Chưa có'}
+                      </Text>
+                      {item.metadataValidation?.valid ? (
+                        <Tag color="cyan" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                          Meta: Hợp lệ
+                        </Tag>
+                      ) : (
+                        <Tooltip title={item.metadataValidation?.errors?.join(', ') || 'Lỗi siêu dữ liệu'}>
+                          <Tag color="error" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px', cursor: 'pointer' }}>
+                            Meta: Lỗi
+                          </Tag>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {typeof item.metadata.latitude === 'number' && typeof item.metadata.longitude === 'number' ? (
+                        <Text style={{ fontSize: '10px', color: '#1677ff' }}>
+                          GPS: {item.metadata.latitude.toFixed(4)}, {item.metadata.longitude.toFixed(4)}
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
+                          GPS: Chưa có
+                        </Text>
+                      )}
+                      {item.metadata.width && item.metadata.height ? (
+                        <Text style={{ fontSize: '9px', color: '#8c8c8c' }}>
+                          {item.metadata.width}x{item.metadata.height}
+                        </Text>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
 
                 {/* Trạng thái hai giai đoạn: Hiển thị & Ảnh gốc */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
