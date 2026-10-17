@@ -1,6 +1,8 @@
 package com.ntdhtcct.domain.diary.dto;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public record DiaryImageResponse(
@@ -18,9 +20,35 @@ public record DiaryImageResponse(
         Double latitude,
         Double longitude,
         String metadataStatus,
+        List<String> metadataReasons,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
+    public DiaryImageResponse(
+            UUID id,
+            UUID diaryEntryId,
+            String clientImageId,
+            String originalFilename,
+            String displayStatus,
+            String originalStatus,
+            Long displayFileSize,
+            Long originalFileSize,
+            Integer width,
+            Integer height,
+            OffsetDateTime capturedAt,
+            Double latitude,
+            Double longitude,
+            String metadataStatus,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt
+    ) {
+        this(id, diaryEntryId, clientImageId, originalFilename, displayStatus, originalStatus,
+                displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
+                metadataStatus != null ? metadataStatus : computeMetadataStatus(capturedAt, latitude, longitude),
+                computeMetadataReasons(capturedAt, latitude, longitude),
+                createdAt, updatedAt);
+    }
+
     public DiaryImageResponse(
             UUID id,
             UUID diaryEntryId,
@@ -40,7 +68,9 @@ public record DiaryImageResponse(
     ) {
         this(id, diaryEntryId, clientImageId, originalFilename, displayStatus, originalStatus,
                 displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
-                computeMetadataStatus(capturedAt, latitude, longitude), createdAt, updatedAt);
+                computeMetadataStatus(capturedAt, latitude, longitude),
+                computeMetadataReasons(capturedAt, latitude, longitude),
+                createdAt, updatedAt);
     }
 
     public DiaryImageResponse(
@@ -81,5 +111,34 @@ public record DiaryImageResponse(
             }
         }
         return "VALID";
+    }
+
+    public static List<String> computeMetadataReasons(OffsetDateTime capturedAt, Double latitude, Double longitude) {
+        List<String> reasons = new ArrayList<>();
+        if (capturedAt == null) {
+            reasons.add("Thiếu thời gian chụp");
+        } else {
+            OffsetDateTime maxAllowedFuture = OffsetDateTime.now().plusMinutes(5);
+            if (capturedAt.isAfter(maxAllowedFuture)) {
+                reasons.add("Thời gian chụp ở tương lai");
+            }
+            if (capturedAt.getYear() < 2000) {
+                reasons.add("Thời gian chụp trước năm 2000");
+            }
+        }
+
+        if (latitude == null && longitude != null) {
+            reasons.add("Thiếu vĩ độ GPS (tọa độ GPS không đầy đủ)");
+        } else if (latitude != null && longitude == null) {
+            reasons.add("Thiếu kinh độ GPS (tọa độ GPS không đầy đủ)");
+        } else if (latitude != null && longitude != null) {
+            if (Double.isNaN(latitude) || Double.isInfinite(latitude) || latitude < -90.0 || latitude > 90.0) {
+                reasons.add("Vĩ độ GPS ngoài phạm vi -90 đến 90");
+            }
+            if (Double.isNaN(longitude) || Double.isInfinite(longitude) || longitude < -180.0 || longitude > 180.0) {
+                reasons.add("Kinh độ GPS ngoài phạm vi -180 đến 180");
+            }
+        }
+        return reasons;
     }
 }

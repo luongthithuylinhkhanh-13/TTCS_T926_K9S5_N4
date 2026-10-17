@@ -387,3 +387,186 @@ test('T-75: determineImageMetadataStatus đánh giá ảnh tải từ DB (DiaryI
   assert.equal(res3.status, 'INVALID');
   assert.equal(res3.label, 'Meta: Không hợp lệ');
 });
+
+// =========================================================================
+// TEST SUITE: T-76 Hiển thị cảnh báo/lý do ảnh không hợp lệ (S-42)
+// =========================================================================
+
+test('T-76 - Test 1: Ảnh hợp lệ -> Không hiển thị cảnh báo (reasons rỗng)', () => {
+  const validMeta = {
+    fileName: 'valid_photo.jpg',
+    fileSize: 1024 * 1024,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+
+  const validation = validateImageMetadata(validMeta, { requireGps: true });
+  assert.equal(validation.status, METADATA_STATUS.VALID);
+  assert.deepEqual(validation.reasons, []);
+
+  const statusObj = determineImageMetadataStatus(validMeta, { requireGps: true });
+  assert.equal(statusObj.status, 'VALID');
+  assert.deepEqual(statusObj.reasons, []);
+});
+
+test('T-76 - Test 2: Thiếu capturedAt -> cảnh báo "Thiếu thời gian chụp"', () => {
+  const missingCapturedAtMeta = {
+    fileName: 'photo_no_time.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: null,
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+
+  const validation = validateImageMetadata(missingCapturedAtMeta);
+  assert.equal(validation.status, METADATA_STATUS.MISSING);
+  assert.ok(validation.reasons.includes('Thiếu thời gian chụp'));
+
+  const statusObj = determineImageMetadataStatus(missingCapturedAtMeta);
+  assert.equal(statusObj.status, 'MISSING');
+  assert.ok(statusObj.reasons.includes('Thiếu thời gian chụp'));
+});
+
+test('T-76 - Test 3: requireGps=true và không có GPS -> cảnh báo "Thiếu thông tin vị trí GPS"', () => {
+  const noGpsMeta = {
+    fileName: 'photo_no_gps.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: null,
+    longitude: null,
+  };
+
+  const validation = validateImageMetadata(noGpsMeta, { requireGps: true });
+  assert.equal(validation.status, METADATA_STATUS.MISSING);
+  assert.ok(validation.reasons.includes('Thiếu thông tin vị trí GPS'));
+
+  const statusObj = determineImageMetadataStatus(noGpsMeta, { requireGps: true });
+  assert.equal(statusObj.status, 'MISSING');
+  assert.ok(statusObj.reasons.includes('Thiếu thông tin vị trí GPS'));
+});
+
+test('T-76 - Test 4: capturedAt ở tương lai -> cảnh báo "Thời gian chụp ở tương lai"', () => {
+  const futureMeta = {
+    fileName: 'future_photo.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2099-01-01T12:00:00',
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+
+  const validation = validateImageMetadata(futureMeta);
+  assert.equal(validation.status, METADATA_STATUS.INVALID);
+  assert.ok(validation.reasons.includes('Thời gian chụp ở tương lai'));
+
+  const statusObj = determineImageMetadataStatus(futureMeta);
+  assert.equal(statusObj.status, 'INVALID');
+  assert.ok(statusObj.reasons.includes('Thời gian chụp ở tương lai'));
+});
+
+test('T-76 - Test 5: Latitude ngoài phạm vi -> cảnh báo "Vĩ độ GPS ngoài phạm vi -90 đến 90"', () => {
+  const badLatMeta = {
+    fileName: 'bad_lat.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 95.5,
+    longitude: 105.8542,
+  };
+
+  const validation = validateImageMetadata(badLatMeta);
+  assert.equal(validation.status, METADATA_STATUS.INVALID);
+  assert.ok(validation.reasons.includes('Vĩ độ GPS ngoài phạm vi -90 đến 90'));
+
+  const statusObj = determineImageMetadataStatus(badLatMeta);
+  assert.equal(statusObj.status, 'INVALID');
+  assert.ok(statusObj.reasons.includes('Vĩ độ GPS ngoài phạm vi -90 đến 90'));
+});
+
+test('T-76 - Test 6: Longitude ngoài phạm vi -> cảnh báo "Kinh độ GPS ngoài phạm vi -180 đến 180"', () => {
+  const badLonMeta = {
+    fileName: 'bad_lon.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 21.0285,
+    longitude: 195.5,
+  };
+
+  const validation = validateImageMetadata(badLonMeta);
+  assert.equal(validation.status, METADATA_STATUS.INVALID);
+  assert.ok(validation.reasons.includes('Kinh độ GPS ngoài phạm vi -180 đến 180'));
+
+  const statusObj = determineImageMetadataStatus(badLonMeta);
+  assert.equal(statusObj.status, 'INVALID');
+  assert.ok(statusObj.reasons.includes('Kinh độ GPS ngoài phạm vi -180 đến 180'));
+});
+
+test('T-76 - Test 7: Chỉ có latitude hoặc longitude -> cảnh báo tọa độ GPS không đầy đủ', () => {
+  // 7a: Chỉ có vĩ độ, thiếu kinh độ
+  const latOnlyMeta = {
+    fileName: 'lat_only.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 21.0285,
+    longitude: null,
+  };
+  const latOnlyVal = validateImageMetadata(latOnlyMeta);
+  assert.equal(latOnlyVal.status, METADATA_STATUS.INVALID);
+  assert.ok(latOnlyVal.reasons.some((r) => r.includes('Thiếu kinh độ GPS') && r.includes('tọa độ GPS không đầy đủ')));
+
+  // 7b: Chỉ có kinh độ, thiếu vĩ độ
+  const lonOnlyMeta = {
+    fileName: 'lon_only.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: null,
+    longitude: 105.8542,
+  };
+  const lonOnlyVal = validateImageMetadata(lonOnlyMeta);
+  assert.equal(lonOnlyVal.status, METADATA_STATUS.INVALID);
+  assert.ok(lonOnlyVal.reasons.some((r) => r.includes('Thiếu vĩ độ GPS') && r.includes('tọa độ GPS không đầy đủ')));
+});
+
+test('T-76 - Test 8: Có nhiều lỗi cùng lúc -> giao diện và kết quả hiển thị đầy đủ các lý do tương ứng, không chỉ lỗi đầu tiên', () => {
+  const multiErrorMeta = {
+    fileName: '', // Thiếu tên
+    fileSize: 0, // File rỗng
+    mimeType: 'image/gif', // Định dạng không hỗ trợ
+    capturedAt: null, // Thiếu thời gian chụp
+    latitude: 100.0, // Vĩ độ ngoài phạm vi
+    longitude: 200.0, // Kinh độ ngoài phạm vi
+  };
+
+  const validation = validateImageMetadata(multiErrorMeta);
+  assert.equal(validation.status, METADATA_STATUS.MISSING); // Có missing fields nên status là MISSING
+  // Đầy đủ các lý do phải cùng tồn tại trong reasons
+  assert.ok(validation.reasons.includes('Thiếu tên tệp ảnh'));
+  assert.ok(validation.reasons.includes('File ảnh rỗng'));
+  assert.ok(validation.reasons.includes('Định dạng ảnh không được hỗ trợ'));
+  assert.ok(validation.reasons.includes('Thiếu thời gian chụp'));
+  assert.ok(validation.reasons.includes('Vĩ độ GPS ngoài phạm vi -90 đến 90'));
+  assert.ok(validation.reasons.includes('Kinh độ GPS ngoài phạm vi -180 đến 180'));
+  assert.ok(validation.reasons.length >= 6);
+});
+
+test('T-76: determineImageMetadataStatus tiếp nhận metadataReasons trả về từ máy chủ Backend', () => {
+  const serverResponseImage = {
+    id: 'img-101',
+    originalFilename: 'server_photo.jpg',
+    metadataStatus: 'MISSING',
+    metadataReasons: ['Thiếu thời gian chụp', 'Thiếu thông tin vị trí GPS'],
+  };
+
+  const result = determineImageMetadataStatus(serverResponseImage);
+  assert.equal(result.status, 'MISSING');
+  assert.equal(result.label, 'Meta: Thiếu');
+  assert.deepEqual(result.reasons, ['Thiếu thời gian chụp', 'Thiếu thông tin vị trí GPS']);
+});
+

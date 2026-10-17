@@ -38,7 +38,7 @@ public class DiaryController {
     @PostMapping
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryEntryResponse>> createDiaryEntry(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody CreateDiaryEntryRequest request
     ) {
         UUID authorId = UserSecurityContext.getUserId();
@@ -51,8 +51,8 @@ public class DiaryController {
     @PostMapping("/{entryId}/images/display")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadDisplayImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
             @RequestParam("file") MultipartFile file,
@@ -71,8 +71,8 @@ public class DiaryController {
     @PostMapping("/{entryId}/images/original")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadOriginalImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
             @RequestParam("file") MultipartFile file,
@@ -91,9 +91,9 @@ public class DiaryController {
     @GetMapping("/{entryId}/images/{imageId}/display")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<Resource> getDisplayImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
-            @PathVariable UUID imageId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId,
             @RequestParam(value = "thumb", defaultValue = "false") boolean isThumb
     ) {
         Resource resource = diaryService.getDisplayImageResource(projectId, entryId, imageId, isThumb);
@@ -105,9 +105,9 @@ public class DiaryController {
     @GetMapping("/{entryId}/images/{imageId}/original")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<Resource> getOriginalImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
-            @PathVariable UUID imageId
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId
     ) {
         Resource resource = diaryService.getOriginalImageResource(projectId, entryId, imageId);
         return ResponseEntity.ok()
@@ -119,8 +119,8 @@ public class DiaryController {
     @GetMapping("/{entryId}/images")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<ApiResponse<java.util.List<DiaryImageResponse>>> getDiaryImages(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId
     ) {
         java.util.List<DiaryImageResponse> images = diaryService.getDiaryImages(projectId, entryId);
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách ảnh thành công", images));
@@ -129,9 +129,9 @@ public class DiaryController {
     @DeleteMapping("/{entryId}/images/{imageId}")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<Void>> deleteDiaryImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
-            @PathVariable UUID imageId
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId
     ) {
         diaryService.deleteDiaryImage(projectId, entryId, imageId);
         return ResponseEntity.ok(ApiResponse.ok("Xóa ảnh thành công", null));

@@ -251,12 +251,12 @@ export default function DiaryImageList({
                   {img.originalFilename || 'Ảnh'}
                 </Text>
               </Tooltip>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
-                  {img.capturedAt ? `📅 ${img.capturedAt.slice(0, 10)}` : 'Chưa có ngày'}
-                </Text>
-                {(() => {
-                  const metaStatus = determineImageMetadataStatus(img);
+              {(() => {
+                const metaStatus = determineImageMetadataStatus(img);
+                const hasReasons = metaStatus.reasons && metaStatus.reasons.length > 0;
+                const isMissing = metaStatus.status === 'MISSING';
+
+                const badgeElement = (() => {
                   if (metaStatus.status === 'VALID') {
                     return (
                       <Tag color="success" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
@@ -264,7 +264,7 @@ export default function DiaryImageList({
                       </Tag>
                     );
                   }
-                  if (metaStatus.status === 'MISSING') {
+                  if (isMissing) {
                     return (
                       <Tag color="warning" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
                         ⚠ Meta: Thiếu
@@ -276,8 +276,59 @@ export default function DiaryImageList({
                       ⚠ Meta: Không hợp lệ
                     </Tag>
                   );
-                })()}
-              </div>
+                })();
+
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
+                        {img.capturedAt ? `📅 ${img.capturedAt.slice(0, 10)}` : 'Chưa có ngày'}
+                      </Text>
+                      {hasReasons ? (
+                        <Tooltip
+                          title={
+                            <div>
+                              <div style={{ fontWeight: 600, marginBottom: 2 }}>{metaStatus.label}:</div>
+                              <ul style={{ margin: 0, paddingLeft: 14 }}>
+                                {metaStatus.reasons.map((r, i) => (
+                                  <li key={i}>{r}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          }
+                        >
+                          {badgeElement}
+                        </Tooltip>
+                      ) : (
+                        badgeElement
+                      )}
+                    </div>
+
+                    {/* T-76: Hiển thị ngắn gọn lý do cảnh báo dưới badge */}
+                    {metaStatus.status !== 'VALID' && hasReasons && (
+                      <div
+                        className="saved-image-metadata-warning"
+                        style={{
+                          marginTop: 4,
+                          padding: '2px 4px',
+                          borderRadius: 3,
+                          background: isMissing ? '#fffbe6' : '#fff2f0',
+                          border: `1px solid ${isMissing ? '#ffe58f' : '#ffccc7'}`,
+                          fontSize: '9px',
+                          color: isMissing ? '#ad4e00' : '#cf1322',
+                          lineHeight: '1.25',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={metaStatus.reasons.join('; ')}
+                      >
+                        ⚠ {metaStatus.reasons.length === 1 ? metaStatus.reasons[0] : `${metaStatus.reasons[0]} (+${metaStatus.reasons.length - 1})`}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </Card>
           );
         })}
