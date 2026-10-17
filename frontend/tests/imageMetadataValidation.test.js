@@ -188,3 +188,202 @@ test('T-74: createQueueItem integrates metadata and validation', () => {
   assert.ok(item.metadataValidation);
   assert.equal(item.metadataValidation.valid, true);
 });
+
+// =========================================================================
+// TEST SUITE: T-75 Xác định và đánh dấu ảnh thiếu metadata (S-42)
+// =========================================================================
+
+import {
+  METADATA_STATUS,
+  METADATA_STATUS_LABELS,
+  determineImageMetadataStatus,
+} from '../src/utils/imageMetadataExtractor.js';
+
+test('T-75 - Test 1: Ảnh đầy đủ metadata -> Meta: Hợp lệ', () => {
+  const fullMeta = {
+    fileName: 'full_valid.jpg',
+    fileSize: 1024 * 1024,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+
+  const result = validateImageMetadata(fullMeta, { requireGps: true });
+  assert.equal(result.status, METADATA_STATUS.VALID);
+  assert.equal(result.statusLabel, 'Meta: Hợp lệ');
+  assert.equal(result.valid, true);
+  assert.equal(result.missingFields.length, 0);
+  assert.equal(result.invalidFields.length, 0);
+
+  // Kiểm tra qua helper determineImageMetadataStatus
+  const statusCheck = determineImageMetadataStatus(fullMeta, { requireGps: true });
+  assert.equal(statusCheck.status, 'VALID');
+  assert.equal(statusCheck.label, 'Meta: Hợp lệ');
+});
+
+test('T-75 - Test 2: Ảnh thiếu metadata bắt buộc -> Meta: Thiếu', () => {
+  const missingCaptureTimeMeta = {
+    fileName: 'missing_time.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: null,
+    latitude: 21.0,
+    longitude: 105.0,
+  };
+
+  const result = validateImageMetadata(missingCaptureTimeMeta);
+  assert.equal(result.status, METADATA_STATUS.MISSING);
+  assert.equal(result.statusLabel, 'Meta: Thiếu');
+  assert.equal(result.valid, false);
+  assert.ok(result.missingFields.includes('capturedAt'));
+
+  const statusCheck = determineImageMetadataStatus(missingCaptureTimeMeta);
+  assert.equal(statusCheck.status, 'MISSING');
+  assert.equal(statusCheck.label, 'Meta: Thiếu');
+});
+
+test('T-75 - Test 3: Ảnh có metadata nhưng giá trị sai -> Meta: Không hợp lệ', () => {
+  // 3a. Thời gian chụp ở tương lai
+  const futureMeta = {
+    fileName: 'future.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2099-01-01T12:00:00',
+    latitude: 21.0,
+    longitude: 105.0,
+  };
+  const futureRes = validateImageMetadata(futureMeta);
+  assert.equal(futureRes.status, METADATA_STATUS.INVALID);
+  assert.equal(futureRes.statusLabel, 'Meta: Không hợp lệ');
+  assert.equal(futureRes.valid, false);
+  assert.ok(futureRes.invalidFields.includes('capturedAt'));
+
+  // 3b. Latitude ngoài -90 đến 90
+  const badLatMeta = {
+    fileName: 'bad_lat.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T09:00:00',
+    latitude: 95.0,
+    longitude: 105.0,
+  };
+  const badLatRes = validateImageMetadata(badLatMeta);
+  assert.equal(badLatRes.status, METADATA_STATUS.INVALID);
+  assert.equal(badLatRes.statusLabel, 'Meta: Không hợp lệ');
+  assert.ok(badLatRes.invalidFields.includes('gps'));
+
+  // 3c. Longitude ngoài -180 đến 180
+  const badLonMeta = {
+    fileName: 'bad_lon.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T09:00:00',
+    latitude: 21.0,
+    longitude: 200.0,
+  };
+  const badLonRes = validateImageMetadata(badLonMeta);
+  assert.equal(badLonRes.status, METADATA_STATUS.INVALID);
+  assert.equal(badLonRes.statusLabel, 'Meta: Không hợp lệ');
+
+  // 3d. Có latitude nhưng không có longitude
+  const unpairedGpsMeta = {
+    fileName: 'unpaired.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T09:00:00',
+    latitude: 21.0,
+    longitude: null,
+  };
+  const unpairedRes = validateImageMetadata(unpairedGpsMeta);
+  assert.equal(unpairedRes.status, METADATA_STATUS.INVALID);
+  assert.equal(unpairedRes.statusLabel, 'Meta: Không hợp lệ');
+  assert.ok(unpairedRes.invalidFields.includes('gps'));
+});
+
+test('T-75 - Test 4: Ảnh không có GPS nhưng GPS không bắt buộc -> Không được đánh dấu thiếu GPS', () => {
+  const noGpsMeta = {
+    fileName: 'no_gps_optional.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: null,
+    longitude: null,
+  };
+
+  const result = validateImageMetadata(noGpsMeta, { requireGps: false });
+  // Không bắt buộc GPS nên ảnh có capturedAt hợp lệ vẫn là Hợp lệ
+  assert.equal(result.status, METADATA_STATUS.VALID);
+  assert.equal(result.statusLabel, 'Meta: Hợp lệ');
+  assert.equal(result.valid, true);
+  assert.ok(!result.missingFields.includes('gps'));
+
+  const statusCheck = determineImageMetadataStatus(noGpsMeta, { requireGps: false });
+  assert.equal(statusCheck.status, 'VALID');
+  assert.equal(statusCheck.label, 'Meta: Hợp lệ');
+});
+
+test('T-75 - Test 5: Ảnh không có GPS và requireGps=true -> Meta: Thiếu', () => {
+  const noGpsMeta = {
+    fileName: 'no_gps_strict.jpg',
+    fileSize: 500000,
+    mimeType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: null,
+    longitude: null,
+  };
+
+  const result = validateImageMetadata(noGpsMeta, { requireGps: true });
+  assert.equal(result.status, METADATA_STATUS.MISSING);
+  assert.equal(result.statusLabel, 'Meta: Thiếu');
+  assert.equal(result.valid, false);
+  assert.ok(result.missingFields.includes('gps'));
+
+  const statusCheck = determineImageMetadataStatus(noGpsMeta, { requireGps: true });
+  assert.equal(statusCheck.status, 'MISSING');
+  assert.equal(statusCheck.label, 'Meta: Thiếu');
+});
+
+test('T-75: determineImageMetadataStatus đánh giá ảnh tải từ DB (DiaryImageResponse)', () => {
+  // Ảnh DB hợp lệ
+  const dbImageValid = {
+    id: 'img-1',
+    originalFilename: 'db_photo_1.jpg',
+    originalFileSize: 800000,
+    contentType: 'image/jpeg',
+    capturedAt: '2026-10-17T08:00:00',
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+  const res1 = determineImageMetadataStatus(dbImageValid);
+  assert.equal(res1.status, 'VALID');
+  assert.equal(res1.label, 'Meta: Hợp lệ');
+
+  // Ảnh DB thiếu ngày chụp
+  const dbImageMissing = {
+    id: 'img-2',
+    originalFilename: 'db_photo_2.jpg',
+    originalFileSize: 800000,
+    contentType: 'image/jpeg',
+    capturedAt: null,
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+  const res2 = determineImageMetadataStatus(dbImageMissing);
+  assert.equal(res2.status, 'MISSING');
+  assert.equal(res2.label, 'Meta: Thiếu');
+
+  // Ảnh DB thời gian tương lai
+  const dbImageFuture = {
+    id: 'img-3',
+    originalFilename: 'db_photo_3.jpg',
+    originalFileSize: 800000,
+    contentType: 'image/jpeg',
+    capturedAt: '2099-01-01T00:00:00',
+    latitude: 21.0285,
+    longitude: 105.8542,
+  };
+  const res3 = determineImageMetadataStatus(dbImageFuture);
+  assert.equal(res3.status, 'INVALID');
+  assert.equal(res3.label, 'Meta: Không hợp lệ');
+});

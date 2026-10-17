@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag, Popconfirm, Button, message } from 'antd';
 import { FileImageOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getDiaryImages, getDisplayImageUrl, deleteDiaryImage } from '../../services/diaryApi.js';
+import { determineImageMetadataStatus } from '../../utils/imageMetadataExtractor.js';
 import apiClient from '../../services/apiClient.js';
 import DiaryImageLightbox from './DiaryImageLightbox.jsx';
 
@@ -250,11 +251,33 @@ export default function DiaryImageList({
                   {img.originalFilename || 'Ảnh'}
                 </Text>
               </Tooltip>
-              {img.capturedAt && (
-                <Text style={{ fontSize: '10px', color: '#8c8c8c', display: 'block', marginTop: 2 }}>
-                  📅 {img.capturedAt.slice(0, 10)} {img.capturedAt.slice(11, 16)}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
+                  {img.capturedAt ? `📅 ${img.capturedAt.slice(0, 10)}` : 'Chưa có ngày'}
                 </Text>
-              )}
+                {(() => {
+                  const metaStatus = determineImageMetadataStatus(img);
+                  if (metaStatus.status === 'VALID') {
+                    return (
+                      <Tag color="success" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                        ✓ Meta: Hợp lệ
+                      </Tag>
+                    );
+                  }
+                  if (metaStatus.status === 'MISSING') {
+                    return (
+                      <Tag color="warning" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                        ⚠ Meta: Thiếu
+                      </Tag>
+                    );
+                  }
+                  return (
+                    <Tag color="error" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                      ⚠ Meta: Không hợp lệ
+                    </Tag>
+                  );
+                })()}
+              </div>
             </Card>
           );
         })}

@@ -147,4 +147,88 @@ public class ImageMetadataValidator {
             }
         }
     }
+
+    /**
+     * Định nghĩa 3 trạng thái metadata theo T-75.
+     */
+    public enum MetadataStatus {
+        VALID("Meta: Hợp lệ"),
+        MISSING("Meta: Thiếu"),
+        INVALID("Meta: Không hợp lệ");
+
+        private final String label;
+
+        MetadataStatus(String label) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+    }
+
+    /**
+     * Xác định trạng thái metadata của ảnh (T-75) theo 3 trạng thái: HỢP LỆ, THIẾU, KHÔNG HỢP LỆ.
+     *
+     * @param metadata   Dữ liệu metadata
+     * @param requireGps Có bắt buộc tọa độ GPS hay không
+     * @return MetadataStatus
+     */
+    public MetadataStatus determineStatus(ImageMetadata metadata, boolean requireGps) {
+        if (metadata == null) {
+            return MetadataStatus.MISSING;
+        }
+
+        // B. THIẾU METADATA BẮT BUỘC
+        if (metadata.filename() == null || metadata.filename().isBlank()) {
+            return MetadataStatus.MISSING;
+        }
+
+        if (metadata.capturedAt() == null) {
+            return MetadataStatus.MISSING;
+        }
+
+        Double lat = metadata.latitude();
+        Double lon = metadata.longitude();
+
+        if (requireGps && (lat == null || lon == null)) {
+            return MetadataStatus.MISSING;
+        }
+
+        // C. METADATA KHÔNG HỢP LỆ (có metadata nhưng sai / bất thường)
+        if (!ALLOWED_EXTENSIONS_PATTERN.matcher(metadata.filename().trim()).matches()) {
+            return MetadataStatus.INVALID;
+        }
+
+        if (metadata.contentType() == null
+                || !ALLOWED_MIME_TYPES.contains(metadata.contentType().toLowerCase())) {
+            return MetadataStatus.INVALID;
+        }
+
+        if (metadata.fileSize() == null || metadata.fileSize() <= 0 || metadata.fileSize() > MAX_ORIGINAL_FILE_SIZE) {
+            return MetadataStatus.INVALID;
+        }
+
+        OffsetDateTime capturedAt = metadata.capturedAt();
+        OffsetDateTime maxAllowedFuture = OffsetDateTime.now().plusMinutes(5);
+        if (capturedAt.isAfter(maxAllowedFuture) || capturedAt.isBefore(MIN_REASONABLE_DATE)) {
+            return MetadataStatus.INVALID;
+        }
+
+        if ((lat == null && lon != null) || (lat != null && lon == null)) {
+            return MetadataStatus.INVALID;
+        }
+
+        if (lat != null && lon != null) {
+            if (Double.isNaN(lat) || Double.isInfinite(lat) || lat < -90.0 || lat > 90.0) {
+                return MetadataStatus.INVALID;
+            }
+            if (Double.isNaN(lon) || Double.isInfinite(lon) || lon < -180.0 || lon > 180.0) {
+                return MetadataStatus.INVALID;
+            }
+        }
+
+        // A. HỢP LỆ
+        return MetadataStatus.VALID;
+    }
 }
