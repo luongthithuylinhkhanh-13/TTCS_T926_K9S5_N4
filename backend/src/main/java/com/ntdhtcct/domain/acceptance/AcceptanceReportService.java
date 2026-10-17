@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -290,6 +291,22 @@ public class AcceptanceReportService {
         if (rate.compareTo(BigDecimal.ZERO) < 0 || rate.compareTo(new BigDecimal("100")) > 0) {
             throw new IllegalArgumentException("Tỷ lệ tạm giữ phải từ 0% đến 100%");
         }
+    }
+
+    /**
+     * T-86 (S-45): Tự động tính số tiền tạm giữ theo hợp đồng
+     * retentionAmount = acceptedAmount * (retentionRate / 100)
+     */
+    public static BigDecimal calculateRetentionAmount(BigDecimal acceptedAmount, BigDecimal retentionRate) {
+        if (acceptedAmount == null || acceptedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (retentionRate == null || retentionRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return acceptedAmount
+                .multiply(retentionRate)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private String trimToNull(String value) {
