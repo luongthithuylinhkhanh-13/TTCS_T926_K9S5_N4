@@ -284,11 +284,12 @@ public class DiaryService {
                 throw new BadRequestException("FILE_TOO_LARGE", "Ảnh gốc vượt quá giới hạn tối đa 20 MiB");
             }
 
-            // T-74: Trích xuất và kiểm tra siêu dữ liệu (metadata) của ảnh hiện trường
+            // T-69: Trích xuất và kiểm tra siêu dữ liệu (metadata) của ảnh hiện trường
             ExifMetadataExtractor.ParsedExif parsedExif = ExifMetadataExtractor.extract(file.getBytes());
-            OffsetDateTime effectiveCapturedAt = capturedAt != null ? capturedAt : parsedExif.capturedAt();
-            Double effectiveLat = latitude != null ? latitude : parsedExif.latitude();
-            Double effectiveLon = longitude != null ? longitude : parsedExif.longitude();
+            // Ưu tiên thời điểm chụp đọc trực tiếp từ EXIF của ảnh gốc để chống việc client gửi sai/giả mạo
+            OffsetDateTime effectiveCapturedAt = parsedExif.capturedAt() != null ? parsedExif.capturedAt() : capturedAt;
+            Double effectiveLat = parsedExif.latitude() != null ? parsedExif.latitude() : latitude;
+            Double effectiveLon = parsedExif.longitude() != null ? parsedExif.longitude() : longitude;
 
             ImageMetadataValidator.ImageMetadata meta = new ImageMetadataValidator.ImageMetadata(
                     filename,
@@ -579,15 +580,15 @@ public class DiaryService {
         if (existing.isPresent()) {
             DiaryImage img = existing.get();
             boolean changed = false;
-            if (img.getCapturedAt() == null && capturedAt != null) {
+            if (capturedAt != null && !capturedAt.equals(img.getCapturedAt())) {
                 img.setCapturedAt(capturedAt);
                 changed = true;
             }
-            if (img.getLatitude() == null && latitude != null) {
+            if (latitude != null && !latitude.equals(img.getLatitude())) {
                 img.setLatitude(latitude);
                 changed = true;
             }
-            if (img.getLongitude() == null && longitude != null) {
+            if (longitude != null && !longitude.equals(img.getLongitude())) {
                 img.setLongitude(longitude);
                 changed = true;
             }
@@ -603,15 +604,15 @@ public class DiaryService {
             if (existing.isPresent()) {
                 DiaryImage img = existing.get();
                 boolean changed = false;
-                if (img.getCapturedAt() == null && capturedAt != null) {
+                if (capturedAt != null && !capturedAt.equals(img.getCapturedAt())) {
                     img.setCapturedAt(capturedAt);
                     changed = true;
                 }
-                if (img.getLatitude() == null && latitude != null) {
+                if (latitude != null && !latitude.equals(img.getLatitude())) {
                     img.setLatitude(latitude);
                     changed = true;
                 }
-                if (img.getLongitude() == null && longitude != null) {
+                if (longitude != null && !longitude.equals(img.getLongitude())) {
                     img.setLongitude(longitude);
                     changed = true;
                 }

@@ -205,6 +205,35 @@ export function parseExifDateString(dateStr) {
 }
 
 /**
+ * Định dạng thời điểm chụp ảnh (capturedAt) chuẩn hóa dạng HH:mm DD/MM/YYYY cho hiển thị giao diện (T-70).
+ * Trả về chuỗi thông báo rõ ràng "Chưa có thời gian chụp" nếu null/undefined hoặc không hợp lệ, không để xuất hiện "Invalid Date".
+ *
+ * @param {string|null|undefined} dateStr
+ * @param {object} [options]
+ * @param {string} [options.fallback='Chưa có thời gian chụp']
+ * @returns {string}
+ */
+export function formatCapturedAt(dateStr, options = {}) {
+  const fallback = options.fallback || 'Chưa có thời gian chụp';
+  if (!dateStr || typeof dateStr !== 'string' || dateStr.trim() === '') {
+    return fallback;
+  }
+
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return fallback;
+  }
+
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+
+  return `${hours}:${minutes} ${day}/${month}/${year}`;
+}
+
+/**
  * Trích xuất toàn diện siêu dữ liệu từ tệp ảnh (Frontend).
  * @param {File|Blob} file
  * @returns {Promise<object>}
@@ -256,16 +285,6 @@ export async function extractImageMetadata(file) {
     }
   }
 
-  // Fallback capturedAt từ lastModified nếu chưa có trong EXIF
-  if (!baseMeta.capturedAt && typeof file.lastModified === 'number' && file.lastModified > 0) {
-    const d = new Date(file.lastModified);
-    if (!isNaN(d.getTime())) {
-      baseMeta.capturedAt = d.toISOString().slice(0, 19);
-      if (baseMeta.source !== 'exif') {
-        baseMeta.source = 'file_system';
-      }
-    }
-  }
 
   // Trích xuất kích thước ảnh nếu trong môi trường DOM
   if (typeof Image !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {

@@ -159,22 +159,63 @@ test('T-74: validateImageMetadata rejects empty or oversized files', () => {
   assert.ok(overRes.errors.some((e) => e.includes('vượt quá')));
 });
 
-test('T-74: extractImageMetadata extracts file properties and falls back to lastModified', async () => {
+test('T-69: extractImageMetadata returns capturedAt = null when image lacks EXIF', async () => {
   const mockFile = {
-    name: 'test_photo.jpg',
+    name: 'test_photo_no_exif.jpg',
     size: 150000,
     type: 'image/jpeg',
     lastModified: new Date('2026-10-16T09:30:00Z').getTime(),
   };
 
   const meta = await extractImageMetadata(mockFile);
-  assert.equal(meta.fileName, 'test_photo.jpg');
+  assert.equal(meta.fileName, 'test_photo_no_exif.jpg');
   assert.equal(meta.fileSize, 150000);
   assert.equal(meta.mimeType, 'image/jpeg');
-  assert.ok(meta.capturedAt.includes('2026-10-16'));
+  assert.equal(meta.capturedAt, null, 'Ảnh không có EXIF phải giữ capturedAt = null, không tự gán lastModified hay giờ hiện tại');
 });
 
-test('T-74: createQueueItem integrates metadata and validation', () => {
+test('T-69: extractImageMetadata extracts capturedAt when EXIF buffer is present', async () => {
+  // Tạo JPEG SOI (FF D8) + APP1 Marker (FF E1) với header Exif và tag DateTime (0x0132)
+  const exifDateStr = '2026:10:15 14:30:25\0';
+  const buffer = new ArrayBuffer(128);
+  const view = new DataView(buffer);
+  view.setUint16(0, 0xFFD8, false); // SOI
+  view.setUint16(2, 0xFFE1, false); // APP1
+  view.setUint16(4, 100, false); // Length
+  // "Exif\0\0"
+  view.setUint8(6, 0x45); view.setUint8(7, 0x78); view.setUint8(8, 0x69);
+  view.setUint8(9, 0x66); view.setUint8(10, 0x00); view.setUint8(11, 0x00);
+  // TIFF Header: "II" (0x4949) little endian
+  const tiffStart = 12;
+  view.setUint16(tiffStart, 0x4949, false);
+  view.setUint16(tiffStart + 2, 42, true);
+  view.setUint32(tiffStart + 4, 8, true); // offset to IFD0
+  // IFD0
+  const ifd0 = tiffStart + 8;
+  view.setUint16(ifd0, 1, true); // 1 tag
+  // Tag 0x0132 (DateTime)
+  view.setUint16(ifd0 + 2, 0x0132, true);
+  view.setUint16(ifd0 + 4, 2, true); // ASCII
+  view.setUint32(ifd0 + 6, exifDateStr.length, true);
+  const strOffset = 40;
+  view.setUint32(ifd0 + 10, strOffset, true); // offset relative to tiffStart
+  for (let i = 0; i < exifDateStr.length; i++) {
+    view.setUint8(tiffStart + strOffset + i, exifDateStr.charCodeAt(i));
+  }
+
+  const mockExifFile = {
+    name: 'site_camera.jpg',
+    size: buffer.byteLength,
+    type: 'image/jpeg',
+    arrayBuffer: async () => buffer,
+  };
+
+  const meta = await extractImageMetadata(mockExifFile);
+  assert.equal(meta.capturedAt, '2026-10-15T14:30:25');
+  assert.equal(meta.source, 'exif');
+});
+
+test('T-69: createQueueItem initializes capturedAt as null without fake timestamp', () => {
   const mockFile = {
     name: 'site_photo_1.jpg',
     size: 200000,
@@ -185,8 +226,9 @@ test('T-74: createQueueItem integrates metadata and validation', () => {
   const item = createQueueItem(mockFile, () => 'blob:preview-1');
   assert.ok(item.metadata);
   assert.equal(item.metadata.fileName, 'site_photo_1.jpg');
+  assert.equal(item.metadata.capturedAt, null, 'Hàng đợi không tự gán thời gian giả cho capturedAt');
   assert.ok(item.metadataValidation);
-  assert.equal(item.metadataValidation.valid, true);
+  assert.equal(item.metadataValidation.status, 'MISSING');
 });
 
 // =========================================================================
