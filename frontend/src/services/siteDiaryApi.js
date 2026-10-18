@@ -91,12 +91,6 @@ export const updateSiteDiary = async (projectId, diaryId, diaryData) => {
   return response.data;
 };
 
-export const deleteSiteDiary = async (projectId, diaryId) => {
-  const response = await apiClient.delete(
-    `/api/projects/${projectId}/site-diaries/${diaryId}`
-  );
-  return response.data;
-};
 
 /**
  * Xóa một bản ghi nhật ký công trường.
