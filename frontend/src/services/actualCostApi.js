@@ -4,9 +4,11 @@
  *   - NTDHTCT-306 (T-94): Xây dựng chức năng nhập chi phí thực tế
  *   - NTDHTCT-307 (T-95): Liên kết chi phí với hạng mục tương ứng
  *   - NTDHTCT-308 (T-96): Lưu và hiển thị lịch sử chi phí
+ *   - T-98: Lấy và chuẩn hóa dữ liệu chi phí thực tế
  */
 
 import apiClient from './apiClient.js';
+import { normalizeActualCostData } from './actualCostData.js';
 
 /**
  * T-94: Kiểm tra tính hợp lệ của dữ liệu nhập chi phí thực tế
@@ -21,7 +23,12 @@ export const validateActualCost = ({ name, amount, costType, incurredDate }) => 
   }
 
   const numAmount = Number(amount);
-  if (amount === undefined || amount === null || isNaN(numAmount) || numAmount <= 0) {
+  if (
+    amount === undefined ||
+    amount === null ||
+    isNaN(numAmount) ||
+    numAmount <= 0
+  ) {
     errors.push('Số tiền chi phí phải lớn hơn 0');
   }
 
@@ -35,7 +42,7 @@ export const validateActualCost = ({ name, amount, costType, incurredDate }) => 
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
@@ -43,10 +50,13 @@ export const validateActualCost = ({ name, amount, costType, incurredDate }) => 
  * Tiện ích định dạng tiền tệ VNĐ
  */
 export const formatCurrency = (amount) => {
-  if (amount === null || amount === undefined || isNaN(amount)) return '0 đ';
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '0 đ';
+  }
+
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
-    currency: 'VND'
+    currency: 'VND',
   }).format(amount);
 };
 
@@ -55,22 +65,36 @@ export const formatCurrency = (amount) => {
  */
 export const calculateTotalCost = (costs = []) => {
   if (!Array.isArray(costs) || costs.length === 0) return 0;
-  return costs.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+
+  return costs.reduce(
+    (sum, item) => sum + (Number(item?.amount) || 0),
+    0,
+  );
 };
 
 /**
- * T-96: Lấy danh sách lịch sử chi phí thực tế của dự án
+ * T-96, T-98: Lấy và chuẩn hóa danh sách chi phí thực tế của dự án.
  */
 export const getActualCosts = async (projectId, params = {}) => {
-  const response = await apiClient.get(`/api/projects/${projectId}/actual-costs`, { params });
-  return Array.isArray(response.data) ? response.data : [];
+  const response = await apiClient.get(
+    `/api/projects/${projectId}/actual-costs`,
+    { params },
+  );
+
+  return Array.isArray(response.data)
+    ? normalizeActualCostData(response.data, projectId)
+    : [];
 };
 
 /**
  * T-94 & T-95: Nhập chi phí thực tế mới (kèm liên kết hạng mục)
  */
 export const createActualCost = async (projectId, costData) => {
-  const response = await apiClient.post(`/api/projects/${projectId}/actual-costs`, costData);
+  const response = await apiClient.post(
+    `/api/projects/${projectId}/actual-costs`,
+    costData,
+  );
+
   return response.data;
 };
 
@@ -79,7 +103,12 @@ export const createActualCost = async (projectId, costData) => {
  */
 export const getActualCostSummary = async (projectId, wbsItemId = null) => {
   const params = wbsItemId ? { wbsItemId } : {};
-  const response = await apiClient.get(`/api/projects/${projectId}/actual-costs/summary`, { params });
+
+  const response = await apiClient.get(
+    `/api/projects/${projectId}/actual-costs/summary`,
+    { params },
+  );
+
   return response.data;
 };
 
@@ -87,6 +116,9 @@ export const getActualCostSummary = async (projectId, wbsItemId = null) => {
  * T-95 & T-96: Lấy lịch sử chi phí của riêng một hạng mục
  */
 export const getActualCostsByWbsItem = async (projectId, wbsItemId) => {
-  const response = await apiClient.get(`/api/projects/${projectId}/actual-costs/wbs-items/${wbsItemId}`);
+  const response = await apiClient.get(
+    `/api/projects/${projectId}/actual-costs/wbs-items/${wbsItemId}`,
+  );
+
   return Array.isArray(response.data) ? response.data : [];
 };
