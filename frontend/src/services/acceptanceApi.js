@@ -33,6 +33,59 @@ export const calculateTotalAmount = items => {
 };
 
 /**
+ * S-45 (T-85): Hàm kiểm tra tính hợp lệ của Tỷ lệ tạm giữ theo hợp đồng (%)
+ * Quy tắc: 0 <= retentionRate <= 100, không được rỗng, không được chứa ký tự không hợp lệ.
+ */
+export const validateRetentionRate = rate => {
+  if (rate === undefined || rate === null || rate === '') {
+    return { valid: false, error: 'Vui lòng nhập tỷ lệ tạm giữ theo hợp đồng' };
+  }
+  const num = Number(rate);
+  if (isNaN(num)) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải là số hợp lệ' };
+  }
+  if (num < 0 || num > 100) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải từ 0% đến 100%' };
+  }
+  return { valid: true, value: num };
+};
+
+/**
+ * S-45 (T-86): Tự động tính số tiền tạm giữ theo hợp đồng
+ * retentionAmount = acceptedAmount * (retentionRate / 100)
+ * Quy tắc:
+ *   - Nếu acceptedAmount <= 0 hoặc retentionRate <= 0 -> trả về 0
+ *   - Làm tròn 2 chữ số thập phân (rounding phù hợp tiền tệ)
+ *   - Tránh NaN, số âm, Infinity
+ */
+export const calculateRetentionAmount = (acceptedAmount, retentionRate) => {
+  const amount = Number(acceptedAmount);
+  const rate = Number(retentionRate);
+  if (isNaN(amount) || isNaN(rate) || amount <= 0 || rate <= 0) {
+    return 0;
+  }
+  return Math.round((amount * rate / 100) * 100) / 100;
+};
+
+/**
+ * S-45 (T-87): Tự động tính giá trị thanh toán sau tạm giữ
+ * paymentAfterRetention = acceptedAmount - retentionAmount
+ * Quy tắc:
+ *   - Nếu acceptedAmount <= 0 -> trả về 0
+ *   - Làm tròn 2 chữ số thập phân
+ *   - Tránh NaN, số âm, Infinity
+ */
+export const calculatePaymentAfterRetention = (acceptedAmount, retentionRate) => {
+  const amount = Number(acceptedAmount);
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  const retention = calculateRetentionAmount(amount, retentionRate);
+  const payment = amount - retention;
+  return payment <= 0 ? 0 : Math.round(payment * 100) / 100;
+};
+
+/**
  * Lấy danh sách phiếu nghiệm thu theo đợt của một dự án
  */
 export const getAcceptanceReports = async projectId => {
@@ -45,6 +98,14 @@ export const getAcceptanceReports = async projectId => {
  */
 export const getAcceptanceReport = async (projectId, reportId) => {
   const response = await apiClient.get(`/api/projects/${projectId}/acceptance-reports/${reportId}`);
+  return response.data;
+};
+
+/**
+ * T-105: Lấy dữ liệu đầy đủ để lập hồ sơ nghiệm thu.
+ */
+export const getAcceptanceDossier = async reportId => {
+  const response = await apiClient.get(`/api/acceptance-reports/${reportId}`);
   return response.data;
 };
 

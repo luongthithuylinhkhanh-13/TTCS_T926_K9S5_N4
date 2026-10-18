@@ -24,7 +24,15 @@ public class AcceptanceReportResponse {
     private String status;
     private UUID creatorId;
     private String notes;
+    private String location;
+    private String ownerRepresentativeName;
+    private String supervisorRepresentativeName;
+    private String contractorRepresentativeName;
+    private UUID acceptanceRecordId;
     private BigDecimal totalAmount;
+    private BigDecimal retentionRate;
+    private BigDecimal retentionAmount;
+    private BigDecimal paymentAfterRetention;
     private int itemCount;
     private List<AcceptanceItemResponse> items = new ArrayList<>();
     private OffsetDateTime createdAt;
@@ -44,7 +52,15 @@ public class AcceptanceReportResponse {
         res.setStatus(report.getStatus());
         res.setCreatorId(report.getCreatorId());
         res.setNotes(report.getNotes());
+        res.setLocation(report.getLocation());
+        res.setOwnerRepresentativeName(report.getOwnerRepresentativeName());
+        res.setSupervisorRepresentativeName(report.getSupervisorRepresentativeName());
+        res.setContractorRepresentativeName(report.getContractorRepresentativeName());
+        res.setAcceptanceRecordId(report.getAcceptanceRecordId());
         res.setTotalAmount(report.getTotalAmount());
+        res.setRetentionRate(report.getRetentionRate());
+        res.setRetentionAmount(report.calculateRetentionAmount());
+        res.setPaymentAfterRetention(report.calculatePaymentAfterRetention());
         if (report.getItems() != null) {
             res.setItemCount(report.getItems().size());
             res.setItems(report.getItems().stream()
@@ -130,6 +146,46 @@ public class AcceptanceReportResponse {
         this.notes = notes;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getOwnerRepresentativeName() {
+        return ownerRepresentativeName;
+    }
+
+    public void setOwnerRepresentativeName(String ownerRepresentativeName) {
+        this.ownerRepresentativeName = ownerRepresentativeName;
+    }
+
+    public String getSupervisorRepresentativeName() {
+        return supervisorRepresentativeName;
+    }
+
+    public void setSupervisorRepresentativeName(String supervisorRepresentativeName) {
+        this.supervisorRepresentativeName = supervisorRepresentativeName;
+    }
+
+    public String getContractorRepresentativeName() {
+        return contractorRepresentativeName;
+    }
+
+    public void setContractorRepresentativeName(String contractorRepresentativeName) {
+        this.contractorRepresentativeName = contractorRepresentativeName;
+    }
+
+    public UUID getAcceptanceRecordId() {
+        return acceptanceRecordId;
+    }
+
+    public void setAcceptanceRecordId(UUID acceptanceRecordId) {
+        this.acceptanceRecordId = acceptanceRecordId;
+    }
+
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
@@ -160,6 +216,30 @@ public class AcceptanceReportResponse {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
+    }
+
+    public BigDecimal getRetentionAmount() {
+        return retentionAmount;
+    }
+
+    public void setRetentionAmount(BigDecimal retentionAmount) {
+        this.retentionAmount = retentionAmount;
+    }
+
+    public BigDecimal getPaymentAfterRetention() {
+        return paymentAfterRetention;
+    }
+
+    public void setPaymentAfterRetention(BigDecimal paymentAfterRetention) {
+        this.paymentAfterRetention = paymentAfterRetention;
     }
 
     public OffsetDateTime getUpdatedAt() {

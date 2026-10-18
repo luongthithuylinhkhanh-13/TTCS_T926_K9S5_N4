@@ -1,6 +1,7 @@
 import TaskDependencySection from './TaskDependencySection';
 import CategoryTaskSection from './CategoryTaskSection';
 import TeamAssignmentSection from './TeamAssignmentSection';
+import ActualCostSection from './ActualCostSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -366,6 +367,11 @@ const WorkDetailDrawer = ({
         <TaskDependencySection
           taskId={node?.id || node?.key}
           allTasks={allTasks}
+        />
+        {/* === CHI PHÍ THỰC TẾ (S-47: T-94, T-95, T-96) === */}
+        <ActualCostSection
+          projectId={projectId}
+          wbsItem={node}
         />
       </div>
 

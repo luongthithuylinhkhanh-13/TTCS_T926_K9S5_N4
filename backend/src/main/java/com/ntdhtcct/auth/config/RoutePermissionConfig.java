@@ -63,6 +63,7 @@ public class RoutePermissionConfig {
         // S-23 (T-61, T-62, T-63): Diary entries & Image uploads/views
         addRule(HttpMethod.POST, "/api/projects/*/diary-entries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.POST, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images/*/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
 

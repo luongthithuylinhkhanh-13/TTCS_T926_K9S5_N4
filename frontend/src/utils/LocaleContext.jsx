@@ -252,6 +252,7 @@ const translations = {
   'Đăng ký không thành công.': 'Registration failed.',
   'Đăng nhập không thành công.': 'Sign-in failed.',
   'Đăng ký thành công. Bạn có thể đăng nhập.': 'Registration successful. You can now sign in.',
+  'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.': 'Registration successful. Check your email to verify your account.',
   'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.': 'Unable to connect to the server. Please try again later.',
   'Chào mừng trở lại': 'Welcome back',
   'Tạo tài khoản': 'Create an account',

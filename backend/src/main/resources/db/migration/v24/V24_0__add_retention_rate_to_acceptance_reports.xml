@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        S-45: Phần tạm giữ theo hợp đồng được trừ
+        T-85: Cấu hình tỷ lệ tạm giữ theo hợp đồng
+    -->
+    <changeSet id="V24.0-add-retention-rate-to-acceptance-reports" author="S-45">
+        <addColumn tableName="acceptance_reports">
+            <column name="retention_rate" type="DECIMAL(5,2)" defaultValueNumeric="5.00">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="acceptance_reports" columnName="retention_rate"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

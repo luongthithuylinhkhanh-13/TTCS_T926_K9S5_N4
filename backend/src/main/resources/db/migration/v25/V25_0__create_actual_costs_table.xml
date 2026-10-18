@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- S-47 (NTDHTCT-237): Ghi nhận chi phí thực tế gắn với hạng mục -->
+    <!-- T-94 (NTDHTCT-306): Xây dựng chức năng nhập chi phí thực tế -->
+    <!-- T-95 (NTDHTCT-307): Liên kết chi phí với hạng mục tương ứng -->
+    <!-- T-96 (NTDHTCT-308): Lưu và hiển thị lịch sử chi phí -->
+    <changeSet id="V25.0-create-actual-costs-table" author="NTDHTCT-237">
+        <createTable tableName="actual_costs">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="wbs_item_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="task_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cost_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="incurred_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(100)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="actual_costs"
+            baseColumnNames="project_id"
+            constraintName="fk_actual_costs_project"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="actual_costs"
+            baseColumnNames="wbs_item_id"
+            constraintName="fk_actual_costs_wbs_item"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="actual_costs"
+            baseColumnNames="task_id"
+            constraintName="fk_actual_costs_task"
+            referencedTableName="tasks"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="actual_costs" indexName="idx_actual_costs_project_id">
+            <column name="project_id"/>
+        </createIndex>
+
+        <createIndex tableName="actual_costs" indexName="idx_actual_costs_wbs_item_id">
+            <column name="wbs_item_id"/>
+        </createIndex>
+
+        <createIndex tableName="actual_costs" indexName="idx_actual_costs_incurred_date">
+            <column name="incurred_date"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="actual_costs"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -153,15 +153,9 @@ public class SiteDiaryAdvisoryLockManager {
             synchronized (this) {
                 if (isPostgreSql == null) {
                     try {
-                        String dialect = (String) entityManager.getEntityManagerFactory()
-                                .getProperties().get("hibernate.dialect");
-                        if (dialect != null && dialect.toLowerCase().contains("postgresql")) {
-                            isPostgreSql = true;
-                        } else {
-                            // Thử kiểm tra qua database engine name
-                            Object result = entityManager.createNativeQuery("SELECT version()").getSingleResult();
-                            isPostgreSql = result != null && result.toString().toLowerCase().contains("postgresql");
-                        }
+                        Object result = entityManager.createNativeQuery("SELECT version()").getSingleResult();
+                        String ver = result != null ? result.toString().toLowerCase() : "";
+                        isPostgreSql = ver.contains("postgresql") && !ver.contains("h2");
                     } catch (Exception e) {
                         isPostgreSql = false;
                     }

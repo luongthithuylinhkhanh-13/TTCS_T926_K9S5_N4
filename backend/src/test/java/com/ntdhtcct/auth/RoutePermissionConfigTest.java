@@ -61,6 +61,19 @@ class RoutePermissionConfigTest {
     }
 
     @Test
+    void allowsEngineersAndManagersToDeleteDiaryImages() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.DELETE.name(),
+                        "/api/projects/123/diary-entries/456/images/789"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
     void restrictsCrewReassignmentToProjectManagers() {
         String[] roles = routePermissionConfig
                 .findRequiredRoles(
@@ -89,6 +102,19 @@ class RoutePermissionConfigTest {
         String[] roles = routePermissionConfig
                 .findRequiredRoles(
                         HttpMethod.PUT.name(),
+                        "/api/projects/123/site-diaries/456"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
+    void allowsSiteEngineersToDeleteSiteDiariesButNotWorkers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.DELETE.name(),
                         "/api/projects/123/site-diaries/456"
                 )
                 .orElseThrow();

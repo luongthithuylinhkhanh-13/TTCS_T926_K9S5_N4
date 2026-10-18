@@ -1021,7 +1021,7 @@ const handleFormSubmit = async formData => {
             onClick={() => handleOpenAddModal(null)}
             disabled={!currentProject}
           >
-            + {t('Thêm công việc')}
+            {t('Thêm công việc')}
           </Button>
         </div>
       </div>

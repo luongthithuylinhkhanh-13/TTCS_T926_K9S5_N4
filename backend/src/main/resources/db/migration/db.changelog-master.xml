@@ -114,4 +114,20 @@
     <!-- S-39: Phiếu nghiệm thu và nhật ký thao tác -->
     <include file="db/migration/v21/V21_0__create_acceptance_records_and_audit_logs.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- Email verification for self-service registration -->
+    <include file="db/migration/v22/V22_0__add_email_verification.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-50: Hồ sơ nghiệm thu theo hạng mục -->
+    <include file="db/migration/v23/V23_0__add_acceptance_dossier_details.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-45 (T-85): Cấu hình tỷ lệ tạm giữ theo hợp đồng -->
+    <include file="db/migration/v24/V24_0__add_retention_rate_to_acceptance_reports.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-47 (NTDHTCT-237, T-94, T-95, T-96): Ghi nhận chi phí thực tế gắn với hạng mục -->
+    <include file="db/migration/v25/V25_0__create_actual_costs_table.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

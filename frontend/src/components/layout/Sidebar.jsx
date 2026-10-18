@@ -10,6 +10,8 @@ import {
   CalendarOutlined,
   BookOutlined,
   AuditOutlined,
+  DollarOutlined,
+  SettingOutlined,
   LogoutOutlined,
   CalculatorOutlined,
 } from '@ant-design/icons';
@@ -176,6 +178,25 @@ const Sidebar = ({ collapsed }) => {
           <AuditOutlined />
           {!collapsed && <span>{t('Nghiệm thu khối lượng')}</span>}
         </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/actual-costs' ? 'active' : ''}`}
+          onClick={() => navigate('/actual-costs')}
+          title={collapsed ? t('Chi phí thực tế') : ''}
+        >
+          <DollarOutlined />
+          {!collapsed && <span>{t('Chi phí thực tế')}</span>}
+        </div>
+        {user?.roleName?.toUpperCase() === 'ADMIN' && (
+          <div
+            className={`sidebar-item ${location.pathname === '/admin/system-health' ? 'active' : ''}`}
+            onClick={() => navigate('/admin/system-health')}
+            title={collapsed ? 'Sức khỏe hệ thống' : ''}
+          >
+            <SettingOutlined />
+            {!collapsed && <span>Sức khỏe hệ thống</span>}
+          </div>
+        )}
       </div>
 
       {/* Bottom Gradient placeholder */}

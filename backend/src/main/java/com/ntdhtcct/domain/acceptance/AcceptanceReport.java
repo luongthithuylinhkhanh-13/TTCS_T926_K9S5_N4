@@ -10,11 +10,14 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -67,8 +70,29 @@ public class AcceptanceReport {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "location", length = 500)
+    private String location;
+
+    @Column(name = "owner_representative_name", length = 255)
+    private String ownerRepresentativeName;
+
+    @Column(name = "supervisor_representative_name", length = 255)
+    private String supervisorRepresentativeName;
+
+    @Column(name = "contractor_representative_name", length = 255)
+    private String contractorRepresentativeName;
+
+    @Column(name = "acceptance_record_id")
+    private UUID acceptanceRecordId;
+
     @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @NotNull(message = "Tỷ lệ tạm giữ không được để trống")
+    @DecimalMin(value = "0.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @DecimalMax(value = "100.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @Column(name = "retention_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal retentionRate = new BigDecimal("5.00");
 
     @OneToMany(mappedBy = "acceptanceReport", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AcceptanceItem> items = new ArrayList<>();
@@ -118,6 +142,9 @@ public class AcceptanceReport {
         if (this.totalAmount == null) {
             this.totalAmount = BigDecimal.ZERO;
         }
+        if (this.retentionRate == null) {
+            this.retentionRate = new BigDecimal("5.00");
+        }
     }
 
     @PreUpdate
@@ -153,6 +180,43 @@ public class AcceptanceReport {
             }
         }
         this.totalAmount = sum;
+    }
+
+    /**
+     * T-86 (S-45): Tự động tính số tiền tạm giữ theo hợp đồng
+     * retentionAmount = totalAmount * (retentionRate / 100)
+     */
+    public BigDecimal calculateRetentionAmount() {
+        if (this.totalAmount == null || this.totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (this.retentionRate == null || this.retentionRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return this.totalAmount
+                .multiply(this.retentionRate)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getRetentionAmount() {
+        return calculateRetentionAmount();
+    }
+
+    /**
+     * T-87 (S-45): Tự động tính giá trị thanh toán sau tạm giữ
+     * paymentAfterRetention = totalAmount - retentionAmount
+     */
+    public BigDecimal calculatePaymentAfterRetention() {
+        if (this.totalAmount == null || this.totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal retention = calculateRetentionAmount();
+        BigDecimal payment = this.totalAmount.subtract(retention).setScale(2, RoundingMode.HALF_UP);
+        return payment.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : payment;
+    }
+
+    public BigDecimal getPaymentAfterRetention() {
+        return calculatePaymentAfterRetention();
     }
 
     // Getters and Setters
@@ -228,6 +292,46 @@ public class AcceptanceReport {
         this.notes = notes;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getOwnerRepresentativeName() {
+        return ownerRepresentativeName;
+    }
+
+    public void setOwnerRepresentativeName(String ownerRepresentativeName) {
+        this.ownerRepresentativeName = ownerRepresentativeName;
+    }
+
+    public String getSupervisorRepresentativeName() {
+        return supervisorRepresentativeName;
+    }
+
+    public void setSupervisorRepresentativeName(String supervisorRepresentativeName) {
+        this.supervisorRepresentativeName = supervisorRepresentativeName;
+    }
+
+    public String getContractorRepresentativeName() {
+        return contractorRepresentativeName;
+    }
+
+    public void setContractorRepresentativeName(String contractorRepresentativeName) {
+        this.contractorRepresentativeName = contractorRepresentativeName;
+    }
+
+    public UUID getAcceptanceRecordId() {
+        return acceptanceRecordId;
+    }
+
+    public void setAcceptanceRecordId(UUID acceptanceRecordId) {
+        this.acceptanceRecordId = acceptanceRecordId;
+    }
+
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
@@ -242,6 +346,14 @@ public class AcceptanceReport {
 
     public void setItems(List<AcceptanceItem> items) {
         this.items = items;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
     }
 
     public OffsetDateTime getCreatedAt() {

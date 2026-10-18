@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,7 +57,7 @@ public class SiteDiaryController {
      */
     @PostMapping("/sync")
     public ResponseEntity<?> syncSingleDiary(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody SiteDiarySyncRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId
@@ -82,7 +83,7 @@ public class SiteDiaryController {
      */
     @PostMapping("/batch-sync")
     public ResponseEntity<SiteDiaryBatchSyncResponse> batchSyncDiaries(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody SiteDiaryBatchSyncRequest batchRequest,
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId
@@ -97,7 +98,7 @@ public class SiteDiaryController {
      */
     @PostMapping
     public ResponseEntity<?> createDiary(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody SiteDiarySyncRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId
@@ -109,7 +110,7 @@ public class SiteDiaryController {
      * Danh sách nhật ký công trường của dự án.
      */
     @GetMapping
-    public ResponseEntity<List<SiteDiaryResponse>> getDiaries(@PathVariable UUID projectId) {
+    public ResponseEntity<List<SiteDiaryResponse>> getDiaries(@PathVariable("projectId") UUID projectId) {
         List<SiteDiaryResponse> list = siteDiarySyncService.getDiariesByProject(projectId);
         return ResponseEntity.ok(list);
     }
@@ -118,7 +119,7 @@ public class SiteDiaryController {
      * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký của dự án.
      */
     @GetMapping("/sync-status")
-    public ResponseEntity<SiteDiarySyncStatusResponse> getSyncStatus(@PathVariable UUID projectId) {
+    public ResponseEntity<SiteDiarySyncStatusResponse> getSyncStatus(@PathVariable("projectId") UUID projectId) {
         SiteDiarySyncStatusResponse status = siteDiarySyncService.getProjectSyncStatus(projectId);
         return ResponseEntity.ok(status);
     }
@@ -127,7 +128,7 @@ public class SiteDiaryController {
      * Xem chi tiết một bản ghi nhật ký.
      */
     @GetMapping("/{diaryId}")
-    public ResponseEntity<?> getDiaryById(@PathVariable UUID projectId, @PathVariable UUID diaryId) {
+    public ResponseEntity<?> getDiaryById(@PathVariable("projectId") UUID projectId, @PathVariable("diaryId") UUID diaryId) {
         return siteDiarySyncService.getDiaryById(projectId, diaryId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -138,8 +139,8 @@ public class SiteDiaryController {
      */
     @PutMapping("/{diaryId}")
     public ResponseEntity<?> updateDiary(
-            @PathVariable UUID projectId,
-            @PathVariable UUID diaryId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("diaryId") UUID diaryId,
             @Valid @RequestBody SiteDiaryUpdateRequest request
     ) {
         return siteDiarySyncService.updateDiary(projectId, diaryId, request)
@@ -151,18 +152,15 @@ public class SiteDiaryController {
      * Xóa một bản ghi nhật ký công trường.
      */
     @DeleteMapping("/{diaryId}")
-    public ResponseEntity<?> deleteDiary(
-            @PathVariable UUID projectId,
-            @PathVariable UUID diaryId
+    public ResponseEntity<Void> deleteDiary(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("diaryId") UUID diaryId
     ) {
         boolean deleted = siteDiarySyncService.deleteDiary(projectId, diaryId);
-        if (!deleted) {
-            return ResponseEntity.notFound().build();
+        if (deleted) {
+            return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(java.util.Map.of(
-                "success", true,
-                "message", "Xóa nhật ký công trường thành công"
-        ));
+        return ResponseEntity.notFound().build();
     }
 
     /**
@@ -170,7 +168,7 @@ public class SiteDiaryController {
      */
     @PostMapping("/locks")
     public ResponseEntity<SiteDiaryLockResponse> lockDiaryDate(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody SiteDiaryLockRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId
@@ -190,7 +188,7 @@ public class SiteDiaryController {
      */
     @PostMapping("/unlocks")
     public ResponseEntity<SiteDiaryLockResponse> unlockDiaryDate(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody SiteDiaryUnlockRequest request,
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestHeader(value = "X-User-Id", required = false) String xUserId
@@ -209,7 +207,7 @@ public class SiteDiaryController {
      * T-64: Danh sách tất cả các ngày đã thiết lập khóa/mở khóa sổ của dự án.
      */
     @GetMapping("/locks")
-    public ResponseEntity<List<SiteDiaryLockResponse>> getProjectLocks(@PathVariable UUID projectId) {
+    public ResponseEntity<List<SiteDiaryLockResponse>> getProjectLocks(@PathVariable("projectId") UUID projectId) {
         List<SiteDiaryLockResponse> response = siteDiaryLockService.getProjectLocks(projectId);
         return ResponseEntity.ok(response);
     }
@@ -219,8 +217,8 @@ public class SiteDiaryController {
      */
     @GetMapping("/locks/status")
     public ResponseEntity<SiteDiaryLockResponse> getLockStatus(
-            @PathVariable UUID projectId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @PathVariable("projectId") UUID projectId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         return siteDiaryLockService.getLockStatus(projectId, date)
                 .map(ResponseEntity::ok)

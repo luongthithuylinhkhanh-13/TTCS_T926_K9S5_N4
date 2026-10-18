@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 @Order(2)
 public class UserSeeder implements CommandLineRunner {
 
+    private static final String DEFAULT_PASSWORD = "12345678";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -29,24 +31,35 @@ public class UserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!userRepository.existsByEmailIgnoreCase("test@test.com")) {
-            Role role = roleRepository.findByName("CUSTOMER")
-                .orElseGet(() -> roleRepository.save(new Role("CUSTOMER")));
+        ensureUser("test@test.com", "Test User", "CUSTOMER");
+
+        ensureUser("linh.work@gmail.com", "Linh", "PROJECT_MANAGER");
+        ensureUser("kien.work@gmail.com", "Kiên", "PROJECT_MANAGER");
+        ensureUser("bach.work@gmail.com", "Bách", "PROJECT_MANAGER");
+        ensureUser("chinh.work@gmail.com", "Chinh", "PROJECT_MANAGER");
+        ensureUser("lan.work@gmail.com", "Lan", "PROJECT_MANAGER");
+    }
+
+    private void ensureUser(String email, String fullName, String roleName) {
+        if (!userRepository.existsByEmailIgnoreCase(email)) {
+            Role role = roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(new Role(roleName)));
 
             User user = new User(
-                "test@test.com",
-                passwordEncoder.encode("12345678"),
-                "Test User"
+                email,
+                passwordEncoder.encode(DEFAULT_PASSWORD),
+                fullName
             );
             user.setRole(role);
             userRepository.save(user);
+            return;
         }
 
-        userRepository.findByEmailIgnoreCase("lanc5676@gmail.com")
-            .ifPresent(user -> roleRepository.findByName("PROJECT_MANAGER")
-                .ifPresent(role -> {
-                    user.setRole(role);
-                    userRepository.save(user);
-                }));
+        userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+            roleRepository.findByName(roleName).ifPresent(role -> {
+                user.setRole(role);
+                userRepository.save(user);
+            });
+        });
     }
 }

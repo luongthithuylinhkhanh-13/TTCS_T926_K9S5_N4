@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Table,
@@ -31,21 +31,27 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  FilePdfOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getProjects, getProjectWbs } from '../services/wbsApi';
 import {
   getAcceptanceReports,
   getAcceptanceReport,
+  getAcceptanceDossier,
   getAcceptanceSummary,
   getNextPeriod,
   createAcceptanceReport,
   updateAcceptanceReport,
   deleteAcceptanceReport,
   calculateItemAmount,
-  calculateTotalAmount
+  calculateTotalAmount,
+  calculateRetentionAmount,
+  calculatePaymentAfterRetention
 } from '../services/acceptanceApi';
+import { getAcceptanceRecords } from '../services/acceptanceRecordApi';
+import AcceptanceDossierDocument from '../components/acceptance/AcceptanceDossierDocument.jsx';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -60,6 +66,7 @@ const AcceptancePage = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [reports, setReports] = useState([]);
+  const [acceptanceRecords, setAcceptanceRecords] = useState([]);
   const [wbsItems, setWbsItems] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -72,6 +79,9 @@ const AcceptancePage = () => {
 
   // State cho Modal Chi tiết
   const [detailReport, setDetailReport] = useState(null);
+  const [pdfExportData, setPdfExportData] = useState(null);
+  const [pdfExportingId, setPdfExportingId] = useState(null);
+  const pdfDocumentRef = useRef(null);
 
   // State cho Modal chọn hạng mục WBS (T-84)
   const [wbsSelectModalOpen, setWbsSelectModalOpen] = useState(false);
@@ -105,6 +115,16 @@ const AcceptancePage = () => {
       setReports(reportsData);
       setSummary(summaryData);
       setWbsItems(Array.isArray(wbsData) ? wbsData : []);
+      try {
+        const recordsData = await getAcceptanceRecords(selectedProjectId);
+        setAcceptanceRecords(Array.isArray(recordsData) ? recordsData : []);
+      } catch (err) {
+        setAcceptanceRecords([]);
+        notification.warning({
+          message: 'Không thể tải phiếu duyệt S-39',
+          description: err.response?.data?.message || err.message
+        });
+      }
     } catch (err) {
       console.error('Lỗi tải dữ liệu nghiệm thu:', err);
       notification.error({
@@ -146,7 +166,8 @@ const AcceptancePage = () => {
       periodNumber: defaultPeriod,
       acceptanceDate: dayjs(),
       status: 'DRAFT',
-      notes: ''
+      notes: '',
+      retentionRate: 5
     });
 
     setModalOpen(true);
@@ -163,7 +184,13 @@ const AcceptancePage = () => {
         periodNumber: detail.periodNumber,
         acceptanceDate: detail.acceptanceDate ? dayjs(detail.acceptanceDate) : dayjs(),
         status: detail.status,
-        notes: detail.notes
+        notes: detail.notes,
+        location: detail.location,
+        ownerRepresentativeName: detail.ownerRepresentativeName,
+        supervisorRepresentativeName: detail.supervisorRepresentativeName,
+        contractorRepresentativeName: detail.contractorRepresentativeName,
+        acceptanceRecordId: detail.acceptanceRecordId,
+        retentionRate: detail.retentionRate != null ? Number(detail.retentionRate) : 5
       });
       setItems(detail.items || []);
       setModalOpen(true);
@@ -241,6 +268,14 @@ const AcceptancePage = () => {
   // T-85: Tổng giá trị nghiệm thu tự động tính của toàn bộ phiếu
   const currentTotalAmount = calculateTotalAmount(items);
 
+  // T-85 & T-86 & T-87: Tỷ lệ tạm giữ, Số tiền tạm giữ và Thanh toán sau tạm giữ tự động tính realtime
+  const watchedRetentionRate = Form.useWatch('retentionRate', form);
+  const currentRetentionRate = watchedRetentionRate !== undefined && watchedRetentionRate !== null && watchedRetentionRate !== ''
+    ? Number(watchedRetentionRate)
+    : 5;
+  const currentRetentionAmount = calculateRetentionAmount(currentTotalAmount, currentRetentionRate);
+  const currentPaymentAfterRetention = calculatePaymentAfterRetention(currentTotalAmount, currentRetentionRate);
+
   // 6. Gửi biểu mẫu tạo hoặc cập nhật phiếu nghiệm thu
   const onFinish = async values => {
     if (!selectedProjectId) {
@@ -265,6 +300,12 @@ const AcceptancePage = () => {
         acceptanceDate: values.acceptanceDate.format('YYYY-MM-DD'),
         status: values.status,
         notes: values.notes,
+        location: values.location,
+        ownerRepresentativeName: values.ownerRepresentativeName,
+        supervisorRepresentativeName: values.supervisorRepresentativeName,
+        contractorRepresentativeName: values.contractorRepresentativeName,
+        acceptanceRecordId: values.acceptanceRecordId || null,
+        retentionRate: values.retentionRate !== undefined && values.retentionRate !== null ? Number(values.retentionRate) : 5,
         items: items.map(item => ({
           wbsItemId: item.wbsItemId,
           taskId: item.taskId,
@@ -318,6 +359,60 @@ const AcceptancePage = () => {
     }
   };
 
+  const handleExportDossier = async report => {
+    setPdfExportingId(report.id);
+    try {
+      const dossier = await getAcceptanceDossier(report.id);
+      setPdfExportData(dossier);
+    } catch (err) {
+      setPdfExportingId(null);
+      notification.error({
+        message: 'Không thể xuất hồ sơ nghiệm thu',
+        description: err.response?.data?.message || err.message
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!pdfExportData || !pdfDocumentRef.current) return;
+
+    const generatePdf = async () => {
+      try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        const safeReportNumber = String(pdfExportData.reportNumber || 'nghiem-thu')
+          .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-');
+        await html2pdf()
+          .set({
+            margin: 0,
+            filename: `Bien-ban-nghiem-thu-${safeReportNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff',
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+          })
+          .from(pdfDocumentRef.current)
+          .save();
+        notification.success({ message: 'Đã tải biên bản nghiệm thu PDF' });
+      } catch (err) {
+        notification.error({
+          message: 'Tạo PDF thất bại',
+          description: err.message || 'Không thể tạo tệp PDF.'
+        });
+      } finally {
+        setPdfExportData(null);
+        setPdfExportingId(null);
+      }
+    };
+
+    generatePdf();
+  }, [pdfExportData]);
+
   // Cột bảng danh sách phiếu nghiệm thu
   const columns = [
     {
@@ -362,6 +457,50 @@ const AcceptancePage = () => {
       )
     },
     {
+      title: 'Tỷ lệ tạm giữ',
+      dataIndex: 'retentionRate',
+      key: 'retentionRate',
+      width: 120,
+      align: 'center',
+      render: rate => (
+        <Tag color="orange" style={{ fontWeight: 600 }}>
+          {rate != null ? Number(rate) : 5}%
+        </Tag>
+      )
+    },
+    {
+      title: 'Số tiền tạm giữ (T-86)',
+      key: 'retentionAmount',
+      width: 170,
+      align: 'right',
+      render: (_, record) => {
+        const amount = record.retentionAmount != null
+          ? record.retentionAmount
+          : calculateRetentionAmount(record.totalAmount, record.retentionRate);
+        return (
+          <span style={{ fontWeight: 700, color: '#ad4e00', fontSize: '14px' }}>
+            {formatCurrency(amount)}
+          </span>
+        );
+      }
+    },
+    {
+      title: 'Thanh toán sau tạm giữ (T-87)',
+      key: 'paymentAfterRetention',
+      width: 190,
+      align: 'right',
+      render: (_, record) => {
+        const payment = record.paymentAfterRetention != null
+          ? record.paymentAfterRetention
+          : calculatePaymentAfterRetention(record.totalAmount, record.retentionRate);
+        return (
+          <span style={{ fontWeight: 700, color: '#389e0d', fontSize: '14px' }}>
+            {formatCurrency(payment)}
+          </span>
+        );
+      }
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
@@ -382,7 +521,7 @@ const AcceptancePage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 180,
+      width: 240,
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -402,6 +541,15 @@ const AcceptancePage = () => {
             disabled={record.status === 'APPROVED'}
           >
             Sửa
+          </Button>
+          <Button
+            size="small"
+            icon={<FilePdfOutlined />}
+            loading={pdfExportingId === record.id}
+            disabled={pdfExportingId !== null && pdfExportingId !== record.id}
+            onClick={() => handleExportDossier(record)}
+          >
+            Xuất PDF
           </Button>
           <Popconfirm
             title="Xác nhận xóa phiếu nghiệm thu này?"
@@ -526,7 +674,7 @@ const AcceptancePage = () => {
           loading={loading}
           pagination={{ pageSize: 6, showSizeChanger: true }}
           size="middle"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1250 }}
         />
       </Card>
 
@@ -576,7 +724,7 @@ const AcceptancePage = () => {
           </Row>
 
           <Row gutter={12}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="acceptanceDate"
                 label="Ngày nghiệm thu"
@@ -585,7 +733,7 @@ const AcceptancePage = () => {
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item name="status" label="Trạng thái">
                 <Select
                   options={[
@@ -596,10 +744,87 @@ const AcceptancePage = () => {
                 />
               </Form.Item>
             </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                name="retentionRate"
+                label="Tỷ lệ tạm giữ theo hợp đồng (%)"
+                extra="Tỷ lệ phần trăm được giữ lại từ giá trị thanh toán theo điều khoản hợp đồng."
+                rules={[
+                  { required: true, message: 'Tỷ lệ tạm giữ không được để trống' },
+                  {
+                    validator: (_, value) => {
+                      if (value === undefined || value === null || value === '') {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ không được để trống'));
+                      }
+                      const num = Number(value);
+                      if (isNaN(num)) {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ phải là số hợp lệ'));
+                      }
+                      if (num < 0 || num > 100) {
+                        return Promise.reject(new Error('Tỷ lệ tạm giữ phải từ 0% đến 100%'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  precision={2}
+                  style={{ width: '100%' }}
+                  placeholder="5.00"
+                  addonAfter="%"
+                />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Form.Item name="notes" label="Ghi chú / Nhận xét nghiệm thu">
             <TextArea rows={2} placeholder="Ghi nhận đánh giá hiện trường hoặc ghi chú hồ sơ..." />
+          </Form.Item>
+
+          <Divider orientation="left" style={{ margin: '12px 0' }}>
+            Thông tin hồ sơ nghiệm thu
+          </Divider>
+          <Form.Item name="location" label="Vị trí / đoạn thi công">
+            <Input placeholder="Ví dụ: Trục A-B, tầng 2, khu vực phía Đông..." />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col xs={24} md={8}>
+              <Form.Item name="ownerRepresentativeName" label="Đại diện Chủ đầu tư">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="supervisorRepresentativeName" label="Đại diện Tư vấn giám sát">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="contractorRepresentativeName" label="Đại diện Nhà thầu">
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="acceptanceRecordId" label="Liên kết phiếu nghiệm thu / phê duyệt S-39">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Chọn phiếu S-39 để đưa kết quả và người duyệt vào hồ sơ"
+              options={acceptanceRecords.map(acceptanceRecord => ({
+                value: acceptanceRecord.id,
+                label: `${acceptanceRecord.title} · ${acceptanceRecord.inspectionDate ? dayjs(acceptanceRecord.inspectionDate).format('DD/MM/YYYY') : 'Chưa có ngày'} · ${
+                  acceptanceRecord.status === 'APPROVED'
+                    ? 'Đã duyệt'
+                    : acceptanceRecord.status === 'RETURNED'
+                      ? 'Trả lại'
+                      : 'Chờ duyệt'
+                }`
+              }))}
+            />
           </Form.Item>
 
           <Divider orientation="left" style={{ margin: '16px 0 12px 0' }}>
@@ -734,30 +959,57 @@ const AcceptancePage = () => {
             ]}
           />
 
-          {/* T-85: Hộp hiển thị tổng giá trị tự động tính của phiếu */}
+          {/* T-85 & T-86: Hộp hiển thị giá trị nghiệm thu và số tiền tạm giữ tự động tính */}
           <div
             style={{
               marginTop: 16,
-              padding: '12px 16px',
-              borderRadius: '6px',
+              padding: '14px 18px',
+              borderRadius: '8px',
               background: '#fffbe6',
-              border: '1px solid #ffe58f',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
+              border: '1px solid #ffe58f'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CalculatorOutlined style={{ fontSize: 20, color: '#fa8c16' }} />
-              <div>
-                <strong style={{ fontSize: 14 }}>Tự động tính tổng giá trị nghiệm thu (T-85):</strong>
-                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
-                  Tổng cộng thành tiền của {items.length} hạng mục nghiệm thu
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CalculatorOutlined style={{ fontSize: 18, color: '#fa8c16' }} />
+                <div>
+                  <strong style={{ fontSize: 14 }}>Tổng giá trị nghiệm thu:</strong>
+                  <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                    Tổng cộng thành tiền của {items.length} hạng mục nghiệm thu
+                  </div>
                 </div>
               </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#d48806' }}>
+                {formatCurrency(currentTotalAmount)}
+              </div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#d48806' }}>
-              {formatCurrency(currentTotalAmount)}
+
+            <Divider style={{ margin: '8px 0', borderColor: '#ffe58f' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: 14, color: '#ad4e00' }}>Số tiền tạm giữ theo hợp đồng (T-86):</strong>
+                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  Tự động tính = {formatCurrency(currentTotalAmount)} × {currentRetentionRate}% (Read-only)
+                </div>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#ad4e00' }}>
+                {formatCurrency(currentRetentionAmount)}
+              </div>
+            </div>
+
+            <Divider style={{ margin: '8px 0', borderColor: '#ffe58f' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: 14, color: '#389e0d' }}>Thanh toán sau tạm giữ (T-87):</strong>
+                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  Tự động tính = Giá trị nghiệm thu - Số tiền tạm giữ (Read-only)
+                </div>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#389e0d' }}>
+                {formatCurrency(currentPaymentAfterRetention)}
+              </div>
             </div>
           </div>
 
@@ -842,6 +1094,14 @@ const AcceptancePage = () => {
         />
       </Modal>
 
+      <div className="acceptance-dossier-export-host" aria-hidden="true">
+        {pdfExportData && (
+          <div ref={pdfDocumentRef}>
+            <AcceptanceDossierDocument dossier={pdfExportData} />
+          </div>
+        )}
+      </div>
+
       {/* Modal Xem Chi Tiết Phiếu Nghiệm Thu */}
       <Modal
         title={
@@ -886,6 +1146,41 @@ const AcceptancePage = () => {
               </Col>
               <Col span={12}>
                 <Text strong>Ghi chú: </Text>{detailReport.notes || 'Không có'}
+              </Col>
+              <Col span={8}>
+                <Text strong>Tỷ lệ tạm giữ: </Text>
+                <Tag color="orange" style={{ fontWeight: 600 }}>
+                  {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
+                </Tag>
+                <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
+                  Tỷ lệ tạm giữ theo hợp đồng
+                </div>
+              </Col>
+              <Col span={8}>
+                <Text strong>Số tiền tạm giữ (T-86): </Text>
+                <span style={{ fontWeight: 700, color: '#ad4e00', fontSize: '15px' }}>
+                  {formatCurrency(
+                    detailReport.retentionAmount != null
+                      ? detailReport.retentionAmount
+                      : calculateRetentionAmount(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+                <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
+                  Tự động tính = Giá trị × {detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%
+                </div>
+              </Col>
+              <Col span={8}>
+                <Text strong>Thanh toán sau tạm giữ (T-87): </Text>
+                <span style={{ fontWeight: 700, color: '#389e0d', fontSize: '15px' }}>
+                  {formatCurrency(
+                    detailReport.paymentAfterRetention != null
+                      ? detailReport.paymentAfterRetention
+                      : calculatePaymentAfterRetention(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+                <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 2 }}>
+                  Tự động tính = Giá trị - Tạm giữ
+                </div>
               </Col>
             </Row>
 
@@ -935,8 +1230,9 @@ const AcceptancePage = () => {
             <div
               style={{
                 display: 'flex',
-                justifyContent: 'flex-end',
+                justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
                 gap: 16,
                 padding: '12px 16px',
                 background: '#f6ffed',
@@ -944,10 +1240,32 @@ const AcceptancePage = () => {
                 border: '1px solid #b7eb8f'
               }}
             >
-              <span style={{ fontSize: 14, fontWeight: 600 }}>Tổng giá trị nghiệm thu phiếu:</span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: '#389e0d' }}>
-                {formatCurrency(detailReport.totalAmount)}
-              </span>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Tổng giá trị nghiệm thu: </span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#389e0d' }}>
+                  {formatCurrency(detailReport.totalAmount)}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Số tiền tạm giữ ({detailReport.retentionRate != null ? Number(detailReport.retentionRate) : 5}%): </span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#ad4e00' }}>
+                  {formatCurrency(
+                    detailReport.retentionAmount != null
+                      ? detailReport.retentionAmount
+                      : calculateRetentionAmount(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>Thanh toán sau tạm giữ (T-87): </span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: '#389e0d' }}>
+                  {formatCurrency(
+                    detailReport.paymentAfterRetention != null
+                      ? detailReport.paymentAfterRetention
+                      : calculatePaymentAfterRetention(detailReport.totalAmount, detailReport.retentionRate)
+                  )}
+                </span>
+              </div>
             </div>
           </Space>
         )}

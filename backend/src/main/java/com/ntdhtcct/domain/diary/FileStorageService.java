@@ -13,11 +13,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Service
@@ -139,6 +137,22 @@ public class FileStorageService {
             throw new ResourceNotFoundException("FILE_NOT_FOUND", "Không tìm thấy file trên hệ thống lưu trữ");
         }
         return filePath;
+    }
+
+    /**
+     * Xóa file trên hệ thống lưu trữ nếu tồn tại.
+     */
+    public void deleteFile(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return;
+        }
+        try {
+            Path filePath = rootStorageDir.resolve(relativePath).normalize();
+            if (filePath.startsWith(rootStorageDir)) {
+                Files.deleteIfExists(filePath);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private byte[] generateThumbnail(BufferedImage source, int maxW, int maxH) throws IOException {

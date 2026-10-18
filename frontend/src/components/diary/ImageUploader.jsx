@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Upload, Button, Card, Typography, Space, Tooltip, Tag, Progress } from 'antd';
+import { Upload, Button, Card, Typography, Tooltip, Tag, message } from 'antd';
 import {
   InboxOutlined,
   DeleteOutlined,
@@ -8,11 +8,60 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { formatFileSize, createQueueItem, revokeQueueItem, revokeAllQueueItems } from '../../utils/imageQueueUtils.js';
+import { extractImageMetadata, validateImageMetadata } from '../../utils/imageMetadataExtractor.js';
 
 const { Dragger } = Upload;
 const { Text } = Typography;
+
+export { validateImageMetadata };
+
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const ALLOWED_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
+export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MiB
+
+/**
+ * Kiểm tra tính hợp lệ của tệp ảnh trước khi đưa vào hàng đợi
+ */
+export function validateDiaryImageFile(file) {
+  if (!file) {
+    return { valid: false, error: 'Vui lòng chọn tệp ảnh.' };
+  }
+
+  const fileName = file.name || '';
+  const fileType = (file.type || '').toLowerCase();
+
+  const hasValidExt = ALLOWED_EXTENSIONS.test(fileName);
+  const hasValidMime = fileType ? ALLOWED_MIME_TYPES.includes(fileType) : false;
+
+  // Kiểm tra định dạng: phần mở rộng và MIME type
+  if (!hasValidExt || (fileType && !hasValidMime)) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName || 'Không rõ'}" không đúng định dạng. Chỉ chấp nhận ảnh JPEG, PNG, WebP.`,
+    };
+  }
+
+  // Kiểm tra tệp rỗng
+  if (typeof file.size === 'number' && file.size <= 0) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName}" không được để trống (dung lượng 0 byte).`,
+    };
+  }
+
+  // Kiểm tra dung lượng tối đa (<= 20 MiB)
+  if (typeof file.size === 'number' && file.size > MAX_FILE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `Tệp "${fileName}" (${formatFileSize(file.size)}) vượt quá dung lượng tối đa 20 MiB.`,
+    };
+  }
+
+  return { valid: true };
+}
 
 /**
  * Component T-62: Chọn nhiều ảnh, nén hiển thị, theo dõi trạng thái hai giai đoạn (Display & Original),
@@ -24,10 +73,16 @@ export default function ImageUploader({
   onRetryDisplay,
   onRetryOriginal,
   disabled = false,
-  maxCount = 20,
+  maxCount = null,
+  requireGps = false,
 }) {
   const itemsRef = useRef(items);
   itemsRef.current = items;
+
+  // Luôn đồng bộ itemsRef với prop items mới nhất
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     return () => {
@@ -36,28 +91,97 @@ export default function ImageUploader({
     };
   }, []);
 
-  const handleBeforeUpload = () => {
-    // Ngăn chặn form submit hoặc upload ngầm tự động
-    return false;
+  const handleBeforeUpload = (file) => {
+    if (disabled) {
+      return Upload.LIST_IGNORE;
+    }
+
+    if (maxCount && itemsRef.current.length >= maxCount) {
+      message.warning(`Đã đạt giới hạn tối đa ${maxCount} ảnh. Không thể thêm "${file.name || 'ảnh mới'}".`);
+      return Upload.LIST_IGNORE;
+    }
+
+    const validation = validateDiaryImageFile(file);
+    if (!validation.valid) {
+      message.error(validation.error);
+      return Upload.LIST_IGNORE;
+    }
+
+    // Tệp hợp lệ: trả về true để Ant Design chuyển sang customRequest
+    return true;
   };
 
-  const handleCustomUpload = ({ file }) => {
-    if (items.length >= maxCount) {
+  const handleCustomUpload = ({ file, onSuccess }) => {
+    if (disabled) {
       return;
     }
-    const newItem = createQueueItem(file);
-    const updated = [...items, newItem];
+    if (maxCount && itemsRef.current.length >= maxCount) {
+      message.warning(`Đã đạt giới hạn tối đa ${maxCount} ảnh. Không thể thêm "${file.name || 'ảnh mới'}".`);
+      return;
+    }
+
+    const newItem = createQueueItem(file, undefined, null, { requireGps });
+    const updated = [...itemsRef.current, newItem];
+    itemsRef.current = updated;
+
     if (onChange) {
       onChange(updated);
     }
+    if (onSuccess) {
+      onSuccess('ok');
+    }
+
+    // T-74: Trích xuất siêu dữ liệu EXIF / GPS / kích thước ảnh bất đồng bộ
+    extractImageMetadata(file).then((extractedMeta) => {
+      const validation = validateImageMetadata(extractedMeta, { requireGps });
+      const currentList = itemsRef.current;
+      const targetIdx = currentList.findIndex((it) => it.clientImageId === newItem.clientImageId);
+      if (targetIdx >= 0) {
+        const nextList = [...currentList];
+        nextList[targetIdx] = {
+          ...nextList[targetIdx],
+          metadata: extractedMeta,
+          metadataValidation: validation,
+        };
+        itemsRef.current = nextList;
+        if (onChange) {
+          onChange(nextList);
+        }
+      }
+    }).catch(() => {
+      // Bỏ qua lỗi trích xuất
+    });
+  };
+
+  const handleDrop = (e) => {
+    if (disabled) {
+      return;
+    }
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    if (droppedFiles.length === 0) {
+      return;
+    }
+
+    // Duyệt qua các tệp được thả vào để phát hiện và cảnh báo các tệp không hợp lệ
+    // (như tệp không phải ảnh bị Ant Design attrAccept tự động bỏ qua ngầm)
+    droppedFiles.forEach((file) => {
+      const validation = validateDiaryImageFile(file);
+      if (!validation.valid) {
+        message.error(validation.error);
+      }
+    });
   };
 
   const handleRemove = (clientImageId) => {
-    const target = items.find((it) => it.clientImageId === clientImageId);
+    if (disabled) {
+      return;
+    }
+    const target = itemsRef.current.find((it) => it.clientImageId === clientImageId);
     if (target) {
       revokeQueueItem(target);
     }
-    const updated = items.filter((it) => it.clientImageId !== clientImageId);
+    const updated = itemsRef.current.filter((it) => it.clientImageId !== clientImageId);
+    itemsRef.current = updated;
     if (onChange) {
       onChange(updated);
     }
@@ -105,9 +229,10 @@ export default function ImageUploader({
       <Dragger
         multiple
         accept="image/jpeg,image/png,image/webp"
-        disabled={disabled || items.length >= maxCount}
+        disabled={disabled || (Boolean(maxCount) && items.length >= maxCount)}
         beforeUpload={handleBeforeUpload}
         customRequest={handleCustomUpload}
+        onDrop={handleDrop}
         showUploadList={false}
         style={{ padding: '16px', background: '#fafafa', borderRadius: '8px' }}
       >
@@ -118,7 +243,7 @@ export default function ImageUploader({
           Nhấp hoặc kéo thả ảnh vào khu vực này để chọn
         </p>
         <p className="ant-upload-hint" style={{ color: '#8c8c8c', fontSize: '12px', margin: 0 }}>
-          Hỗ trợ định dạng JPEG, PNG, WebP (Tối đa {maxCount} ảnh, dung lượng gốc tối đa 20 MiB/ảnh).
+          {maxCount ? `Hỗ trợ JPEG, PNG, WebP (Tối đa ${maxCount} ảnh, dung lượng gốc tối đa 20 MiB/ảnh).` : 'Hỗ trợ định dạng JPEG, PNG, WebP (dung lượng gốc tối đa 20 MiB/ảnh).'}
         </p>
       </Dragger>
 
@@ -186,6 +311,103 @@ export default function ImageUploader({
                     title="Xóa ảnh khỏi hàng đợi"
                   />
                 </div>
+
+                {/* T-74: Thông tin và trạng thái kiểm tra siêu dữ liệu ảnh hiện trường */}
+                {item.metadata && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '4px 6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: '10px', color: '#595959' }}>
+                        Chụp: {item.metadata.capturedAt ? item.metadata.capturedAt.slice(0, 16).replace('T', ' ') : 'Chưa có'}
+                      </Text>
+                      {(() => {
+                        const status = item.metadataValidation?.status || (item.metadataValidation?.valid ? 'VALID' : 'INVALID');
+                        if (status === 'VALID') {
+                          return (
+                            <Tag color="success" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                              ✓ Meta: Hợp lệ
+                            </Tag>
+                          );
+                        }
+                        if (status === 'MISSING') {
+                          return (
+                            <Tag color="warning" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                              ⚠ Meta: Thiếu
+                            </Tag>
+                          );
+                        }
+                        return (
+                          <Tag color="error" style={{ margin: 0, fontSize: '9px', padding: '0 4px', lineHeight: '16px' }}>
+                            ⚠ Meta: Không hợp lệ
+                          </Tag>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {typeof item.metadata.latitude === 'number' && typeof item.metadata.longitude === 'number' ? (
+                        <Text style={{ fontSize: '10px', color: '#1677ff' }}>
+                          GPS: {item.metadata.latitude.toFixed(4)}, {item.metadata.longitude.toFixed(4)}
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
+                          GPS: Chưa có
+                        </Text>
+                      )}
+                      {item.metadata.width && item.metadata.height ? (
+                        <Text style={{ fontSize: '9px', color: '#8c8c8c' }}>
+                          {item.metadata.width}x{item.metadata.height}
+                        </Text>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {/* T-76: Khu vực cảnh báo lý do metadata không hợp lệ / thiếu */}
+                {(() => {
+                  const metaStatus = item.metadataValidation?.status || (item.metadataValidation?.valid ? 'VALID' : 'INVALID');
+                  const reasons = item.metadataValidation?.reasons || [];
+                  if (metaStatus === 'VALID' || reasons.length === 0) {
+                    return null;
+                  }
+                  const isMissing = metaStatus === 'MISSING';
+                  return (
+                    <div
+                      className="metadata-warning-box"
+                      style={{
+                        background: isMissing ? '#fffbe6' : '#fff2f0',
+                        border: `1px solid ${isMissing ? '#ffe58f' : '#ffccc7'}`,
+                        borderRadius: '4px',
+                        padding: '4px 6px',
+                        fontSize: '10px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: isMissing ? '#d46b08' : '#cf1322',
+                          marginBottom: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <WarningOutlined style={{ fontSize: '11px' }} />
+                        <span>Lý do:</span>
+                      </div>
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingLeft: '14px',
+                          color: isMissing ? '#873800' : '#820014',
+                          lineHeight: '1.35',
+                        }}
+                      >
+                        {reasons.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 {/* Trạng thái hai giai đoạn: Hiển thị & Ảnh gốc */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

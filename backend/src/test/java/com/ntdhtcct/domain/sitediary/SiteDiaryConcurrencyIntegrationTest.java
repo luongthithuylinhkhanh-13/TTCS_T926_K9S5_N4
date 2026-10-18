@@ -8,8 +8,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ntdhtcct.domain.diary.DiaryEntry;
+import com.ntdhtcct.domain.diary.DiaryEntryRepository;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -31,6 +35,9 @@ public class SiteDiaryConcurrencyIntegrationTest {
 
     @Mock
     private SiteDiaryLockRepository siteDiaryLockRepository;
+
+    @Mock
+    private DiaryEntryRepository diaryEntryRepository;
 
     @Test
     @DisplayName("Concurrency: Thao tác khóa sổ phải đợi giao dịch ghi đang giữ shared lock kết thúc; giao dịch ghi đến sau phải bị từ chối")
@@ -225,5 +232,75 @@ public class SiteDiaryConcurrencyIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("S-24 / Concurrency: Đồng bộ tạo SiteDiary đa luồng tự động duy trì DiaryEntry bridge với ID và trạng thái Persistable chính xác")
+    void testSiteDiarySyncMaintainsDiaryEntryBridgeConcurrently() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        LocalDate targetDate = LocalDate.of(2026, 10, 18);
+
+        SiteDiaryAdvisoryLockManager lockManager = new SiteDiaryAdvisoryLockManager(null);
+        SiteDiaryLockService lockService = new SiteDiaryLockService(siteDiaryLockRepository, lockManager);
+        SiteDiarySyncService syncService = new SiteDiarySyncService(siteDiaryRepository, lockService, lockManager, diaryEntryRepository);
+
+        java.util.concurrent.ConcurrentHashMap<UUID, DiaryEntry> diaryEntryStore = new java.util.concurrent.ConcurrentHashMap<>();
+
+        when(siteDiaryLockRepository.existsByProjectIdAndLockDateAndStatus(projectId, targetDate, "LOCKED"))
+                .thenReturn(false);
+        when(siteDiaryRepository.findByClientSyncId(any())).thenReturn(Optional.empty());
+        when(siteDiaryRepository.save(any(SiteDiary.class))).thenAnswer(inv -> {
+            SiteDiary d = inv.getArgument(0);
+            if (d.getId() == null) {
+                d.setId(UUID.randomUUID());
+            }
+            return d;
+        });
+
+        when(diaryEntryRepository.findById(any())).thenAnswer(inv ->
+                Optional.ofNullable(diaryEntryStore.get(inv.getArgument(0)))
+        );
+        when(diaryEntryRepository.save(any(DiaryEntry.class))).thenAnswer(inv -> {
+            DiaryEntry de = inv.getArgument(0);
+            diaryEntryStore.put(de.getId(), de);
+            return de;
+        });
+
+        int threadCount = 4;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        List<Future<SiteDiarySyncResult>> futures = new java.util.ArrayList<>();
+
+        for (int i = 0; i < threadCount; i++) {
+            final String syncId = "sync-bridge-concurrent-" + i;
+            futures.add(executor.submit(() -> {
+                startLatch.await();
+                SiteDiarySyncRequest req = new SiteDiarySyncRequest(
+                        syncId, targetDate, "Nắng", "31", 15, "", "Hạng mục " + syncId, "", OffsetDateTime.now()
+                );
+                return syncService.syncSingleDiary(projectId, userId, req);
+            }));
+        }
+
+        startLatch.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+
+        for (Future<SiteDiarySyncResult> future : futures) {
+            SiteDiarySyncResult res = future.get();
+            assertThat(res.getStatus()).isEqualTo("CREATED");
+            UUID diaryId = res.getServerDiaryId();
+            assertThat(diaryId).isNotNull();
+
+            // Xác minh DiaryEntry bridge tương ứng đã được tạo với cùng ID và Persistable isNew() == true
+            DiaryEntry bridged = diaryEntryStore.get(diaryId);
+            assertThat(bridged).isNotNull();
+            assertThat(bridged.getId()).isEqualTo(diaryId);
+            assertThat(bridged.isNew()).isTrue();
+            assertThat(bridged.getProjectId()).isEqualTo(projectId);
+        }
+
+        assertThat(diaryEntryStore).hasSize(threadCount);
     }
 }

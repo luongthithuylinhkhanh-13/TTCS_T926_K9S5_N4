@@ -20,26 +20,50 @@ export function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+import { validateImageMetadata } from './imageMetadataExtractor.js';
+
 /**
  * Tạo một item ảnh mới đưa vào hàng đợi với ID client duy nhất và URL preview.
  * @param {File} file
  * @param {Function} [createObjectURLFn] Hàm tạo object URL (mặc định URL.createObjectURL)
+ * @param {object} [initialMetadata] Siêu dữ liệu ban đầu nếu đã trích xuất
+ * @param {object} [validationOptions] Tùy chọn kiểm tra (ví dụ requireGps)
  * @returns {object}
  */
-export function createQueueItem(file, createObjectURLFn = (f) => URL.createObjectURL(f)) {
+export function createQueueItem(
+  file,
+  createObjectURLFn = (f) => URL.createObjectURL(f),
+  initialMetadata = null,
+  validationOptions = {}
+) {
   const clientImageId = typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : 'temp-' + Math.random().toString(36).substring(2, 11);
 
   const previewUrl = createObjectURLFn(file);
 
+  const metadata = initialMetadata ? { ...initialMetadata } : {
+    fileName: file?.name || '',
+    fileSize: typeof file?.size === 'number' ? file.size : 0,
+    mimeType: (file?.type || '').toLowerCase(),
+    capturedAt: null,
+    latitude: null,
+    longitude: null,
+    width: null,
+    height: null,
+  };
+
+  const metadataValidation = validateImageMetadata(metadata, validationOptions);
+
   return {
     clientImageId,
     file,
-    name: file.name,
-    size: file.size,
-    type: file.type,
+    name: file?.name,
+    size: file?.size,
+    type: file?.type,
     previewUrl,
+    metadata,
+    metadataValidation,
     displayStatus: 'idle', // 'idle' | 'uploading' | 'completed' | 'failed'
     originalStatus: 'idle', // 'idle' | 'uploading' | 'completed' | 'failed'
     displayError: null,

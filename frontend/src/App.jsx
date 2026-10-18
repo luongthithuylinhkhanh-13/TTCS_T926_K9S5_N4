@@ -13,13 +13,22 @@ import SiteDiaryPage from './pages/SiteDiaryPage';
 import AcceptancePage from './pages/AcceptancePage';
 import AcceptanceRecordsPage from './pages/AcceptanceRecordsPage';
 import BudgetPage from './pages/BudgetPage';
-import { isAuthenticated } from './utils/auth';
+import ActualCostPage from './pages/ActualCostPage';
+import SystemHealthPage from './pages/SystemHealthPage';
+import { getAuthUser, isAuthenticated } from './utils/auth';
 
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
 
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  if (getAuthUser()?.roleName?.toUpperCase() !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 };
 
@@ -48,6 +57,8 @@ function App() {
         <Route path="site-diary" element={<SiteDiaryPage />} />
         <Route path="acceptance" element={<AcceptancePage />} />
         <Route path="acceptance-records" element={<AcceptanceRecordsPage />} />
+        <Route path="actual-costs" element={<ActualCostPage />} />
+        <Route path="admin/system-health" element={<AdminRoute><SystemHealthPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +38,7 @@ public class DiaryController {
     @PostMapping
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryEntryResponse>> createDiaryEntry(
-            @PathVariable UUID projectId,
+            @PathVariable("projectId") UUID projectId,
             @Valid @RequestBody CreateDiaryEntryRequest request
     ) {
         UUID authorId = UserSecurityContext.getUserId();
@@ -50,37 +51,49 @@ public class DiaryController {
     @PostMapping("/{entryId}/images/display")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadDisplayImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "capturedAt", required = false) String capturedAtStr,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
+            @RequestParam(value = "requireGps", required = false, defaultValue = "false") boolean requireGps
     ) throws IOException {
+        java.time.OffsetDateTime capturedAt = parseOffsetDateTime(capturedAtStr);
         DiaryImageResponse response =
-                diaryService.uploadDisplayImage(projectId, entryId, clientImageId, filename, file);
+                diaryService.uploadDisplayImage(projectId, entryId, clientImageId, filename, file,
+                        capturedAt, latitude, longitude, requireGps);
         return ResponseEntity.ok(ApiResponse.ok("Tải ảnh hiển thị thành công", response));
     }
 
     @PostMapping("/{entryId}/images/original")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
     public ResponseEntity<ApiResponse<DiaryImageResponse>> uploadOriginalImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
             @RequestParam("clientImageId") String clientImageId,
             @RequestParam("filename") String filename,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "capturedAt", required = false) String capturedAtStr,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
+            @RequestParam(value = "requireGps", required = false, defaultValue = "false") boolean requireGps
     ) throws IOException {
+        java.time.OffsetDateTime capturedAt = parseOffsetDateTime(capturedAtStr);
         DiaryImageResponse response =
-                diaryService.uploadOriginalImage(projectId, entryId, clientImageId, filename, file);
+                diaryService.uploadOriginalImage(projectId, entryId, clientImageId, filename, file,
+                        capturedAt, latitude, longitude, requireGps);
         return ResponseEntity.ok(ApiResponse.ok("Tải ảnh gốc thành công", response));
     }
 
     @GetMapping("/{entryId}/images/{imageId}/display")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<Resource> getDisplayImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
-            @PathVariable UUID imageId,
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId,
             @RequestParam(value = "thumb", defaultValue = "false") boolean isThumb
     ) {
         Resource resource = diaryService.getDisplayImageResource(projectId, entryId, imageId, isThumb);
@@ -92,9 +105,9 @@ public class DiaryController {
     @GetMapping("/{entryId}/images/{imageId}/original")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<Resource> getOriginalImage(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId,
-            @PathVariable UUID imageId
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId
     ) {
         Resource resource = diaryService.getOriginalImageResource(projectId, entryId, imageId);
         return ResponseEntity.ok()
@@ -106,10 +119,37 @@ public class DiaryController {
     @GetMapping("/{entryId}/images")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<ApiResponse<java.util.List<DiaryImageResponse>>> getDiaryImages(
-            @PathVariable UUID projectId,
-            @PathVariable UUID entryId
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId
     ) {
         java.util.List<DiaryImageResponse> images = diaryService.getDiaryImages(projectId, entryId);
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách ảnh thành công", images));
+    }
+
+    @DeleteMapping("/{entryId}/images/{imageId}")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"})
+    public ResponseEntity<ApiResponse<Void>> deleteDiaryImage(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("entryId") UUID entryId,
+            @PathVariable("imageId") UUID imageId
+    ) {
+        diaryService.deleteDiaryImage(projectId, entryId, imageId);
+        return ResponseEntity.ok(ApiResponse.ok("Xóa ảnh thành công", null));
+    }
+
+    private java.time.OffsetDateTime parseOffsetDateTime(String str) {
+        if (str == null || str.isBlank()) {
+            return null;
+        }
+        try {
+            return java.time.OffsetDateTime.parse(str);
+        } catch (Exception e) {
+            try {
+                java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(str);
+                return ldt.atZone(java.time.ZoneId.systemDefault()).toOffsetDateTime();
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 }

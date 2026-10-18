@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Modal, Button, Spin, Typography, Space, Tooltip, message } from 'antd';
+import { Modal, Button, Spin, Typography, Space, Tooltip, Tag, message } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
@@ -8,6 +8,8 @@ import {
   FileImageOutlined,
 } from '@ant-design/icons';
 import { getDisplayImageUrl, getOriginalImageUrl } from '../../services/diaryApi.js';
+import { determineImageMetadataStatus, formatCapturedAt } from '../../utils/imageMetadataExtractor.js';
+import apiClient from '../../services/apiClient.js';
 import { formatFileSize } from '../../utils/imageQueueUtils.js';
 
 const { Text } = Typography;
@@ -125,13 +127,74 @@ export default function DiaryImageLightbox({
             zIndex: 10,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-            <Text ellipsis style={{ color: '#fff', fontSize: '15px', fontWeight: 500, maxWidth: '400px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flexWrap: 'wrap' }}>
+            <Text ellipsis style={{ color: '#fff', fontSize: '15px', fontWeight: 500, maxWidth: '350px' }}>
               {currentImage.originalFilename || 'Ảnh nhật ký'}
             </Text>
             <Text style={{ color: '#aaa', fontSize: '12px' }}>
               ({currentIndex + 1} / {images.length})
             </Text>
+            <Tooltip title={currentImage.capturedAt ? `Thời điểm chụp: ${formatCapturedAt(currentImage.capturedAt)}` : 'Chưa có thời gian chụp'}>
+              <Text style={{ color: currentImage.capturedAt ? '#4ade80' : '#d1d5db', fontSize: '12px' }}>
+                📅 {currentImage.capturedAt ? `Chụp: ${formatCapturedAt(currentImage.capturedAt)}` : 'Chưa có thời gian chụp'}
+              </Text>
+            </Tooltip>
+            {currentImage.createdAt && (
+              <Tooltip title={`Thời điểm tải lên: ${formatCapturedAt(currentImage.createdAt)}`}>
+                <Text style={{ color: '#9ca3af', fontSize: '11px' }}>
+                  (Tải lên: {formatCapturedAt(currentImage.createdAt)})
+                </Text>
+              </Tooltip>
+            )}
+            {typeof currentImage.latitude === 'number' && typeof currentImage.longitude === 'number' && (
+              <Text style={{ color: '#60a5fa', fontSize: '12px' }}>
+                📍 {currentImage.latitude.toFixed(4)}, {currentImage.longitude.toFixed(4)}
+              </Text>
+            )}
+            {(() => {
+              const metaStatus = determineImageMetadataStatus(currentImage);
+              const badge = (() => {
+                if (metaStatus.status === 'VALID') {
+                  return (
+                    <Tag color="success" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                      ✓ Meta: Hợp lệ
+                    </Tag>
+                  );
+                }
+                if (metaStatus.status === 'MISSING') {
+                  return (
+                    <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                      ⚠ Meta: Thiếu
+                    </Tag>
+                  );
+                }
+                return (
+                  <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 6px' }}>
+                    ⚠ Meta: Không hợp lệ
+                  </Tag>
+                );
+              })();
+
+              if (metaStatus.reasons && metaStatus.reasons.length > 0) {
+                return (
+                  <Tooltip
+                    title={
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 2 }}>{metaStatus.label}:</div>
+                        <ul style={{ margin: 0, paddingLeft: 14 }}>
+                          {metaStatus.reasons.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    }
+                  >
+                    {badge}
+                  </Tooltip>
+                );
+              }
+              return badge;
+            })()}
           </div>
 
           <Space>
@@ -163,6 +226,69 @@ export default function DiaryImageLightbox({
             />
           </Space>
         </div>
+
+        {/* T-76: Banner cảnh báo chi tiết lý do metadata không hợp lệ / thiếu */}
+        {(() => {
+          const metaStatus = determineImageMetadataStatus(currentImage);
+          if (metaStatus.status === 'VALID' || !metaStatus.reasons || metaStatus.reasons.length === 0) {
+            return null;
+          }
+          const isMissing = metaStatus.status === 'MISSING';
+          return (
+            <div
+              className="lightbox-metadata-warning-banner"
+              style={{
+                background: isMissing ? 'rgba(113, 63, 18, 0.4)' : 'rgba(127, 29, 29, 0.4)',
+                borderBottom: `1px solid ${isMissing ? 'rgba(234, 179, 8, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+                padding: '8px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '12px',
+                flexWrap: 'wrap',
+                zIndex: 9,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                <span style={{ color: '#d1d5db' }}>Trạng thái metadata:</span>
+                {isMissing ? (
+                  <Tag color="warning" style={{ margin: 0, fontSize: '11px', padding: '1px 8px' }}>
+                    ⚠ Meta: Thiếu
+                  </Tag>
+                ) : (
+                  <Tag color="error" style={{ margin: 0, fontSize: '11px', padding: '1px 8px' }}>
+                    ⚠ Meta: Không hợp lệ
+                  </Tag>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: isMissing ? '#fde047' : '#fca5a5' }}>
+                  Lý do:
+                </span>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {metaStatus.reasons.map((r, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        color: '#f9fafb',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'rgba(0,0,0,0.25)',
+                        padding: '1px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      <span style={{ color: isMissing ? '#facc15' : '#f87171', fontWeight: 'bold' }}>•</span>
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Khu vực hiển thị ảnh chính */}
         <div
@@ -196,9 +322,25 @@ export default function DiaryImageLightbox({
               src={displayUrl}
               alt={currentImage.originalFilename}
               onLoad={() => setLoading(false)}
-              onError={() => {
-                setLoading(false);
-                setLoadError(true);
+              onError={(e) => {
+                if (!e.target.dataset.fallbackTried) {
+                  e.target.dataset.fallbackTried = 'true';
+                  apiClient.get(`/api/projects/${projectId}/diary-entries/${entryId}/images/${currentImage.id}/display`, {
+                    responseType: 'blob',
+                  })
+                  .then((res) => {
+                    e.target.src = URL.createObjectURL(res.data);
+                    setLoading(false);
+                    setLoadError(false);
+                  })
+                  .catch(() => {
+                    setLoading(false);
+                    setLoadError(true);
+                  });
+                } else {
+                  setLoading(false);
+                  setLoadError(true);
+                }
               }}
               style={{
                 maxWidth: '100%',
