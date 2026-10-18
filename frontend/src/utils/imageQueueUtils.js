@@ -42,15 +42,11 @@ export function createQueueItem(
 
   const previewUrl = createObjectURLFn(file);
 
-  const defaultCapturedAt = typeof file?.lastModified === 'number' && file.lastModified > 0
-    ? new Date(file.lastModified).toISOString().slice(0, 19)
-    : new Date().toISOString().slice(0, 19);
-
   const metadata = initialMetadata ? { ...initialMetadata } : {
     fileName: file?.name || '',
     fileSize: typeof file?.size === 'number' ? file.size : 0,
     mimeType: (file?.type || '').toLowerCase(),
-    capturedAt: defaultCapturedAt,
+    capturedAt: null,
     latitude: null,
     longitude: null,
     width: null,

@@ -256,16 +256,6 @@ export async function extractImageMetadata(file) {
     }
   }
 
-  // Fallback capturedAt từ lastModified nếu chưa có trong EXIF
-  if (!baseMeta.capturedAt && typeof file.lastModified === 'number' && file.lastModified > 0) {
-    const d = new Date(file.lastModified);
-    if (!isNaN(d.getTime())) {
-      baseMeta.capturedAt = d.toISOString().slice(0, 19);
-      if (baseMeta.source !== 'exif') {
-        baseMeta.source = 'file_system';
-      }
-    }
-  }
 
   // Trích xuất kích thước ảnh nếu trong môi trường DOM
   if (typeof Image !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
