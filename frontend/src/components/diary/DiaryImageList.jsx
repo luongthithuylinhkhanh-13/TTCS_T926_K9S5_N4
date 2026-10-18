@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag, Popconfirm, Button, message } from 'antd';
 import { FileImageOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getDiaryImages, getDisplayImageUrl, deleteDiaryImage } from '../../services/diaryApi.js';
-import { determineImageMetadataStatus } from '../../utils/imageMetadataExtractor.js';
+import { determineImageMetadataStatus, formatCapturedAt } from '../../utils/imageMetadataExtractor.js';
 import apiClient from '../../services/apiClient.js';
 import DiaryImageLightbox from './DiaryImageLightbox.jsx';
 
@@ -281,9 +281,11 @@ export default function DiaryImageList({
                 return (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                      <Text style={{ fontSize: '10px', color: '#8c8c8c' }}>
-                        {img.capturedAt ? `📅 ${img.capturedAt.slice(0, 10)}` : 'Chưa có ngày'}
-                      </Text>
+                      <Tooltip title={img.capturedAt ? `Thời điểm chụp: ${formatCapturedAt(img.capturedAt)}` : 'Chưa có thời gian chụp'}>
+                        <Text style={{ fontSize: '10px', color: img.capturedAt ? '#262626' : '#8c8c8c' }} ellipsis>
+                          {img.capturedAt ? `📅 ${formatCapturedAt(img.capturedAt)}` : 'Chưa có thời gian chụp'}
+                        </Text>
+                      </Tooltip>
                       {hasReasons ? (
                         <Tooltip
                           title={

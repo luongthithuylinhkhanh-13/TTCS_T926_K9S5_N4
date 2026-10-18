@@ -8,7 +8,7 @@ import {
   FileImageOutlined,
 } from '@ant-design/icons';
 import { getDisplayImageUrl, getOriginalImageUrl } from '../../services/diaryApi.js';
-import { determineImageMetadataStatus } from '../../utils/imageMetadataExtractor.js';
+import { determineImageMetadataStatus, formatCapturedAt } from '../../utils/imageMetadataExtractor.js';
 import apiClient from '../../services/apiClient.js';
 import { formatFileSize } from '../../utils/imageQueueUtils.js';
 
@@ -134,10 +134,17 @@ export default function DiaryImageLightbox({
             <Text style={{ color: '#aaa', fontSize: '12px' }}>
               ({currentIndex + 1} / {images.length})
             </Text>
-            {currentImage.capturedAt && (
-              <Text style={{ color: '#4ade80', fontSize: '12px' }}>
-                📅 {currentImage.capturedAt.slice(0, 16).replace('T', ' ')}
+            <Tooltip title={currentImage.capturedAt ? `Thời điểm chụp: ${formatCapturedAt(currentImage.capturedAt)}` : 'Chưa có thời gian chụp'}>
+              <Text style={{ color: currentImage.capturedAt ? '#4ade80' : '#d1d5db', fontSize: '12px' }}>
+                📅 {currentImage.capturedAt ? `Chụp: ${formatCapturedAt(currentImage.capturedAt)}` : 'Chưa có thời gian chụp'}
               </Text>
+            </Tooltip>
+            {currentImage.createdAt && (
+              <Tooltip title={`Thời điểm tải lên: ${formatCapturedAt(currentImage.createdAt)}`}>
+                <Text style={{ color: '#9ca3af', fontSize: '11px' }}>
+                  (Tải lên: {formatCapturedAt(currentImage.createdAt)})
+                </Text>
+              </Tooltip>
             )}
             {typeof currentImage.latitude === 'number' && typeof currentImage.longitude === 'number' && (
               <Text style={{ color: '#60a5fa', fontSize: '12px' }}>
