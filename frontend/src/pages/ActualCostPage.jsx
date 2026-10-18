@@ -31,6 +31,8 @@ import {
 } from '../services/actualCostApi';
 import { getProjects, getProjectWbs } from '../services/wbsApi';
 import ActualCostModal from '../components/wbs/ActualCostModal';
+import { getProjectBudgetTree } from '../services/budgetApi';
+import { calculateActualCostVariance } from '../services/actualCostVariance';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -60,6 +62,10 @@ const ActualCostPage = () => {
   const [costs, setCosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const [budgetTree, setBudgetTree] = useState([]);
+  const [allActualCosts, setAllActualCosts] = useState([]);
+  const [varianceLoading, setVarianceLoading] = useState(false);
 
   // Filters
   const [filterWbsItemId, setFilterWbsItemId] = useState(null);
@@ -100,6 +106,47 @@ const ActualCostPage = () => {
     loadWbs();
   }, [selectedProjectId]);
 
+  useEffect(() => {
+   if (!selectedProjectId) {
+    setBudgetTree([]);
+    setAllActualCosts([]);
+    setVarianceLoading(false);
+    return;
+  }
+
+  let cancelled = false;
+
+  const loadVarianceData = async () => {
+    setVarianceLoading(true);
+
+    try {
+      const [treeData, actualData] = await Promise.all([
+        getProjectBudgetTree(selectedProjectId),
+        getActualCosts(selectedProjectId),
+      ]);
+
+      if (!cancelled) {
+        setBudgetTree(Array.isArray(treeData) ? treeData : []);
+        setAllActualCosts(Array.isArray(actualData) ? actualData : []);
+      }
+    } catch (error) {
+      if (!cancelled) {
+        message.error('Không thể tải dữ liệu so sánh dự toán và thực tế');
+      }
+    } finally {
+      if (!cancelled) {
+        setVarianceLoading(false);
+      }
+    }
+  };
+
+  loadVarianceData();
+
+  return () => {
+    cancelled = true;
+  };
+}, [selectedProjectId]);
+
   // Load actual costs with filters
   const loadCosts = useCallback(async () => {
     if (!selectedProjectId) return;
@@ -127,6 +174,87 @@ const ActualCostPage = () => {
   }, [loadCosts]);
 
   const totalActual = calculateTotalCost(costs);
+  const variance = calculateActualCostVariance(budgetTree, allActualCosts);
+  const varianceRows = [];
+
+const flattenVarianceItems = (items, depth = 0) => {
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    varianceRows.push({
+      ...item,
+      depth,
+      key: item.id,
+    });
+
+    flattenVarianceItems(item.children, depth + 1);
+  });
+};
+
+flattenVarianceItems(variance.items);
+const varianceColumns = [
+  {
+    title: 'Hạng mục WBS',
+    dataIndex: 'name',
+    key: 'name',
+    render: (name, record) => (
+      <span style={{ paddingLeft: record.depth * 20 }}>
+        {name || 'Chưa đặt tên'}
+      </span>
+    ),
+  },
+  {
+    title: 'Dự toán',
+    dataIndex: 'budget',
+    key: 'budget',
+    align: 'right',
+    render: value => formatCurrency(value),
+  },
+  {
+    title: 'Thực tế',
+    dataIndex: 'actual',
+    key: 'actual',
+    align: 'right',
+    render: value => formatCurrency(value),
+  },
+  {
+    title: 'Chênh lệch',
+    dataIndex: 'difference',
+    key: 'difference',
+    align: 'right',
+    render: value => (
+      <span style={{
+        color: value > 0 ? '#DC2626' : value < 0 ? '#16A34A' : '#64748B',
+        fontWeight: 600,
+      }}>
+        {value > 0 ? '+' : ''}{formatCurrency(value)}
+      </span>
+    ),
+  },
+  {
+    title: 'Chênh lệch (%)',
+    dataIndex: 'percentage',
+    key: 'percentage',
+    align: 'right',
+    render: value => value == null ? '—' : `${value.toFixed(2)}%`,
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'status',
+    key: 'status',
+    render: status => {
+      const statusConfig = {
+        OVER_BUDGET: { color: 'red', label: 'Vượt dự toán' },
+        UNDER_BUDGET: { color: 'green', label: 'Tiết kiệm' },
+        ON_BUDGET: { color: 'blue', label: 'Đúng dự toán' },
+      };
+      const config = statusConfig[status] || {
+        color: 'default',
+        label: 'Chưa xác định',
+      };
+
+      return <Tag color={config.color}>{config.label}</Tag>;
+    },
+  },
+];
 
   const columns = [
     {
@@ -306,6 +434,59 @@ const ActualCostPage = () => {
         </Space>
       </Card>
 
+            {/* T-99: So sánh dự toán và chi phí thực tế */}
+      <Card
+        title="So sánh dự toán và thực tế (T-99)"
+        style={{ marginBottom: 20, borderRadius: 8 }}
+      >
+        <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+          <Col xs={24} md={8}>
+            <Statistic
+              title="Tổng dự toán"
+              value={variance.budget}
+              formatter={value => formatCurrency(value)}
+            />
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Statistic
+              title="Tổng chi phí thực tế"
+              value={variance.actual}
+              formatter={value => formatCurrency(value)}
+            />
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Statistic
+              title="Chênh lệch"
+              value={variance.difference}
+              formatter={value =>
+                `${Number(value) > 0 ? '+' : ''}${formatCurrency(value)}`
+              }
+              valueStyle={{
+                color: variance.difference > 0
+                  ? '#DC2626'
+                  : variance.difference < 0
+                    ? '#16A34A'
+                    : '#64748B',
+              }}
+            />
+          </Col>
+        </Row>
+
+        <Table
+          rowKey="key"
+          columns={varianceColumns}
+          dataSource={varianceRows}
+          loading={varianceLoading}
+          pagination={false}
+          size="middle"
+          locale={{
+            emptyText: 'Chưa có dữ liệu dự toán để so sánh',
+          }}
+          scroll={{ x: 900 }}
+        />
+      </Card>
       {/* Main Table (T-96) */}
       <Card style={{ borderRadius: 8 }}>
         <Table
