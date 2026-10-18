@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   Table,
   Button,
+  Input,
   Select,
   DatePicker,
   Tag,
@@ -38,20 +39,20 @@ const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const COST_TYPES = [
-  { value: '', label: 'Tất cả loại chi phí' },
-  { value: 'VẬT_TƯ', label: 'Vật tư / Nguyên vật liệu' },
-  { value: 'NHÂN_CÔNG', label: 'Nhân công thi công' },
-  { value: 'MÁY_THI_CÔNG', label: 'Máy thi công & Thiết bị' },
-  { value: 'QUẢN_LÝ', label: 'Chi phí quản lý chung' },
-  { value: 'KHÁC', label: 'Chi phí khác' }
+  { value: '', label: 'Táº¥t cáº£ loáº¡i chi phÃ­' },
+  { value: 'Váº¬T_TÆ¯', label: 'Váº­t tÆ° / NguyÃªn váº­t liá»‡u' },
+  { value: 'NHÃ‚N_CÃ”NG', label: 'NhÃ¢n cÃ´ng thi cÃ´ng' },
+  { value: 'MÃY_THI_CÃ”NG', label: 'MÃ¡y thi cÃ´ng & Thiáº¿t bá»‹' },
+  { value: 'QUáº¢N_LÃ', label: 'Chi phÃ­ quáº£n lÃ½ chung' },
+  { value: 'KHÃC', label: 'Chi phÃ­ khÃ¡c' }
 ];
 
 const COST_TYPE_TAGS = {
-  'VẬT_TƯ': { color: 'blue', label: 'Vật tư' },
-  'NHÂN_CÔNG': { color: 'green', label: 'Nhân công' },
-  'MÁY_THI_CÔNG': { color: 'orange', label: 'Máy móc' },
-  'QUẢN_LÝ': { color: 'purple', label: 'Quản lý' },
-  'KHÁC': { color: 'default', label: 'Khác' }
+  'Váº¬T_TÆ¯': { color: 'blue', label: 'Váº­t tÆ°' },
+  'NHÃ‚N_CÃ”NG': { color: 'green', label: 'NhÃ¢n cÃ´ng' },
+  'MÃY_THI_CÃ”NG': { color: 'orange', label: 'MÃ¡y mÃ³c' },
+  'QUáº¢N_LÃ': { color: 'purple', label: 'Quáº£n lÃ½' },
+  'KHÃC': { color: 'default', label: 'KhÃ¡c' }
 };
 
 const ActualCostPage = () => {
@@ -66,6 +67,11 @@ const ActualCostPage = () => {
   const [budgetTree, setBudgetTree] = useState([]);
   const [allActualCosts, setAllActualCosts] = useState([]);
   const [varianceLoading, setVarianceLoading] = useState(false);
+  // T-100: Filters and sorting for comparison table
+  const [varianceSearch, setVarianceSearch] = useState('');
+  const [varianceStatusFilter, setVarianceStatusFilter] = useState('ALL');
+  const [varianceSort, setVarianceSort] = useState('name');
+  const [varianceSortOrder, setVarianceSortOrder] = useState('ascend');
 
   // Filters
   const [filterWbsItemId, setFilterWbsItemId] = useState(null);
@@ -84,7 +90,7 @@ const ActualCostPage = () => {
           setSelectedProjectId(found ? found.id : projs[0].id);
         }
       } catch (err) {
-        message.error('Không thể nạp danh sách dự án');
+        message.error('KhÃ´ng thá»ƒ náº¡p danh sÃ¡ch dá»± Ã¡n');
       }
     };
     loadProjects();
@@ -131,7 +137,7 @@ const ActualCostPage = () => {
       }
     } catch (error) {
       if (!cancelled) {
-        message.error('Không thể tải dữ liệu so sánh dự toán và thực tế');
+        message.error('KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u so sÃ¡nh dá»± toÃ¡n vÃ  thá»±c táº¿');
       }
     } finally {
       if (!cancelled) {
@@ -162,7 +168,7 @@ const ActualCostPage = () => {
       const data = await getActualCosts(selectedProjectId, params);
       setCosts(data);
     } catch (err) {
-      message.error('Lỗi khi tải lịch sử chi phí thực tế');
+      message.error('Lá»—i khi táº£i lá»‹ch sá»­ chi phÃ­ thá»±c táº¿');
       setCosts([]);
     } finally {
       setLoading(false);
@@ -189,34 +195,135 @@ const flattenVarianceItems = (items, depth = 0) => {
   });
 };
 
+
 flattenVarianceItems(variance.items);
-const varianceColumns = [
+
+// T-100: Search, filter and sort comparison rows
+const filteredVarianceRows = varianceRows
+  .filter((item) => {
+    const keyword = varianceSearch.trim().toLowerCase();
+
+    const matchesSearch =
+      !keyword ||
+      String(item.name || '').toLowerCase().includes(keyword) ||
+      String(item.code || '').toLowerCase().includes(keyword);
+
+    const matchesStatus =
+      varianceStatusFilter === 'ALL' ||
+      item.status === varianceStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  })
+  .sort((a, b) => {
+    let result = 0;
+
+    switch (varianceSort) {
+      case 'budget':
+        result = a.budget - b.budget;
+        break;
+      case 'actual':
+        result = a.actual - b.actual;
+        break;
+      case 'difference':
+        result = a.difference - b.difference;
+        break;
+      case 'percentage':
+        result = (a.percentage ?? 0) - (b.percentage ?? 0);
+        break;
+      case 'name':
+      default:
+        result = String(a.name || '').localeCompare(
+          String(b.name || ''),
+          'vi',
+        );
+        break;
+    }
+
+    return varianceSortOrder === 'descend' ? -result : result;
+  });
+
+const exportVarianceCsv = () => {
+  const headers = [
+    'Hang muc WBS',
+    'Du toan',
+    'Thuc te',
+    'Chenh lech',
+    'Chenh lech (%)',
+    'Trang thai',
+  ];
+
+  const statusLabels = {
+    OVER_BUDGET: 'Vuot du toan',
+    UNDER_BUDGET: 'Tiet kiem',
+    ON_BUDGET: 'Dung du toan',
+  };
+
+  const escapeCsv = (value) => {
+    const text = String(value ?? '');
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const rows = filteredVarianceRows.map((item) => [
+    item.name || '',
+    item.budget,
+    item.actual,
+    item.difference,
+    item.percentage == null ? '' : item.percentage,
+    statusLabels[item.status] || 'Chua xac dinh',
+  ]);
+
+  const csvContent = [
+    headers,
+    ...rows,
+  ]
+    .map((row) => row.map(escapeCsv).join(','))
+    .join('\r\n');
+
+  // BOM helps Excel recognize UTF-8
+  const blob = new Blob(
+    ['\uFEFF', csvContent],
+    { type: 'text/csv;charset=utf-8;' },
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'so-sanh-du-toan-thuc-te.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+ };
+
+
+ const varianceColumns = [
+
   {
-    title: 'Hạng mục WBS',
+    title: 'Háº¡ng má»¥c WBS',
     dataIndex: 'name',
     key: 'name',
     render: (name, record) => (
       <span style={{ paddingLeft: record.depth * 20 }}>
-        {name || 'Chưa đặt tên'}
+        {name || 'ChÆ°a Ä‘áº·t tÃªn'}
       </span>
     ),
   },
   {
-    title: 'Dự toán',
+    title: 'Dá»± toÃ¡n',
     dataIndex: 'budget',
     key: 'budget',
     align: 'right',
     render: value => formatCurrency(value),
   },
   {
-    title: 'Thực tế',
+    title: 'Thá»±c táº¿',
     dataIndex: 'actual',
     key: 'actual',
     align: 'right',
     render: value => formatCurrency(value),
   },
   {
-    title: 'Chênh lệch',
+    title: 'ChÃªnh lá»‡ch',
     dataIndex: 'difference',
     key: 'difference',
     align: 'right',
@@ -230,25 +337,25 @@ const varianceColumns = [
     ),
   },
   {
-    title: 'Chênh lệch (%)',
+    title: 'ChÃªnh lá»‡ch (%)',
     dataIndex: 'percentage',
     key: 'percentage',
     align: 'right',
-    render: value => value == null ? '—' : `${value.toFixed(2)}%`,
+    render: value => value == null ? 'â€”' : `${value.toFixed(2)}%`,
   },
   {
-    title: 'Trạng thái',
+    title: 'Tráº¡ng thÃ¡i',
     dataIndex: 'status',
     key: 'status',
     render: status => {
       const statusConfig = {
-        OVER_BUDGET: { color: 'red', label: 'Vượt dự toán' },
-        UNDER_BUDGET: { color: 'green', label: 'Tiết kiệm' },
-        ON_BUDGET: { color: 'blue', label: 'Đúng dự toán' },
+        OVER_BUDGET: { color: 'red', label: 'VÆ°á»£t dá»± toÃ¡n' },
+        UNDER_BUDGET: { color: 'green', label: 'Tiáº¿t kiá»‡m' },
+        ON_BUDGET: { color: 'blue', label: 'ÄÃºng dá»± toÃ¡n' },
       };
       const config = statusConfig[status] || {
         color: 'default',
-        label: 'Chưa xác định',
+        label: 'ChÆ°a xÃ¡c Ä‘á»‹nh',
       };
 
       return <Tag color={config.color}>{config.label}</Tag>;
@@ -258,7 +365,7 @@ const varianceColumns = [
 
   const columns = [
     {
-      title: 'Ngày phát sinh',
+      title: 'NgÃ y phÃ¡t sinh',
       dataIndex: 'incurredDate',
       key: 'incurredDate',
       width: 120,
@@ -266,7 +373,7 @@ const varianceColumns = [
       sorter: (a, b) => dayjs(a.incurredDate).unix() - dayjs(b.incurredDate).unix()
     },
     {
-      title: 'Nội dung khoản chi',
+      title: 'Ná»™i dung khoáº£n chi',
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
@@ -277,22 +384,22 @@ const varianceColumns = [
       )
     },
     {
-      title: 'Hạng mục liên kết (T-95)',
+      title: 'Háº¡ng má»¥c liÃªn káº¿t (T-95)',
       key: 'wbsItem',
       render: (_, record) => {
         if (!record.wbsItemId) {
-          return <Tag color="default">Chi phí chung dự án</Tag>;
+          return <Tag color="default">Chi phÃ­ chung dá»± Ã¡n</Tag>;
         }
         return (
           <Space orientation="vertical" size={2}>
             {record.wbsCode && <span className="wbs-badge" style={{ fontSize: 11 }}>{record.wbsCode}</span>}
-            <span style={{ fontWeight: 500 }}>{record.wbsItemName || 'Hạng mục'}</span>
+            <span style={{ fontWeight: 500 }}>{record.wbsItemName || 'Háº¡ng má»¥c'}</span>
           </Space>
         );
       }
     },
     {
-      title: 'Phân loại',
+      title: 'PhÃ¢n loáº¡i',
       dataIndex: 'costType',
       key: 'costType',
       width: 130,
@@ -302,7 +409,7 @@ const varianceColumns = [
       }
     },
     {
-      title: 'Số tiền thực chi',
+      title: 'Sá»‘ tiá»n thá»±c chi',
       dataIndex: 'amount',
       key: 'amount',
       align: 'right',
@@ -315,11 +422,11 @@ const varianceColumns = [
       sorter: (a, b) => (Number(a.amount) || 0) - (Number(b.amount) || 0)
     },
     {
-      title: 'Người nhập',
+      title: 'NgÆ°á»i nháº­p',
       dataIndex: 'createdBy',
       key: 'createdBy',
       width: 130,
-      render: user => user || 'Hệ thống'
+      render: user => user || 'Há»‡ thá»‘ng'
     }
   ];
 
@@ -330,17 +437,17 @@ const varianceColumns = [
         <div>
           <Title level={3} style={{ margin: 0, color: '#0F172A' }}>
             <DollarOutlined style={{ color: '#16A34A', marginRight: 8 }} />
-            Quản lý & Lịch sử Chi phí Thực tế (S-47)
+            Quáº£n lÃ½ & Lá»‹ch sá»­ Chi phÃ­ Thá»±c táº¿ (S-47)
           </Title>
           <Text type="secondary">
-            Ghi nhận chi phí phát sinh thực tế và liên kết với từng hạng mục công việc
+            Ghi nháº­n chi phÃ­ phÃ¡t sinh thá»±c táº¿ vÃ  liÃªn káº¿t vá»›i tá»«ng háº¡ng má»¥c cÃ´ng viá»‡c
           </Text>
         </div>
 
         <Space>
           <Select
             style={{ width: 260 }}
-            placeholder="Chọn dự án..."
+            placeholder="Chá»n dá»± Ã¡n..."
             value={selectedProjectId}
             onChange={setSelectedProjectId}
             options={projects.map(p => ({ value: p.id, label: `[${p.code}] ${p.name}` }))}
@@ -352,7 +459,7 @@ const varianceColumns = [
             style={{ background: '#16A34A', borderColor: '#16A34A' }}
             disabled={!selectedProjectId}
           >
-            Nhập chi phí thực tế (T-94)
+            Nháº­p chi phÃ­ thá»±c táº¿ (T-94)
           </Button>
         </Space>
       </div>
@@ -362,7 +469,7 @@ const varianceColumns = [
         <Col span={8}>
           <Card bordered={false} style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8 }}>
             <Statistic
-              title={<span style={{ color: '#991B1B', fontWeight: 600 }}>TỔNG CHI PHÍ THỰC TẾ LŨY KẾ</span>}
+              title={<span style={{ color: '#991B1B', fontWeight: 600 }}>Tá»”NG CHI PHÃ THá»°C Táº¾ LÅ¨Y Káº¾</span>}
               value={totalActual}
               formatter={val => formatCurrency(val)}
               valueStyle={{ color: '#DC2626', fontWeight: 700 }}
@@ -373,19 +480,19 @@ const varianceColumns = [
         <Col span={8}>
           <Card bordered={false} style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8 }}>
             <Statistic
-              title={<span style={{ color: '#1E40AF', fontWeight: 600 }}>SỐ LƯỢNG KHOẢN CHI GHI NHẬN</span>}
+              title={<span style={{ color: '#1E40AF', fontWeight: 600 }}>Sá» LÆ¯á»¢NG KHOáº¢N CHI GHI NHáº¬N</span>}
               value={costs.length}
               valueStyle={{ color: '#2563EB', fontWeight: 700 }}
               prefix={<FileDoneOutlined />}
-              suffix="khoản"
+              suffix="khoáº£n"
             />
           </Card>
         </Col>
         <Col span={8}>
           <Card bordered={false} style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8 }}>
             <Statistic
-              title={<span style={{ color: '#166534', fontWeight: 600 }}>KHOẢN CHI GẦN NHẤT</span>}
-              value={costs.length > 0 ? formatCurrency(costs[0]?.amount) : 'Chưa có'}
+              title={<span style={{ color: '#166534', fontWeight: 600 }}>KHOáº¢N CHI Gáº¦N NHáº¤T</span>}
+              value={costs.length > 0 ? formatCurrency(costs[0]?.amount) : 'ChÆ°a cÃ³'}
               valueStyle={{ color: '#16A34A', fontWeight: 700 }}
               prefix={<PieChartOutlined />}
             />
@@ -400,12 +507,12 @@ const varianceColumns = [
       >
         <Space wrap>
           <FilterOutlined style={{ color: '#64748B' }} />
-          <Text strong>Bộ lọc:</Text>
+          <Text strong>Bá»™ lá»c:</Text>
 
           <Select
             allowClear
             style={{ width: 280 }}
-            placeholder="Lọc theo hạng mục WBS (T-95)..."
+            placeholder="Lá»c theo háº¡ng má»¥c WBS (T-95)..."
             value={filterWbsItemId}
             onChange={setFilterWbsItemId}
             options={wbsItems.map(item => ({
@@ -425,24 +532,24 @@ const varianceColumns = [
             format="DD/MM/YYYY"
             value={filterDateRange}
             onChange={setFilterDateRange}
-            placeholder={['Từ ngày', 'Đến ngày']}
+            placeholder={['Tá»« ngÃ y', 'Äáº¿n ngÃ y']}
           />
 
           <Button icon={<ReloadOutlined />} onClick={loadCosts}>
-            Làm mới
+            LÃ m má»›i
           </Button>
         </Space>
       </Card>
 
-            {/* T-99: So sánh dự toán và chi phí thực tế */}
+            {/* T-99: So sÃ¡nh dá»± toÃ¡n vÃ  chi phÃ­ thá»±c táº¿ */}
       <Card
-        title="So sánh dự toán và thực tế (T-99)"
+        title="So sÃ¡nh dá»± toÃ¡n vÃ  thá»±c táº¿ (T-99)"
         style={{ marginBottom: 20, borderRadius: 8 }}
       >
         <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
           <Col xs={24} md={8}>
             <Statistic
-              title="Tổng dự toán"
+              title="Tá»•ng dá»± toÃ¡n"
               value={variance.budget}
               formatter={value => formatCurrency(value)}
             />
@@ -450,7 +557,7 @@ const varianceColumns = [
 
           <Col xs={24} md={8}>
             <Statistic
-              title="Tổng chi phí thực tế"
+              title="Tá»•ng chi phÃ­ thá»±c táº¿"
               value={variance.actual}
               formatter={value => formatCurrency(value)}
             />
@@ -458,7 +565,7 @@ const varianceColumns = [
 
           <Col xs={24} md={8}>
             <Statistic
-              title="Chênh lệch"
+              title="ChÃªnh lá»‡ch"
               value={variance.difference}
               formatter={value =>
                 `${Number(value) > 0 ? '+' : ''}${formatCurrency(value)}`
@@ -474,10 +581,89 @@ const varianceColumns = [
           </Col>
         </Row>
 
+        {/* T-100: Comparison table controls */}
+
+        {/* Hàng hiển thị số lượng và xuất CSV */}
+        <Row
+          gutter={[12, 12]}
+          align="middle"
+          justify="space-between"
+          style={{ marginBottom: 16 }}
+        >
+          <Col xs={24} md={16}>
+            <Typography.Text type="secondary">
+              Hiển thị {filteredVarianceRows.length} hạng mục
+            </Typography.Text>
+          </Col>
+
+          <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+            <Button
+              onClick={exportVarianceCsv}
+              disabled={filteredVarianceRows.length === 0}
+            >
+              Xuất CSV
+            </Button>
+          </Col>
+        </Row>
+
+        {/* Hàng tìm kiếm, lọc và sắp xếp */}
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col xs={24} md={8}>
+            <Input
+              allowClear
+              placeholder="Tìm theo tên hoặc mã hạng mục WBS"
+              value={varianceSearch}
+              onChange={(e) => setVarianceSearch(e.target.value)}
+            />
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Select
+              style={{ width: '100%' }}
+              value={varianceStatusFilter}
+              onChange={setVarianceStatusFilter}
+              options={[
+                { value: 'ALL', label: 'Tất cả trạng thái' },
+                { value: 'OVER_BUDGET', label: 'Vượt dự toán' },
+                { value: 'UNDER_BUDGET', label: 'Tiết kiệm' },
+                { value: 'ON_BUDGET', label: 'Đúng dự toán' },
+              ]}
+            />
+          </Col>
+
+          <Col xs={24} md={5}>
+            <Select
+              style={{ width: '100%' }}
+              value={varianceSort}
+              onChange={setVarianceSort}
+              options={[
+                { value: 'name', label: 'Tên hạng mục' },
+                { value: 'budget', label: 'Số tiền dự toán' },
+                { value: 'actual', label: 'Số tiền thực tế' },
+                { value: 'difference', label: 'Số tiền chênh lệch' },
+                { value: 'percentage', label: 'Chênh lệch (%)' },
+              ]}
+            />
+          </Col>
+
+          <Col xs={24} md={3}>
+            <Select
+              style={{ width: '100%' }}
+              value={varianceSortOrder}
+              onChange={setVarianceSortOrder}
+              options={[
+                { value: 'ascend', label: 'Tăng dần' },
+                { value: 'descend', label: 'Giảm dần' },
+              ]}
+            />
+          </Col>
+        </Row>
+
+
         <Table
           rowKey="key"
           columns={varianceColumns}
-          dataSource={varianceRows}
+          dataSource={filteredVarianceRows}
           loading={varianceLoading}
           pagination={false}
           size="middle"
@@ -494,12 +680,12 @@ const varianceColumns = [
           dataSource={costs}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 10, showTotal: total => `Tổng cộng ${total} khoản chi` }}
-          locale={{ emptyText: <Empty description="Chưa có khoản chi phí thực tế nào" /> }}
+          pagination={{ pageSize: 10, showTotal: total => `Tá»•ng cá»™ng ${total} khoáº£n chi` }}
+          locale={{ emptyText: <Empty description="ChÆ°a cÃ³ khoáº£n chi phÃ­ thá»±c táº¿ nÃ o" /> }}
         />
       </Card>
 
-      {/* Modal nhập chi phí */}
+      {/* Modal nháº­p chi phÃ­ */}
       <ActualCostModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
