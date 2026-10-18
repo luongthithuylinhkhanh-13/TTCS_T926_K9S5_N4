@@ -2,6 +2,7 @@
 import {
   Card,
   Table,
+  Alert,
   Button,
   Input,
   Select,
@@ -197,6 +198,11 @@ const flattenVarianceItems = (items, depth = 0) => {
 
 
 flattenVarianceItems(variance.items);
+// T-101: Identify items that exceed their budget
+const overBudgetRows = varianceRows.filter(
+  (item) => item.status === 'OVER_BUDGET',
+);
+
 
 // T-100: Search, filter and sort comparison rows
 const filteredVarianceRows = varianceRows
@@ -581,6 +587,37 @@ const exportVarianceCsv = () => {
           </Col>
         </Row>
 
+        {/* T-101: Budget overrun warning */}
+{overBudgetRows.length > 0 && (
+  <Alert
+    type="error"
+    showIcon
+    message={`Cảnh báo: Có ${overBudgetRows.length} hạng mục vượt dự toán`}
+    description={
+      <div>
+        {overBudgetRows.map((item) => (
+          <div key={item.id} style={{ marginTop: 6 }}>
+            <strong>{item.name || item.code || item.id}</strong>
+            {' — Vượt '}
+            {formatCurrency(item.difference)}
+            {item.percentage != null &&
+              ` (${item.percentage.toFixed(2)}%)`}
+          </div>
+        ))}
+      </div>
+    }
+    style={{ marginBottom: 20 }}
+  />
+)}
+
+{overBudgetRows.length === 0 && (
+  <Alert
+    type="success"
+    showIcon
+    message="Không có hạng mục vượt dự toán"
+    style={{ marginBottom: 20 }}
+  />
+)}
         {/* T-100: Comparison table controls */}
 
         {/* Hàng hiển thị số lượng và xuất CSV */}
