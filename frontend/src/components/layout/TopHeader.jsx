@@ -81,6 +81,24 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
           { title: t('Dự án') },
           { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Nhật ký công trường')}</span> }
         ];
+      case '/budget':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dự toán công trình')}</span> }
+        ];
+      case '/acceptance':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Nghiệm thu khối lượng')}</span> }
+        ];
+      case '/acceptance-records':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Phiếu nghiệm thu')}</span> }
+        ];
       case '/wbs':
       default:
         return [

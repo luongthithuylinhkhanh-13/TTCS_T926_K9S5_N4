@@ -12,6 +12,7 @@ import MilestonesPage from './pages/MilestonesPage';
 import SiteDiaryPage from './pages/SiteDiaryPage';
 import AcceptancePage from './pages/AcceptancePage';
 import AcceptanceRecordsPage from './pages/AcceptanceRecordsPage';
+import BudgetPage from './pages/BudgetPage';
 import { isAuthenticated } from './utils/auth';
 
 const ProtectedRoute = ({ children }) => {
@@ -38,6 +39,7 @@ function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="wbs" element={<WBSPage />} />
+        <Route path="budget" element={<BudgetPage />} />
         <Route path="progress" element={<ProgressPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="working-calendar" element={<WorkingCalendarPage />} />

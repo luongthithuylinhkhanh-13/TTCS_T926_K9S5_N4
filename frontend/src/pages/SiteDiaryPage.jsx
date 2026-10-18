@@ -17,7 +17,8 @@ import {
   Typography,
   Space,
   Tooltip,
-  Badge
+  Badge,
+  Popconfirm
 } from 'antd';
 import {
   BookOutlined,
@@ -27,6 +28,7 @@ import {
   ReloadOutlined,
   EyeOutlined,
   EditOutlined,
+  DeleteOutlined,
   LockOutlined,
   UnlockOutlined,
   SyncOutlined,
@@ -41,6 +43,7 @@ import {
   submitSiteDiary,
   getSiteDiaries,
   updateSiteDiary,
+  deleteSiteDiary,
   lockSiteDiaryDate,
   unlockSiteDiaryDate,
   getProjectDiaryLocks,
@@ -48,6 +51,7 @@ import {
   triggerManualSync
 } from '../services/siteDiaryApi';
 import { isProjectManager } from '../utils/permissions';
+import syncQueueService from '../services/syncQueueService';
 import SyncQueueModal from '../components/sync/SyncQueueModal';
 
 const { Title, Text } = Typography;
@@ -265,6 +269,38 @@ const SiteDiaryPage = () => {
     form.setFieldsValue({ diaryDate: dayjs(), weather: 'Nắng', workerCount: 30 });
   };
 
+  const handleDeleteDiary = async diary => {
+    if (isDateLocked(diary.diaryDate)) {
+      notification.warning({
+        message: 'Không thể xóa',
+        description: `Nhật ký ngày ${dayjs(diary.diaryDate).format('DD/MM/YYYY')} đã bị khóa sổ.`
+      });
+      return;
+    }
+
+    try {
+      if (diary._isPendingSync || diary._isRejectedLocked) {
+        syncQueueService.remove(diary.id);
+        notification.success({
+          message: 'Đã xóa thành công',
+          description: 'Đã xóa bản ghi khỏi hàng đợi ngoại tuyến.'
+        });
+      } else {
+        await deleteSiteDiary(selectedProjectId, diary.id);
+        notification.success({
+          message: 'Đã xóa thành công',
+          description: 'Đã xóa nhật ký công trường trên máy chủ.'
+        });
+      }
+      await loadDiaries();
+    } catch (err) {
+      notification.error({
+        message: 'Không thể xóa nhật ký',
+        description: err.message || 'Có lỗi xảy ra khi xóa nhật ký.'
+      });
+    }
+  };
+
   const openNewDiary = () => {
     setEditingDiaryId(null);
     form.resetFields();
@@ -443,7 +479,7 @@ const SiteDiaryPage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 190,
+      width: 270,
       render: (_, diary) => {
         const locked = isDateLocked(diary.diaryDate);
         return (
@@ -480,6 +516,25 @@ const SiteDiaryPage = () => {
                 </Button>
               </Tooltip>
             )}
+            <Popconfirm
+              title="Xóa nhật ký?"
+              description="Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa bản ghi này?"
+              onConfirm={() => handleDeleteDiary(diary)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              disabled={locked}
+            >
+              <Tooltip title={locked ? 'Ngày này đã bị khóa sổ, không thể xóa.' : ''}>
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={locked}
+                >
+                  Xóa
+                </Button>
+              </Tooltip>
+            </Popconfirm>
           </Space>
         );
       }

@@ -11,6 +11,7 @@ import {
   BookOutlined,
   AuditOutlined,
   LogoutOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { logoutUser, getAuthUser } from '../../utils/auth';
@@ -91,6 +92,15 @@ const Sidebar = ({ collapsed }) => {
         >
           <NodeIndexOutlined />
           {!collapsed && <span>{t('Cơ cấu công việc')}</span>}
+        </div>
+
+        <div
+          className={`sidebar-item ${location.pathname === '/budget' ? 'active' : ''}`}
+          onClick={() => navigate('/budget')}
+          title={collapsed ? t('Dự toán') : ''}
+        >
+          <CalculatorOutlined />
+          {!collapsed && <span>{t('Dự toán')}</span>}
         </div>
 
         <div

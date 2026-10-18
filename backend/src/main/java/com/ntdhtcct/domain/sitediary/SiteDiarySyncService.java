@@ -217,6 +217,42 @@ public class SiteDiarySyncService {
     }
 
     /**
+     * Xóa một bản ghi nhật ký công trường.
+     * Kiểm tra ngày của nhật ký: Nếu ngày đã bị khóa sổ -> ném DiaryDateLockedException.
+     * Sử dụng Shared Advisory Lock để đảm bảo tính toàn vẹn với thao tác Khóa sổ.
+     */
+    @Transactional
+    public boolean deleteDiary(UUID projectId, UUID diaryId) {
+        Optional<SiteDiary> diaryOpt = siteDiaryRepository.findById(Objects.requireNonNull(diaryId))
+                .filter(diary -> diary.getProjectId().equals(projectId));
+
+        if (diaryOpt.isEmpty()) {
+            return false;
+        }
+
+        SiteDiary diary = diaryOpt.get();
+        LocalDate diaryDate = diary.getDiaryDate();
+
+        if (diaryDate != null) {
+            advisoryLockManager.acquireSharedLock(projectId, diaryDate);
+        }
+
+        try {
+            if (diaryDate != null && siteDiaryLockService.isDateLocked(projectId, diaryDate)) {
+                throw new DiaryDateLockedException(
+                        "Nhật ký công trường ngày " + diaryDate + " đã bị khóa sổ. Không thể xóa."
+                );
+            }
+            siteDiaryRepository.delete(diary);
+            return true;
+        } finally {
+            if (diaryDate != null) {
+                advisoryLockManager.releaseSharedLock(projectId, diaryDate);
+            }
+        }
+    }
+
+    /**
      * T-72, T-73 (S-31): Lấy thông tin thống kê trạng thái đồng bộ nhật ký của dự án.
      */
     @Transactional(readOnly = true)
