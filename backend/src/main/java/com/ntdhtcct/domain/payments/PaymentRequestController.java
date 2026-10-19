@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,12 @@ public class PaymentRequestController {
         return paymentRequestService.getPendingRequests(projectId);
     }
 
+    @GetMapping("/eligible-items")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"})
+    public List<PaymentRequestEligibleItemResponse> getEligibleItems(@PathVariable UUID projectId) {
+        return paymentRequestService.getEligibleItems(projectId);
+    }
+
     @GetMapping("/my-requests")
     @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"})
     public List<PaymentRequestResponse> getMyRequests(@PathVariable UUID projectId) {
@@ -48,6 +55,35 @@ public class PaymentRequestController {
                 UserSecurityContext.getUserId(),
                 submission);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/drafts")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"})
+    public ResponseEntity<PaymentRequestResponse> createDraft(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody PaymentRequestSubmission submission) {
+        PaymentRequestResponse response = paymentRequestService.createDraft(
+                projectId, UserSecurityContext.getUserId(), submission);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/{requestId}")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"})
+    public ResponseEntity<PaymentRequestResponse> updateDraft(
+            @PathVariable UUID projectId,
+            @PathVariable UUID requestId,
+            @Valid @RequestBody PaymentRequestSubmission submission) {
+        return ResponseEntity.ok(paymentRequestService.updateDraft(
+                projectId, requestId, UserSecurityContext.getUserId(), submission));
+    }
+
+    @PostMapping("/{requestId}/submit")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"})
+    public ResponseEntity<PaymentRequestResponse> submitDraft(
+            @PathVariable UUID projectId,
+            @PathVariable UUID requestId) {
+        return ResponseEntity.ok(paymentRequestService.submitDraft(
+                projectId, requestId, UserSecurityContext.getUserId()));
     }
 
     @PostMapping("/{requestId}/approve")

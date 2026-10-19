@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.payments;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record PaymentRequestResponse(
@@ -16,7 +17,8 @@ public record PaymentRequestResponse(
         PaymentRequestStatus status,
         String decisionReason,
         String decidedByName,
-        OffsetDateTime decidedAt) {
+        OffsetDateTime decidedAt,
+        List<PaymentRequestItemResponse> items) {
 
     public PaymentRequestResponse(PaymentRequest request) {
         this(
@@ -31,6 +33,7 @@ public record PaymentRequestResponse(
                 request.getStatus(),
                 request.getDecisionReason(),
                 request.getDecidedBy() == null ? null : request.getDecidedBy().getFullName(),
-                request.getDecidedAt());
+                request.getDecidedAt(),
+                request.getItems().stream().map(PaymentRequestItemResponse::new).toList());
     }
 }

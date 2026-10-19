@@ -121,6 +121,23 @@ class RoutePermissionConfigTest {
     }
 
     @Test
+    void allowsProjectContributorsToManagePaymentRequestDrafts() {
+        String[] contributorRoles = {"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"};
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.GET.name(), "/api/projects/123/payment-requests/eligible-items").orElseThrow())
+                .containsExactly(contributorRoles);
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.POST.name(), "/api/projects/123/payment-requests/drafts").orElseThrow())
+                .containsExactly(contributorRoles);
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.PUT.name(), "/api/projects/123/payment-requests/456").orElseThrow())
+                .containsExactly(contributorRoles);
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.POST.name(), "/api/projects/123/payment-requests/456/submit").orElseThrow())
+                .containsExactly(contributorRoles);
+    }
+
+    @Test
     void allowsSiteEngineersToUpdateSiteDiariesButNotWorkers() {
         String[] roles = routePermissionConfig
                 .findRequiredRoles(

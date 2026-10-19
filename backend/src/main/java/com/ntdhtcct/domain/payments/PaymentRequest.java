@@ -12,12 +12,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "payment_requests")
@@ -66,6 +70,9 @@ public class PaymentRequest {
     @Column(name = "version", nullable = false)
     private long version;
 
+    @OneToMany(mappedBy = "paymentRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentRequestItem> items = new ArrayList<>();
+
     protected PaymentRequest() {
     }
 
@@ -81,7 +88,7 @@ public class PaymentRequest {
         this.amount = amount;
         this.requester = requester;
         this.submittedAt = OffsetDateTime.now();
-        this.status = PaymentRequestStatus.PENDING;
+        this.status = PaymentRequestStatus.DRAFT;
     }
 
     public UUID getId() {
@@ -126,6 +133,47 @@ public class PaymentRequest {
 
     public OffsetDateTime getDecidedAt() {
         return decidedAt;
+    }
+
+    public List<PaymentRequestItem> getItems() {
+        return items;
+    }
+
+    public void replaceItems(List<PaymentRequestItem> items) {
+        this.items.clear();
+        for (PaymentRequestItem item : items) {
+            item.setPaymentRequest(this);
+            this.items.add(item);
+        }
+    }
+
+    public void update(String purpose, BigDecimal amount, List<PaymentRequestItem> items) {
+        if (this.status != PaymentRequestStatus.DRAFT) {
+            throw new IllegalStateException("Only draft payment requests can be edited.");
+        }
+        this.purpose = purpose;
+        this.amount = amount;
+        replaceItems(items);
+        recalculateAmount();
+    }
+
+    public void recalculateAmount() {
+        if (!items.isEmpty()) {
+            this.amount = items.stream()
+                    .map(PaymentRequestItem::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+    }
+
+    public void submit() {
+        if (this.status != PaymentRequestStatus.DRAFT) {
+            throw new IllegalStateException("Only draft payment requests can be submitted.");
+        }
+        if (this.amount == null || this.amount.signum() <= 0) {
+            throw new IllegalStateException("A payment request must have a positive amount.");
+        }
+        this.status = PaymentRequestStatus.PENDING;
+        this.submittedAt = OffsetDateTime.now();
     }
 
     public void decide(PaymentRequestStatus decision, String reason, User approver) {

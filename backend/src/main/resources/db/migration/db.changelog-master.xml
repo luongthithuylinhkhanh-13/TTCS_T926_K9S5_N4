@@ -134,4 +134,8 @@
     <!-- S-44 (T-82, T-83, T-84): Payment request review workflow -->
     <include file="db/migration/v26/V26_0__create_payment_requests.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-43 (T-77 to T-81): Draft payment requests generated from approved acceptance items -->
+    <include file="db/migration/v27/V27_0__payment_request_drafts_and_items.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
