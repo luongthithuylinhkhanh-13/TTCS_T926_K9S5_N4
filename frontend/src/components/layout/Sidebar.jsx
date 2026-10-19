@@ -9,6 +9,7 @@ import {
   CheckSquareOutlined,
   CalendarOutlined,
   BookOutlined,
+  WalletOutlined,
   AuditOutlined,
   DollarOutlined,
   SettingOutlined,
@@ -160,6 +161,14 @@ const Sidebar = ({ collapsed }) => {
         >
           <BookOutlined />
           {!collapsed && <span>{t('Nhật ký công trường')}</span>}
+        </div>
+        <div
+          className={`sidebar-item ${location.pathname === '/payment-requests' ? 'active' : ''}`}
+          onClick={() => navigate('/payment-requests')}
+          title={collapsed ? t('Đề nghị thanh toán') : ''}
+        >
+          <WalletOutlined />
+          {!collapsed && <span>{t('Đề nghị thanh toán')}</span>}
         </div>
         <div
           className={`sidebar-item ${location.pathname.startsWith('/acceptance-records') ? 'active' : ''}`}

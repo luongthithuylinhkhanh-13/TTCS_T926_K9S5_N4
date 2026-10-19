@@ -10,6 +10,7 @@ import WorkingCalendarPage from './pages/WorkingCalendarPage';
 import AssignedTasksPage from './pages/AssignedTasksPage';
 import MilestonesPage from './pages/MilestonesPage';
 import SiteDiaryPage from './pages/SiteDiaryPage';
+import PaymentRequestsPage from './pages/PaymentRequestsPage';
 import AcceptancePage from './pages/AcceptancePage';
 import AcceptanceRecordsPage from './pages/AcceptanceRecordsPage';
 import BudgetPage from './pages/BudgetPage';
@@ -55,6 +56,7 @@ function App() {
         <Route path="assigned-tasks" element={<AssignedTasksPage />} />
         <Route path="progress/milestones" element={<MilestonesPage />} />
         <Route path="site-diary" element={<SiteDiaryPage />} />
+        <Route path="payment-requests" element={<PaymentRequestsPage />} />
         <Route path="acceptance" element={<AcceptancePage />} />
         <Route path="acceptance-records" element={<AcceptanceRecordsPage />} />
         <Route path="actual-costs" element={<ActualCostPage />} />

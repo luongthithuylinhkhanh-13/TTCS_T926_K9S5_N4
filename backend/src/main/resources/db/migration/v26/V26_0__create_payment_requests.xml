@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V26.0-create-payment-requests" author="S-44">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_requests"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment_requests">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_payment_requests"/>
+            </column>
+            <column name="project_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_payment_requests_project"
+                             references="projects(id)" deleteCascade="true"/>
+            </column>
+            <column name="request_code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="purpose" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requester_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_payment_requests_requester"
+                             references="users(id)"/>
+            </column>
+            <column name="submitted_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_reason" type="TEXT"/>
+            <column name="decided_by" type="UUID">
+                <constraints nullable="true" foreignKeyName="fk_payment_requests_decider"
+                             references="users(id)"/>
+            </column>
+            <column name="decided_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="payment_requests"
+                             columnNames="project_id, request_code"
+                             constraintName="uk_payment_requests_project_code"/>
+        <createIndex tableName="payment_requests" indexName="idx_payment_requests_project_status_date">
+            <column name="project_id"/>
+            <column name="status"/>
+            <column name="submitted_at"/>
+        </createIndex>
+        <sql>ALTER TABLE payment_requests ADD CONSTRAINT chk_payment_requests_amount CHECK (amount &gt; 0)</sql>
+        <sql>ALTER TABLE payment_requests ADD CONSTRAINT chk_payment_requests_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))</sql>
+
+        <rollback>
+            <dropTable tableName="payment_requests" cascadeConstraints="true"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

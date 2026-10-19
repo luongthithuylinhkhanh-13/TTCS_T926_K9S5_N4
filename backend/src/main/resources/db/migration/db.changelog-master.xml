@@ -130,4 +130,8 @@
     <!-- S-47 (NTDHTCT-237, T-94, T-95, T-96): Ghi nhận chi phí thực tế gắn với hạng mục -->
     <include file="db/migration/v25/V25_0__create_actual_costs_table.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-44 (T-82, T-83, T-84): Payment request review workflow -->
+    <include file="db/migration/v26/V26_0__create_payment_requests.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>

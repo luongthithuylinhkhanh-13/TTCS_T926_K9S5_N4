@@ -98,6 +98,29 @@ class RoutePermissionConfigTest {
     }
 
     @Test
+    void restrictsPaymentRequestReviewToProjectManagers() {
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.GET.name(), "/api/projects/123/payment-requests").orElseThrow())
+                .containsExactly("ADMIN", "PROJECT_MANAGER");
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.POST.name(), "/api/projects/123/payment-requests/456/approve").orElseThrow())
+                .containsExactly("ADMIN", "PROJECT_MANAGER");
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.POST.name(), "/api/projects/123/payment-requests/456/reject").orElseThrow())
+                .containsExactly("ADMIN", "PROJECT_MANAGER");
+    }
+
+    @Test
+    void allowsProjectContributorsToSubmitPaymentRequests() {
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.POST.name(), "/api/projects/123/payment-requests").orElseThrow())
+                .containsExactly("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER");
+        assertThat(routePermissionConfig.findRequiredRoles(
+                HttpMethod.GET.name(), "/api/projects/123/payment-requests/my-requests").orElseThrow())
+                .containsExactly("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER");
+    }
+
+    @Test
     void allowsSiteEngineersToUpdateSiteDiariesButNotWorkers() {
         String[] roles = routePermissionConfig
                 .findRequiredRoles(
