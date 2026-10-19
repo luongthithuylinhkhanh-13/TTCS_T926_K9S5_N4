@@ -5,7 +5,13 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="V19.0-create-payment-requests" author="S-44">
+    <changeSet id="V26.0-create-payment-requests" author="S-44">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_requests"/>
+            </not>
+        </preConditions>
+
         <createTable tableName="payment_requests">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false" primaryKeyName="pk_payment_requests"/>

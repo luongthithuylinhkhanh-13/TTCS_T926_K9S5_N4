@@ -28,19 +28,86 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
     .slice(0, 2)
     .map(part => part[0].toUpperCase())
     .join('');
-  const currentSection = location.pathname === '/progress'
-    ? t('Tiến độ')
-    : location.pathname === '/progress/milestones'
-      ? t('Mốc tiến độ')
-    : location.pathname === '/working-calendar'
-      ? t('Lịch làm việc')
-      : location.pathname === '/assigned-tasks'
-        ? t('Công việc')
-      : t('Cơ cấu công việc');
 
   const handleProfileUpdated = useCallback(profile => {
     setUser(current => ({ ...current, ...profile }));
   }, []);
+
+  const getBreadcrumbItems = () => {
+    switch (location.pathname) {
+      case '/dashboard':
+        return [
+          { title: t('Trang chủ') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dashboard')}</span> }
+        ];
+      case '/projects':
+        return [
+          { title: t('Trang chủ') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dự án')}</span> }
+        ];
+      case '/progress':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Tiến độ')}</span> }
+        ];
+      case '/progress/milestones':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Mốc tiến độ')}</span> }
+        ];
+      case '/working-calendar':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Lịch làm việc')}</span> }
+        ];
+      case '/tasks':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc')}</span> }
+        ];
+      case '/assigned-tasks':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc đã giao')}</span> }
+        ];
+      case '/site-diary':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Nhật ký công trường')}</span> }
+        ];
+      case '/budget':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Dự toán công trình')}</span> }
+        ];
+      case '/acceptance':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Nghiệm thu khối lượng')}</span> }
+        ];
+      case '/acceptance-records':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Phiếu nghiệm thu')}</span> }
+        ];
+      case '/wbs':
+      default:
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Cơ cấu công việc')}</span> }
+        ];
+    }
+  };
 
   const handleDropdownClick = async ({ key }) => {
     if (key === 'logout') {
@@ -75,13 +142,7 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
           {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
         </div>
 
-        <Breadcrumb
-          items={[
-            { title: t('Trang chủ') },
-            { title: t('Dự án') },
-            { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{currentSection}</span> },
-          ]}
-        />
+        <Breadcrumb items={getBreadcrumbItems()} />
       </div>
 
       <div className="header-right">

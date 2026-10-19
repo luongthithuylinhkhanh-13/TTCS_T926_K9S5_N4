@@ -62,3 +62,6 @@ uploads/
 
 # Antigravity / AI agent instructions
 AGENTS.md
+
+# Local helper scripts
+run_*.bat

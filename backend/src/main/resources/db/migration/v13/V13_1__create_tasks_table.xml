@@ -7,6 +7,31 @@
 
     <!-- 1. Tạo bảng tasks -->
     <changeSet id="V13.1-create-tasks" author="NTDHTCT-133">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <and>
+                    <tableExists tableName="tasks"/>
+                    <columnExists tableName="tasks" columnName="id"/>
+                    <columnExists tableName="tasks" columnName="category_id"/>
+                    <columnExists tableName="tasks" columnName="name"/>
+                    <columnExists tableName="tasks" columnName="duration"/>
+                    <columnExists tableName="tasks" columnName="created_at"/>
+                    <columnExists tableName="tasks" columnName="updated_at"/>
+                    <primaryKeyExists tableName="tasks"/>
+                    <foreignKeyConstraintExists foreignKeyTableName="tasks" foreignKeyName="fk_tasks_category"/>
+                    <indexExists tableName="tasks" indexName="idx_tasks_category_id"/>
+                    <sqlCheck expectedResult="1">
+                        SELECT COUNT(1)
+                        FROM information_schema.table_constraints
+                        WHERE table_schema = current_schema()
+                          AND LOWER(table_name) = 'tasks'
+                          AND LOWER(constraint_name) = 'chk_tasks_duration_positive'
+                          AND UPPER(constraint_type) = 'CHECK'
+                    </sqlCheck>
+                </and>
+            </not>
+        </preConditions>
+
         <createTable tableName="tasks">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>

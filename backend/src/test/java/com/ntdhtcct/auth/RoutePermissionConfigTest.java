@@ -36,6 +36,44 @@ class RoutePermissionConfigTest {
     }
 
     @Test
+    void allowsEngineersAndManagersToCreateDiaryEntries() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/diary-entries"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
+    void allowsProjectMembersToViewDiaryImages() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.GET.name(),
+                        "/api/projects/123/diary-entries/456/images"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER");
+    }
+
+    @Test
+    void allowsEngineersAndManagersToDeleteDiaryImages() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.DELETE.name(),
+                        "/api/projects/123/diary-entries/456/images/789"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
     void restrictsCrewReassignmentToProjectManagers() {
         String[] roles = routePermissionConfig
                 .findRequiredRoles(
@@ -93,5 +131,48 @@ class RoutePermissionConfigTest {
 
         assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
         assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
+    void allowsSiteEngineersToDeleteSiteDiariesButNotWorkers() {
+        String[] roles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.DELETE.name(),
+                        "/api/projects/123/site-diaries/456"
+                )
+                .orElseThrow();
+
+        assertThat(roles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER");
+        assertThat(roles).doesNotContain("WORKER", "VIEWER");
+    }
+
+    @Test
+    void restrictsSiteDiaryLocksToProjectManagersAndAdmins() {
+        String[] lockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/site-diaries/locks"
+                )
+                .orElseThrow();
+
+        assertThat(lockRoles).containsExactly("ADMIN", "PROJECT_MANAGER");
+
+        String[] unlockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.POST.name(),
+                        "/api/projects/123/site-diaries/unlocks"
+                )
+                .orElseThrow();
+
+        assertThat(unlockRoles).containsExactly("ADMIN", "PROJECT_MANAGER");
+
+        String[] viewLockRoles = routePermissionConfig
+                .findRequiredRoles(
+                        HttpMethod.GET.name(),
+                        "/api/projects/123/site-diaries/locks"
+                )
+                .orElseThrow();
+
+        assertThat(viewLockRoles).contains("ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER");
     }
 }

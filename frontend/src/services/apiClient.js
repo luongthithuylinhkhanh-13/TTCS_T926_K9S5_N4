@@ -28,6 +28,7 @@ apiClient.interceptors.response.use(
       || 'Không thể kết nối đến máy chủ';
     const requestError = new Error(message);
     requestError.status = error.response?.status;
+    requestError.response = error.response;
 
     const isExpiredToken = /token.*(hết hạn|không hợp lệ)|unauthorized|invalid token/i.test(message);
 

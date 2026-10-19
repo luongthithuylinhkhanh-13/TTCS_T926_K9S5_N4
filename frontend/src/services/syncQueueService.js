@@ -131,6 +131,15 @@ class SyncQueueService {
   }
 
   /**
+   * Xóa một bản ghi khỏi hàng đợi đồng bộ
+   */
+  removeItem(id) {
+    let queue = this.getQueue();
+    queue = queue.filter(i => i.id !== id && i.clientSyncId !== id);
+    this.saveQueue(queue);
+  }
+
+  /**
    * Đánh dấu item đồng bộ thất bại, tăng số lần thử lại (retry count)
    */
   markFailed(id, errorMessage) {
@@ -143,6 +152,41 @@ class SyncQueueService {
       item.updatedAt = new Date().toISOString();
       this.saveQueue(queue);
     }
+  }
+
+  /**
+   * T-65: Đánh dấu item bị từ chối do ngày đã bị khóa sổ (REJECTED_LOCKED).
+   * Giữ nguyên dữ liệu trên LocalStorage để không mất dữ liệu,
+   * nhưng ngừng tự động thử lại ở các lần sync tự động.
+   */
+  markLocked(id, errorMessage) {
+    const queue = this.getQueue();
+    const item = queue.find(i => i.id === id);
+    if (item) {
+      item.lastError = errorMessage;
+      item.status = 'REJECTED_LOCKED';
+      item.isLocked = true;
+      item.updatedAt = new Date().toISOString();
+      this.saveQueue(queue);
+    }
+  }
+
+  /**
+   * T-65: Đưa một bản ghi từ trạng thái REJECTED_LOCKED hoặc FAILED trở lại PENDING
+   */
+  retryItem(id) {
+    const queue = this.getQueue();
+    const item = queue.find(i => i.id === id);
+    if (item) {
+      item.status = 'PENDING';
+      item.isLocked = false;
+      item.lastError = null;
+      item.retryCount = 0;
+      item.updatedAt = new Date().toISOString();
+      this.saveQueue(queue);
+      return item;
+    }
+    return null;
   }
 
   /**
@@ -162,19 +206,49 @@ class SyncQueueService {
   }
 
   /**
-   * Thống kê trạng thái hàng đợi
+   * T-73 (NTDHTCT-258): Đếm số lượng mục đang chờ đồng bộ (bao gồm PENDING, SYNCING, FAILED)
+   * Có thể lọc theo projectId hoặc đếm toàn cục.
    */
-  getStats() {
-    const queue = this.getQueue();
+  getPendingCount(projectId = null) {
+    let queue = this.getQueue();
+    if (projectId) {
+      queue = queue.filter(item => item.projectId === projectId);
+    }
+    return queue.filter(
+      item => item.status === 'PENDING' || item.status === 'SYNCING' || (item.status === 'FAILED' && item.retryCount < item.maxRetries)
+    ).length;
+  }
+
+  /**
+   * T-72 (NTDHTCT-257): Lấy trạng thái đồng bộ của một bản ghi dựa theo clientSyncId
+   * Trả về: 'PENDING' | 'SYNCING' | 'FAILED' | 'SYNCED' | null
+   */
+  getDiarySyncStatus(clientSyncId) {
+    if (!clientSyncId) return null;
+    const item = this.getQueue().find(i => i.clientSyncId === clientSyncId);
+    if (!item) return 'SYNCED';
+    return item.status;
+  }
+
+  /**
+   * Thống kê trạng thái hàng đợi, hỗ trợ lọc theo dự án (T-73)
+   */
+  getStats(projectId = null) {
+    let queue = this.getQueue();
+    if (projectId) {
+      queue = queue.filter(item => item.projectId === projectId);
+    }
     const pending = queue.filter(i => i.status === 'PENDING').length;
     const syncing = queue.filter(i => i.status === 'SYNCING').length;
     const failed = queue.filter(i => i.status === 'FAILED').length;
+    const pendingCount = pending + syncing + failed;
     return {
       total: queue.length,
       pending,
       syncing,
       failed,
-      hasPending: pending + failed > 0
+      pendingCount,
+      hasPending: pendingCount > 0
     };
   }
 
@@ -193,8 +267,9 @@ class SyncQueueService {
    */
   dispatchQueueEvent() {
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      const stats = this.getStats();
       const event = new CustomEvent('ntdhtcct:sync-queue-updated', {
-        detail: this.getStats()
+        detail: stats
       });
       window.dispatchEvent(event);
     }

@@ -67,7 +67,10 @@ public class CategoryTaskController {
                     projectId,
                     categoryId,
                     request.name(),
-                    request.duration()
+                    request.duration(),
+                    request.quantity(),
+                    request.unit(),
+                    request.unitPrice()
             );
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(TaskResponse.from(task));
@@ -95,7 +98,14 @@ public class CategoryTaskController {
 
             @NotNull(message = "Thời lượng không được để trống")
             @Positive(message = "Thời lượng phải lớn hơn 0")
-            Integer duration
+            Integer duration,
+
+            Double quantity,
+
+            @Size(max = 50, message = "Đơn vị tính không được vượt quá 50 ký tự")
+            String unit,
+
+            Double unitPrice
     ) {
     }
 
@@ -104,6 +114,10 @@ public class CategoryTaskController {
             UUID categoryId,
             String name,
             Integer duration,
+            Double quantity,
+            String unit,
+            Double unitPrice,
+            Double totalPrice,
             OffsetDateTime createdAt
     ) {
         private static TaskResponse from(Task task) {
@@ -112,6 +126,10 @@ public class CategoryTaskController {
                     task.getCategory().getId(),
                     task.getName(),
                     task.getDuration(),
+                    task.getQuantity(),
+                    task.getUnit(),
+                    task.getUnitPrice(),
+                    task.getTotalPrice(),
                     task.getCreatedAt()
             );
         }

@@ -69,12 +69,15 @@
              relativeToChangelogFile="false"/>
 
     <!-- T-43 (NTDHTCT-185): Bảng milestones gắn hạng mục với ngày bắt buộc -->
-
     <include file="db/migration/v15/V15_0__create_milestones_table.xml"
              relativeToChangelogFile="false"/>
 
     <!-- T-51, T-52, T-53: Báo cáo hằng ngày -->
     <include file="db/migration/v13/V13_0__add_wbs_columns_and_daily_reports.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-23 (E-05): Nhật ký công trường và ảnh đính kèm -->
+    <include file="db/migration/v16/V16_0__create_diary_tables.xml"
              relativeToChangelogFile="false"/>
 
     <!-- T-54, T-55: Quản lý thành viên dự án -->
@@ -96,7 +99,39 @@
     <include file="db/migration/v18/V18_0__add_wbs_item_version.xml"
              relativeToChangelogFile="false"/>
 
+    <!-- S-35 (NTDHTCT-219, T-80, T-81, T-82): Khai báo khối lượng, đơn vị tính và đơn giá -->
+    <include file="db/migration/v19/V19_0__add_quantity_unit_price_to_tasks_and_wbs.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-36 (NTDHTCT-220, T-83, T-84, T-85): Lập phiếu nghiệm thu theo đợt, tự tính -->
+    <include file="db/migration/v20/V20_0__create_acceptance_reports_and_items.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-24 (T-64): Khóa sổ nhật ký công trường theo ngày -->
+    <include file="db/migration/v20/V20_0__create_site_diary_locks_table.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-39: Phiếu nghiệm thu và nhật ký thao tác -->
+    <include file="db/migration/v21/V21_0__create_acceptance_records_and_audit_logs.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- Email verification for self-service registration -->
+    <include file="db/migration/v22/V22_0__add_email_verification.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-50: Hồ sơ nghiệm thu theo hạng mục -->
+    <include file="db/migration/v23/V23_0__add_acceptance_dossier_details.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-45 (T-85): Cấu hình tỷ lệ tạm giữ theo hợp đồng -->
+    <include file="db/migration/v24/V24_0__add_retention_rate_to_acceptance_reports.xml"
+             relativeToChangelogFile="false"/>
+
+    <!-- S-47 (NTDHTCT-237, T-94, T-95, T-96): Ghi nhận chi phí thực tế gắn với hạng mục -->
+    <include file="db/migration/v25/V25_0__create_actual_costs_table.xml"
+             relativeToChangelogFile="false"/>
+
     <!-- S-44 (T-82, T-83, T-84): Payment request review workflow -->
-    <include file="db/migration/v19/V19_0__create_payment_requests.xml"
+    <include file="db/migration/v26/V26_0__create_payment_requests.xml"
              relativeToChangelogFile="false"/>
 </databaseChangeLog>

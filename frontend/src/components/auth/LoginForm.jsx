@@ -47,7 +47,7 @@ const LoginForm = () => {
       }
 
       if (registering) {
-        setSuccessMessage(data.message || t('Đăng ký thành công. Bạn có thể đăng nhập.'));
+        setSuccessMessage(data.message || t('Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.'));
         setMode('login');
         form.resetFields();
         form.setFieldsValue({ email: data.email || values.email });

@@ -1,6 +1,7 @@
 import TaskDependencySection from './TaskDependencySection';
 import CategoryTaskSection from './CategoryTaskSection';
 import TeamAssignmentSection from './TeamAssignmentSection';
+import ActualCostSection from './ActualCostSection';
 import React from 'react';
 import { Drawer, Tag, Progress, Button, Space, Avatar, Image, List, Popconfirm } from 'antd';
 import {
@@ -199,6 +200,33 @@ const WorkDetailDrawer = ({
               <span className="drawer-info-label">{t('Thời lượng')}</span>
               <span className="drawer-info-value" style={{ fontWeight: 700 }}>{getDurationDays()}</span>
             </div>
+
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">{t('Khối lượng')}</span>
+              <span className="drawer-info-value" style={{ fontWeight: 600 }}>
+                {(node.totalVolume ?? node.quantity) != null
+                  ? `${node.totalVolume ?? node.quantity} ${node.unit || ''}`.trim()
+                  : '--'}
+              </span>
+            </div>
+
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">{t('Đơn giá dự toán')}</span>
+              <span className="drawer-info-value" style={{ fontWeight: 600 }}>
+                {node.unitPrice != null
+                  ? `${Number(node.unitPrice).toLocaleString('vi-VN')} đ${node.unit ? ` / ${node.unit}` : ''}`
+                  : '--'}
+              </span>
+            </div>
+
+            <div className="drawer-info-item">
+              <span className="drawer-info-label">{t('Tổng tiền dự toán')}</span>
+              <span className="drawer-info-value" style={{ fontWeight: 700, color: '#047857' }}>
+                {(node.totalVolume ?? node.quantity) != null && node.unitPrice != null
+                  ? `${(Number(node.totalVolume ?? node.quantity) * Number(node.unitPrice)).toLocaleString('vi-VN')} đ`
+                  : '--'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -339,6 +367,11 @@ const WorkDetailDrawer = ({
         <TaskDependencySection
           taskId={node?.id || node?.key}
           allTasks={allTasks}
+        />
+        {/* === CHI PHÍ THỰC TẾ (S-47: T-94, T-95, T-96) === */}
+        <ActualCostSection
+          projectId={projectId}
+          wbsItem={node}
         />
       </div>
 

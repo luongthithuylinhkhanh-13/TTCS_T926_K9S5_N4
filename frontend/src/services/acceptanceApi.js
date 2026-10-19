@@ -1,0 +1,155 @@
+/**
+ * API Client cho Nghiệm thu khối lượng theo đợt (Acceptance Reports)
+ * Phục vụ Story S-36 (NTDHTCT-220):
+ *   - NTDHTCT-268 (T-83): Tạo phiếu nghiệm thu theo từng đợt
+ *   - NTDHTCT-269 (T-84): Chọn hạng mục và nhập khối lượng nghiệm thu
+ *   - NTDHTCT-270 (T-85): Tự động tính giá trị nghiệm thu của phiếu
+ */
+
+import apiClient from './apiClient.js';
+
+/**
+ * T-85 (NTDHTCT-270): Hàm tiện ích tính thành tiền cho một hạng mục
+ * amount = acceptedQuantity * unitPrice
+ */
+export const calculateItemAmount = (acceptedQuantity, unitPrice) => {
+  const qty = Number(acceptedQuantity) || 0;
+  const price = Number(unitPrice) || 0;
+  if (qty < 0 || price < 0) return 0;
+  return Math.round(qty * price * 100) / 100;
+};
+
+/**
+ * T-85 (NTDHTCT-270): Hàm tiện ích tính tổng giá trị nghiệm thu của toàn phiếu
+ * totalAmount = sum(item.amount)
+ */
+export const calculateTotalAmount = items => {
+  if (!Array.isArray(items) || items.length === 0) return 0;
+  const total = items.reduce((sum, item) => {
+    const itemAmount = calculateItemAmount(item.acceptedQuantity, item.unitPrice);
+    return sum + itemAmount;
+  }, 0);
+  return Math.round(total * 100) / 100;
+};
+
+/**
+ * S-45 (T-85): Hàm kiểm tra tính hợp lệ của Tỷ lệ tạm giữ theo hợp đồng (%)
+ * Quy tắc: 0 <= retentionRate <= 100, không được rỗng, không được chứa ký tự không hợp lệ.
+ */
+export const validateRetentionRate = rate => {
+  if (rate === undefined || rate === null || rate === '') {
+    return { valid: false, error: 'Vui lòng nhập tỷ lệ tạm giữ theo hợp đồng' };
+  }
+  const num = Number(rate);
+  if (isNaN(num)) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải là số hợp lệ' };
+  }
+  if (num < 0 || num > 100) {
+    return { valid: false, error: 'Tỷ lệ tạm giữ phải từ 0% đến 100%' };
+  }
+  return { valid: true, value: num };
+};
+
+/**
+ * S-45 (T-86): Tự động tính số tiền tạm giữ theo hợp đồng
+ * retentionAmount = acceptedAmount * (retentionRate / 100)
+ * Quy tắc:
+ *   - Nếu acceptedAmount <= 0 hoặc retentionRate <= 0 -> trả về 0
+ *   - Làm tròn 2 chữ số thập phân (rounding phù hợp tiền tệ)
+ *   - Tránh NaN, số âm, Infinity
+ */
+export const calculateRetentionAmount = (acceptedAmount, retentionRate) => {
+  const amount = Number(acceptedAmount);
+  const rate = Number(retentionRate);
+  if (isNaN(amount) || isNaN(rate) || amount <= 0 || rate <= 0) {
+    return 0;
+  }
+  return Math.round((amount * rate / 100) * 100) / 100;
+};
+
+/**
+ * S-45 (T-87): Tự động tính giá trị thanh toán sau tạm giữ
+ * paymentAfterRetention = acceptedAmount - retentionAmount
+ * Quy tắc:
+ *   - Nếu acceptedAmount <= 0 -> trả về 0
+ *   - Làm tròn 2 chữ số thập phân
+ *   - Tránh NaN, số âm, Infinity
+ */
+export const calculatePaymentAfterRetention = (acceptedAmount, retentionRate) => {
+  const amount = Number(acceptedAmount);
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  const retention = calculateRetentionAmount(amount, retentionRate);
+  const payment = amount - retention;
+  return payment <= 0 ? 0 : Math.round(payment * 100) / 100;
+};
+
+/**
+ * Lấy danh sách phiếu nghiệm thu theo đợt của một dự án
+ */
+export const getAcceptanceReports = async projectId => {
+  const response = await apiClient.get(`/api/projects/${projectId}/acceptance-reports`);
+  return Array.isArray(response.data) ? response.data : [];
+};
+
+/**
+ * Xem chi tiết một phiếu nghiệm thu kèm các hạng mục và giá trị
+ */
+export const getAcceptanceReport = async (projectId, reportId) => {
+  const response = await apiClient.get(`/api/projects/${projectId}/acceptance-reports/${reportId}`);
+  return response.data;
+};
+
+/**
+ * T-105: Lấy dữ liệu đầy đủ để lập hồ sơ nghiệm thu.
+ */
+export const getAcceptanceDossier = async reportId => {
+  const response = await apiClient.get(`/api/acceptance-reports/${reportId}`);
+  return response.data;
+};
+
+/**
+ * Lấy tóm tắt thống kê nghiệm thu của dự án
+ */
+export const getAcceptanceSummary = async projectId => {
+  try {
+    const response = await apiClient.get(`/api/projects/${projectId}/acceptance-reports/summary`);
+    return response.data;
+  } catch (err) {
+    console.warn('[AcceptanceApi] Không thể lấy summary:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Lấy số đợt và mã biên bản gợi ý tiếp theo
+ */
+export const getNextPeriod = async projectId => {
+  const response = await apiClient.get(`/api/projects/${projectId}/acceptance-reports/next-period`);
+  return response.data;
+};
+
+/**
+ * T-83, T-84, T-85: Tạo mới phiếu nghiệm thu theo từng đợt
+ */
+export const createAcceptanceReport = async (projectId, reportData) => {
+  const response = await apiClient.post(`/api/projects/${projectId}/acceptance-reports`, reportData);
+  return response.data;
+};
+
+/**
+ * Cập nhật thông tin phiếu nghiệm thu
+ */
+export const updateAcceptanceReport = async (projectId, reportId, reportData) => {
+  const response = await apiClient.put(`/api/projects/${projectId}/acceptance-reports/${reportId}`, reportData);
+  return response.data;
+};
+
+/**
+ * Xóa phiếu nghiệm thu
+ */
+export const deleteAcceptanceReport = async (projectId, reportId) => {
+  const response = await apiClient.delete(`/api/projects/${projectId}/acceptance-reports/${reportId}`);
+  return response.data;
+};

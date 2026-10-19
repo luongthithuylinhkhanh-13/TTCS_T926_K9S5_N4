@@ -1,0 +1,145 @@
+package com.ntdhtcct.domain.acceptance.dto;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * DTO cập nhật phiếu nghiệm thu (T-83, T-84, T-85)
+ */
+public class UpdateAcceptanceReportRequest {
+
+    @NotBlank(message = "Tên phiếu nghiệm thu không được để trống")
+    private String name;
+
+    @NotNull(message = "Ngày nghiệm thu không được để trống")
+    private LocalDate acceptanceDate;
+
+    private String status;
+    private String notes;
+    private String location;
+    private String ownerRepresentativeName;
+    private String supervisorRepresentativeName;
+    private String contractorRepresentativeName;
+    private UUID acceptanceRecordId;
+
+    @DecimalMin(value = "0.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    @DecimalMax(value = "100.00", message = "Tỷ lệ tạm giữ phải từ 0% đến 100%")
+    private BigDecimal retentionRate;
+
+    @Valid
+    private List<AcceptanceItemRequest> items = new ArrayList<>();
+
+    public UpdateAcceptanceReportRequest() {
+    }
+
+    public UpdateAcceptanceReportRequest(
+            String name,
+            LocalDate acceptanceDate,
+            String status,
+            String notes,
+            List<AcceptanceItemRequest> items
+    ) {
+        this.name = name;
+        this.acceptanceDate = acceptanceDate;
+        this.status = status;
+        this.notes = notes;
+        this.items = items != null ? items : new ArrayList<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public LocalDate getAcceptanceDate() {
+        return acceptanceDate;
+    }
+
+    public void setAcceptanceDate(LocalDate acceptanceDate) {
+        this.acceptanceDate = acceptanceDate;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getOwnerRepresentativeName() {
+        return ownerRepresentativeName;
+    }
+
+    public void setOwnerRepresentativeName(String ownerRepresentativeName) {
+        this.ownerRepresentativeName = ownerRepresentativeName;
+    }
+
+    public String getSupervisorRepresentativeName() {
+        return supervisorRepresentativeName;
+    }
+
+    public void setSupervisorRepresentativeName(String supervisorRepresentativeName) {
+        this.supervisorRepresentativeName = supervisorRepresentativeName;
+    }
+
+    public String getContractorRepresentativeName() {
+        return contractorRepresentativeName;
+    }
+
+    public void setContractorRepresentativeName(String contractorRepresentativeName) {
+        this.contractorRepresentativeName = contractorRepresentativeName;
+    }
+
+    public UUID getAcceptanceRecordId() {
+        return acceptanceRecordId;
+    }
+
+    public void setAcceptanceRecordId(UUID acceptanceRecordId) {
+        this.acceptanceRecordId = acceptanceRecordId;
+    }
+
+    public List<AcceptanceItemRequest> getItems() {
+        return items;
+    }
+
+    public void setItems(List<AcceptanceItemRequest> items) {
+        this.items = items;
+    }
+
+    public BigDecimal getRetentionRate() {
+        return retentionRate;
+    }
+
+    public void setRetentionRate(BigDecimal retentionRate) {
+        this.retentionRate = retentionRate;
+    }
+}

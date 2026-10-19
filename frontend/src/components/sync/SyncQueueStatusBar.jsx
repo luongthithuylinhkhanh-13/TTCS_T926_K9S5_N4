@@ -100,10 +100,10 @@ const SyncQueueStatusBar = () => {
           </span>
         )}
 
-        {/* Badge số lượng dữ liệu chưa đồng bộ (T-70) */}
-        <Tooltip title="Số lượng bản ghi chưa đồng bộ trong hàng đợi">
+        {/* Badge số lượng mục đang chờ đồng bộ (T-73 - S-31) */}
+        <Tooltip title={`Số lượng mục đang chờ đồng bộ: ${stats.pendingCount ?? (stats.pending + stats.failed)} mục`}>
           <Badge
-            count={stats.pending + stats.failed}
+            count={stats.pendingCount ?? (stats.pending + stats.failed)}
             style={{ backgroundColor: stats.failed > 0 ? '#ff4d4f' : '#faad14' }}
           >
             <Button
@@ -118,7 +118,7 @@ const SyncQueueStatusBar = () => {
           </Badge>
         </Tooltip>
 
-        {/* Nút kích hoạt đồng bộ (T-71) */}
+        {/* Nút kích hoạt đồng bộ (T-71, T-73) */}
         {stats.hasPending && online && (
           <Button
             type="primary"
@@ -128,7 +128,7 @@ const SyncQueueStatusBar = () => {
             onClick={handleManualSync}
             style={{ backgroundColor: '#1890ff' }}
           >
-            {isSyncing ? 'Đang gửi...' : 'Đồng bộ ngay'}
+            {isSyncing ? 'Đang gửi...' : `Đồng bộ ngay (${stats.pendingCount ?? (stats.pending + stats.failed)})`}
           </Button>
         )}
       </div>

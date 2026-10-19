@@ -1,5 +1,6 @@
 package com.ntdhtcct.domain.sitediary;
 
+import com.ntdhtcct.common.exception.DiaryDateLockedException;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncRequest;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiaryBatchSyncResponse;
 import com.ntdhtcct.domain.sitediary.dto.SiteDiarySyncRequest;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +30,12 @@ public class SiteDiarySyncServiceTest {
     @Mock
     private SiteDiaryRepository siteDiaryRepository;
 
+    @Mock
+    private SiteDiaryLockService siteDiaryLockService;
+
+    @Mock
+    private SiteDiaryAdvisoryLockManager advisoryLockManager;
+
     private SiteDiarySyncService siteDiarySyncService;
 
     private final UUID projectId = UUID.randomUUID();
@@ -35,7 +43,7 @@ public class SiteDiarySyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository);
+        siteDiarySyncService = new SiteDiarySyncService(siteDiaryRepository, siteDiaryLockService, advisoryLockManager);
     }
 
     @Test
@@ -139,5 +147,145 @@ public class SiteDiarySyncServiceTest {
         assertThat(batchResponse.getCreatedCount()).isEqualTo(1);
         assertThat(batchResponse.getDuplicateCount()).isEqualTo(1);
         assertThat(batchResponse.getFailedCount()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("T-65: Từ chối đồng bộ đơn lẻ khi ngày đã bị khóa sổ")
+    void syncSingleDiary_WhenDateLocked_ShouldReturnLockedResult() {
+        LocalDate lockedDate = LocalDate.of(2026, 10, 10);
+        String syncId = "sync-locked-001";
+        SiteDiarySyncRequest req = new SiteDiarySyncRequest(
+                syncId,
+                lockedDate,
+                "Nắng",
+                "30°C",
+                20,
+                "Không",
+                "Công việc",
+                "Không",
+                OffsetDateTime.now()
+        );
+
+        when(siteDiaryLockService.isDateLocked(projectId, lockedDate)).thenReturn(true);
+
+        SiteDiarySyncResult result = siteDiarySyncService.syncSingleDiary(projectId, reporterId, req);
+
+        assertThat(result.getStatus()).isEqualTo("LOCKED");
+        assertThat(result.getErrorCode()).isEqualTo("DIARY_DATE_LOCKED");
+        assertThat(result.getClientSyncId()).isEqualTo(syncId);
+        assertThat(result.getMessage()).contains("đã bị khóa sổ");
+        verify(siteDiaryRepository, never()).save(any(SiteDiary.class));
+    }
+
+    @Test
+    @DisplayName("T-65: Batch Sync xử lý độc lập từng bản ghi khi có bản ghi bị khóa sổ")
+    void syncBatchDiaries_WithLockedRecord_ShouldIncrementFailedCountAndPreserveValid() {
+        LocalDate lockedDate = LocalDate.of(2026, 10, 10);
+        LocalDate validDate = LocalDate.of(2026, 10, 11);
+
+        String lockedSyncId = "sync-locked";
+        String validSyncId = "sync-valid";
+
+        SiteDiarySyncRequest lockedReq = new SiteDiarySyncRequest(lockedSyncId, lockedDate, "Nắng", "30", 10, "", "CV Khóa", "", OffsetDateTime.now());
+        SiteDiarySyncRequest validReq = new SiteDiarySyncRequest(validSyncId, validDate, "Mưa", "28", 12, "", "CV Hợp lệ", "", OffsetDateTime.now());
+
+        when(siteDiaryLockService.isDateLocked(projectId, lockedDate)).thenReturn(true);
+        when(siteDiaryLockService.isDateLocked(projectId, validDate)).thenReturn(false);
+
+        when(siteDiaryRepository.findByClientSyncId(validSyncId)).thenReturn(Optional.empty());
+        SiteDiary saved = new SiteDiary();
+        saved.setId(UUID.randomUUID());
+        when(siteDiaryRepository.save(any(SiteDiary.class))).thenReturn(saved);
+
+        SiteDiaryBatchSyncResponse batchResponse = siteDiarySyncService.syncBatchDiaries(
+                projectId,
+                reporterId,
+                new SiteDiaryBatchSyncRequest(List.of(lockedReq, validReq))
+        );
+
+        assertThat(batchResponse.getTotalProcessed()).isEqualTo(2);
+        assertThat(batchResponse.getCreatedCount()).isEqualTo(1);
+        assertThat(batchResponse.getDuplicateCount()).isEqualTo(0);
+        assertThat(batchResponse.getFailedCount()).isEqualTo(1);
+
+        SiteDiarySyncResult lockedResult = batchResponse.getResults().stream()
+                .filter(r -> lockedSyncId.equals(r.getClientSyncId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(lockedResult.getStatus()).isEqualTo("LOCKED");
+        assertThat(lockedResult.getErrorCode()).isEqualTo("DIARY_DATE_LOCKED");
+    }
+
+    @Test
+    @DisplayName("T-72 & T-73 (S-31): Thống kê trạng thái đồng bộ và số lượng mục của dự án")
+    void getProjectSyncStatus_ShouldReturnCorrectStats() {
+        SiteDiary diary = new SiteDiary();
+        diary.setId(UUID.randomUUID());
+
+        when(siteDiaryRepository.countByProjectId(projectId)).thenReturn(5L);
+        when(siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "SYNCED")).thenReturn(5L);
+        when(siteDiaryRepository.countByProjectIdAndSyncStatus(projectId, "PENDING")).thenReturn(0L);
+        when(siteDiaryRepository.findFirstByProjectIdOrderByUpdatedAtDesc(projectId)).thenReturn(Optional.of(diary));
+
+        var status = siteDiarySyncService.getProjectSyncStatus(projectId);
+
+        assertThat(status.getProjectId()).isEqualTo(projectId);
+        assertThat(status.getTotalDiaries()).isEqualTo(5L);
+        assertThat(status.getSyncedCount()).isEqualTo(5L);
+        assertThat(status.getPendingCount()).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("Xóa nhật ký thành công khi ngày chưa bị khóa")
+    void deleteDiary_Success_ShouldDeleteAndReleaseLock() {
+        UUID diaryId = UUID.randomUUID();
+        LocalDate diaryDate = LocalDate.of(2026, 10, 15);
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(diaryDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, diaryDate)).thenReturn(false);
+
+        boolean result = siteDiarySyncService.deleteDiary(projectId, diaryId);
+
+        assertThat(result).isTrue();
+        verify(advisoryLockManager).acquireSharedLock(projectId, diaryDate);
+        verify(siteDiaryRepository).delete(diary);
+        verify(advisoryLockManager).releaseSharedLock(projectId, diaryDate);
+    }
+
+    @Test
+    @DisplayName("S-24: Từ chối xóa nhật ký khi ngày đã bị khóa sổ")
+    void deleteDiary_WhenDateLocked_ShouldThrowDiaryDateLockedException() {
+        UUID diaryId = UUID.randomUUID();
+        LocalDate diaryDate = LocalDate.of(2026, 10, 15);
+        SiteDiary diary = new SiteDiary();
+        diary.setId(diaryId);
+        diary.setProjectId(projectId);
+        diary.setDiaryDate(diaryDate);
+
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.of(diary));
+        when(siteDiaryLockService.isDateLocked(projectId, diaryDate)).thenReturn(true);
+
+        assertThatThrownBy(() -> siteDiarySyncService.deleteDiary(projectId, diaryId))
+                .isInstanceOf(DiaryDateLockedException.class)
+                .hasMessageContaining("đã bị khóa sổ. Không thể xóa.");
+
+        verify(siteDiaryRepository, never()).delete(any());
+        verify(advisoryLockManager).releaseSharedLock(projectId, diaryDate);
+    }
+
+    @Test
+    @DisplayName("Xóa nhật ký không tồn tại trả về false")
+    void deleteDiary_NotFound_ShouldReturnFalse() {
+        UUID diaryId = UUID.randomUUID();
+        when(siteDiaryRepository.findById(diaryId)).thenReturn(Optional.empty());
+
+        boolean result = siteDiarySyncService.deleteDiary(projectId, diaryId);
+
+        assertThat(result).isFalse();
+        verify(siteDiaryRepository, never()).delete(any());
     }
 }

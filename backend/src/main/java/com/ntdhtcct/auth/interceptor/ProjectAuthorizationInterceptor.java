@@ -65,16 +65,24 @@ public class ProjectAuthorizationInterceptor implements HandlerInterceptor {
         }
 
         String authorization = request.getHeader("Authorization");
+        String token = null;
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            token = authorization.substring(7).trim();
+        } else if (request.getParameter("token") != null && !request.getParameter("token").isBlank()) {
+            token = request.getParameter("token").trim();
+        } else if (request.getParameter("access_token") != null && !request.getParameter("access_token").isBlank()) {
+            token = request.getParameter("access_token").trim();
+        }
+
+        if (token == null || token.isEmpty()) {
             throw new UnauthorizedException(
                     "AUTH_MISSING_TOKEN",
-                    "Yêu cầu cung cấp token đăng nhập qua Header Authorization"
+                    "Yêu cầu cung cấp token đăng nhập qua Header Authorization hoặc tham số token"
             );
         }
 
-        String token = authorization.substring(7).trim();
-        if (token.isEmpty() || !authTokenService.isTokenValid(token)) {
+        if (!authTokenService.isTokenValid(token)) {
             throw new UnauthorizedException(
                     "AUTH_INVALID_TOKEN",
                     "Token không hợp lệ hoặc đã hết hạn"

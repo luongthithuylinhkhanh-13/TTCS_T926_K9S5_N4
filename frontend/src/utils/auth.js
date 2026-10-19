@@ -35,9 +35,9 @@ export const updateAuthUser = updates => {
  */
 export const getAuthUser = () => {
   try {
-    const data =
-      localStorage.getItem(AUTH_KEY) ||
-      sessionStorage.getItem(AUTH_KEY);
+    const local = typeof localStorage !== 'undefined' ? localStorage.getItem(AUTH_KEY) : null;
+    const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(AUTH_KEY) : null;
+    const data = local || session;
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error reading auth state:', error);
