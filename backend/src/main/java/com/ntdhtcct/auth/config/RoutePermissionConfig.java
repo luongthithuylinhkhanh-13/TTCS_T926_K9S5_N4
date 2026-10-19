@@ -42,6 +42,10 @@ public class RoutePermissionConfig {
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
 
+        // S-41: Cấu hình vị trí và bán kính công trường
+        addRule(HttpMethod.GET, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
         // WBS, schedule and critical-path read routes
         addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/schedule", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
