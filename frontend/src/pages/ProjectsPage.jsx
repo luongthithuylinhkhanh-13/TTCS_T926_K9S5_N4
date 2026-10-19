@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -22,9 +22,11 @@ import {
   ClockCircleOutlined,
   SearchOutlined,
   NodeIndexOutlined,
-  HistoryOutlined
+  HistoryOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import { getProjects } from '../services/wbsApi';
+import ProjectSiteLocationModal from '../components/project/ProjectSiteLocationModal.jsx';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -33,23 +35,24 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [locationModalProject, setLocationModalProject] = useState(null);
+
+  const fetchProjects = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await getProjects();
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || 'Không thể tải danh sách dự án');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getProjects();
-        setProjects(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError(err.message || 'Không thể tải danh sách dự án');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -149,9 +152,27 @@ const ProjectsPage = () => {
       render: status => getStatusTag(status)
     },
     {
+      title: 'Vị trí công trường',
+      key: 'siteLocation',
+      width: 170,
+      render: (_, record) => {
+        const isConfigured =
+          record.siteLatitude != null &&
+          record.siteLongitude != null &&
+          record.siteRadiusMeters != null;
+        return isConfigured ? (
+          <Tag color="success" icon={<EnvironmentOutlined />}>
+            R = {record.siteRadiusMeters}m
+          </Tag>
+        ) : (
+          <Tag color="default">Chưa thiết lập</Tag>
+        );
+      }
+    },
+    {
       title: 'Thao tác',
       key: 'action',
-      width: 200,
+      width: 250,
       align: 'center',
       render: (_, record) => (
         <Space size="small">
@@ -170,6 +191,13 @@ const ProjectsPage = () => {
             onClick={() => navigate(`/progress?projectId=${record.id}`)}
           >
             Tiến độ
+          </Button>
+          <Button
+            size="small"
+            icon={<EnvironmentOutlined />}
+            onClick={() => setLocationModalProject(record)}
+          >
+            Vị trí
           </Button>
         </Space>
       )
@@ -277,6 +305,13 @@ const ProjectsPage = () => {
           scroll={{ x: 1000 }}
         />
       </Card>
+
+      <ProjectSiteLocationModal
+        open={Boolean(locationModalProject)}
+        project={locationModalProject}
+        onClose={() => setLocationModalProject(null)}
+        onSuccess={fetchProjects}
+      />
     </div>
   );
 };

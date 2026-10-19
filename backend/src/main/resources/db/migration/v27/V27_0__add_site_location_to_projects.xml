@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- S-41 / T-71: Khai báo tọa độ tâm và bán kính công trường -->
+    <changeSet id="V27.0-add-site-location-to-projects" author="S-41-T71">
+        <addColumn tableName="projects">
+            <column name="site_latitude" type="DOUBLE PRECISION" remarks="Vĩ độ tâm công trường (-90 đến 90)"/>
+            <column name="site_longitude" type="DOUBLE PRECISION" remarks="Kinh độ tâm công trường (-180 đến 180)"/>
+            <column name="site_radius_meters" type="DOUBLE PRECISION" remarks="Bán kính hợp lệ của công trường tính bằng mét (> 0)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>
