@@ -59,7 +59,6 @@ import ImageUploader from '../components/diary/ImageUploader.jsx';
 import DiaryImageList from '../components/diary/DiaryImageList.jsx';
 import { uploadQueueItemStages } from '../services/diaryUploadService.js';
 import { revokeAllQueueItems } from '../utils/imageQueueUtils.js';
-import syncQueueService from '../services/syncQueueService.js';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -439,7 +438,6 @@ const SiteDiaryPage = () => {
       notification.error({
         message: 'Lỗi xóa nhật ký',
         description: err.response?.data?.message || err.message || 'Không thể xóa nhật ký.'
-      });
       });
     }
   };
