@@ -5,6 +5,7 @@ import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.domain.diary.dto.CreateDiaryEntryRequest;
 import com.ntdhtcct.domain.diary.dto.DiaryEntryResponse;
 import com.ntdhtcct.domain.diary.dto.DiaryImageResponse;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -256,6 +257,65 @@ class DiaryServiceTest {
         assertThat(list).hasSize(2);
         assertThat(list.get(0).clientImageId()).isEqualTo("img-1");
         assertThat(list.get(1).clientImageId()).isEqualTo("img-2");
+    }
+
+    @Test
+    @DisplayName("T-72: getDiaryImages đánh giá khoảng cách ảnh và gắn cờ nghi vấn ngoài bán kính, không N+1 query")
+    void getDiaryImages_PopulatesLocationEvaluation_WithinAndOutsideRadius() {
+        Project project = new Project("PRJ-01", "Dự án Hà Nội");
+        project.setSiteLatitude(21.028511);
+        project.setSiteLongitude(105.804817);
+        project.setSiteRadiusMeters(500.0);
+
+        DiaryImage imgInside = new DiaryImage(entryId, "img-inside", "inside.jpg", "image/jpeg");
+        imgInside.setId(UUID.randomUUID());
+        imgInside.setDisplayStatus("COMPLETED");
+        imgInside.setLatitude(21.028511);
+        imgInside.setLongitude(105.804817);
+
+        DiaryImage imgOutside = new DiaryImage(entryId, "img-outside", "outside.jpg", "image/jpeg");
+        imgOutside.setId(UUID.randomUUID());
+        imgOutside.setDisplayStatus("COMPLETED");
+        imgOutside.setLatitude(21.040000); // Cách khoảng 1.28 km > 500m
+        imgOutside.setLongitude(105.804817);
+
+        DiaryImage imgNoGps = new DiaryImage(entryId, "img-nogps", "nogps.jpg", "image/jpeg");
+        imgNoGps.setId(UUID.randomUUID());
+        imgNoGps.setDisplayStatus("COMPLETED");
+
+        when(diaryEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        when(diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(entryId))
+                .thenReturn(java.util.List.of(imgInside, imgOutside, imgNoGps));
+
+        java.util.List<DiaryImageResponse> list = diaryService.getDiaryImages(projectId, entryId);
+
+        assertThat(list).hasSize(3);
+
+        // 1. Ảnh trong bán kính
+        DiaryImageResponse resInside = list.get(0);
+        assertThat(resInside.locationStatus()).isEqualTo("WITHIN_RADIUS");
+        assertThat(resInside.distanceToCenterMeters()).isEqualTo(0.0);
+        assertThat(resInside.excessDistanceMeters()).isEqualTo(0.0);
+        assertThat(resInside.isSuspicious()).isFalse();
+
+        // 2. Ảnh ngoài bán kính
+        DiaryImageResponse resOutside = list.get(1);
+        assertThat(resOutside.locationStatus()).isEqualTo("OUTSIDE_RADIUS");
+        assertThat(resOutside.distanceToCenterMeters()).isGreaterThan(500.0);
+        assertThat(resOutside.excessDistanceMeters()).isGreaterThan(0.0);
+        assertThat(resOutside.isSuspicious()).isTrue();
+        assertThat(resOutside.locationMessage()).contains("Ngoài bán kính công trường");
+
+        // 3. Ảnh không có GPS
+        DiaryImageResponse resNoGps = list.get(2);
+        assertThat(resNoGps.locationStatus()).isEqualTo("NO_GPS");
+        assertThat(resNoGps.distanceToCenterMeters()).isNull();
+        assertThat(resNoGps.excessDistanceMeters()).isNull();
+        assertThat(resNoGps.isSuspicious()).isFalse();
+
+        // Đảm bảo chỉ truy vấn Project đúng 1 lần duy nhất cho toàn bộ danh sách ảnh (tránh N+1)
+        verify(projectRepository, times(1)).findById(projectId);
     }
 
     @Test
