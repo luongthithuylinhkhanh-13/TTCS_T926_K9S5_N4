@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   calculateHaversineDistance,
   evaluatePhotoLocation,
+  formatLocationStatus,
   LOCATION_STATUS,
   EARTH_RADIUS_METERS
 } from '../src/utils/geoDistanceUtils.js';
@@ -118,3 +119,87 @@ test('evaluatePhotoLocation detects photo OUTSIDE_RADIUS with positive excess an
   assert.equal(outside.isSuspicious, true);
   assert.match(outside.locationMessage, /Ngoài bán kính công trường.*vượt/);
 });
+
+test('formatLocationStatus returns appropriate badge, color, and excess distance for OUTSIDE_RADIUS', () => {
+  const img = {
+    locationStatus: LOCATION_STATUS.OUTSIDE_RADIUS,
+    isSuspicious: true,
+    distanceToCenterMeters: 620.5,
+    excessDistanceMeters: 120.5
+  };
+  const formatted = formatLocationStatus(img);
+  assert.equal(formatted.status, LOCATION_STATUS.OUTSIDE_RADIUS);
+  assert.equal(formatted.isSuspicious, true);
+  assert.equal(formatted.color, 'error');
+  assert.equal(formatted.label, 'Ngoài bán kính');
+  assert.equal(formatted.badgeText, '🚨 Ngoài bán kính (+120.5m)');
+  assert.equal(formatted.excessDistanceMeters, 120.5);
+  assert.equal(formatted.distanceToCenterMeters, 620.5);
+});
+
+test('formatLocationStatus returns success badge and excess = 0 for WITHIN_RADIUS', () => {
+  const img = {
+    locationStatus: LOCATION_STATUS.WITHIN_RADIUS,
+    isSuspicious: false,
+    distanceToCenterMeters: 250.0,
+    excessDistanceMeters: 0.0
+  };
+  const formatted = formatLocationStatus(img);
+  assert.equal(formatted.status, LOCATION_STATUS.WITHIN_RADIUS);
+  assert.equal(formatted.isSuspicious, false);
+  assert.equal(formatted.color, 'success');
+  assert.equal(formatted.label, 'Trong bán kính');
+  assert.equal(formatted.badgeText, '✓ Trong bán kính (250m)');
+  assert.equal(formatted.excessDistanceMeters, 0);
+  assert.equal(formatted.distanceToCenterMeters, 250.0);
+});
+
+test('formatLocationStatus does not mark NO_GPS as suspicious', () => {
+  const img = {
+    locationStatus: LOCATION_STATUS.NO_GPS,
+    isSuspicious: false
+  };
+  const formatted = formatLocationStatus(img);
+  assert.equal(formatted.status, LOCATION_STATUS.NO_GPS);
+  assert.equal(formatted.isSuspicious, false);
+  assert.equal(formatted.color, 'default');
+  assert.equal(formatted.label, 'Chưa có GPS');
+  assert.equal(formatted.badgeText, '📍 Chưa có GPS');
+  assert.equal(formatted.excessDistanceMeters, null);
+});
+
+test('formatLocationStatus does not mark PROJECT_NOT_CONFIGURED as suspicious', () => {
+  const img = {
+    locationStatus: LOCATION_STATUS.PROJECT_NOT_CONFIGURED,
+    isSuspicious: false
+  };
+  const formatted = formatLocationStatus(img);
+  assert.equal(formatted.status, LOCATION_STATUS.PROJECT_NOT_CONFIGURED);
+  assert.equal(formatted.isSuspicious, false);
+  assert.equal(formatted.color, 'default');
+  assert.equal(formatted.label, 'Chưa cấu hình vị trí');
+  assert.equal(formatted.badgeText, '📍 Chưa cấu hình vị trí');
+});
+
+test('formatLocationStatus handles INVALID_GPS correctly', () => {
+  const img = {
+    locationStatus: LOCATION_STATUS.INVALID_GPS,
+    isSuspicious: false
+  };
+  const formatted = formatLocationStatus(img);
+  assert.equal(formatted.status, LOCATION_STATUS.INVALID_GPS);
+  assert.equal(formatted.isSuspicious, false);
+  assert.equal(formatted.color, 'error');
+  assert.equal(formatted.label, 'GPS không hợp lệ');
+});
+
+test('formatLocationStatus handles null or empty input gracefully', () => {
+  const formattedNull = formatLocationStatus(null);
+  assert.equal(formattedNull.isSuspicious, false);
+  assert.equal(formattedNull.status, LOCATION_STATUS.PROJECT_NOT_CONFIGURED);
+
+  const formattedEmpty = formatLocationStatus({});
+  assert.equal(formattedEmpty.isSuspicious, false);
+  assert.equal(formattedEmpty.status, LOCATION_STATUS.PROJECT_NOT_CONFIGURED);
+});
+

@@ -163,3 +163,101 @@ export const evaluatePhotoLocation = (photoCoords, siteConfig) => {
     };
   }
 };
+
+/**
+ * Định dạng thông tin hiển thị trạng thái vị trí và cờ nghi vấn của ảnh (T-73).
+ *
+ * @param {object} image Đối tượng ảnh (DiaryImageResponse hoặc kết quả evaluatePhotoLocation)
+ * @returns {{
+ *   status: string,
+ *   label: string,
+ *   badgeText: string,
+ *   color: string,
+ *   isSuspicious: boolean,
+ *   message: string,
+ *   distanceToCenterMeters: number|null,
+ *   excessDistanceMeters: number|null
+ * }}
+ */
+export const formatLocationStatus = (image) => {
+  if (!image) {
+    return {
+      status: LOCATION_STATUS.PROJECT_NOT_CONFIGURED,
+      label: 'Chưa xác định',
+      badgeText: '📍 Vị trí: Chưa xác định',
+      color: 'default',
+      isSuspicious: false,
+      message: '',
+      distanceToCenterMeters: null,
+      excessDistanceMeters: null
+    };
+  }
+
+  const isSuspicious = Boolean(image.isSuspicious);
+  const status = image.locationStatus || (isSuspicious ? LOCATION_STATUS.OUTSIDE_RADIUS : LOCATION_STATUS.PROJECT_NOT_CONFIGURED);
+  const distance = typeof image.distanceToCenterMeters === 'number' ? image.distanceToCenterMeters : null;
+  const excess = typeof image.excessDistanceMeters === 'number' ? image.excessDistanceMeters : null;
+
+  switch (status) {
+    case LOCATION_STATUS.WITHIN_RADIUS:
+      return {
+        status,
+        label: 'Trong bán kính',
+        badgeText: distance != null ? `✓ Trong bán kính (${distance}m)` : '✓ Trong bán kính',
+        color: 'success',
+        isSuspicious: false,
+        message: image.locationMessage || `Ảnh chụp trong bán kính công trường${distance != null ? ` (cách tâm ${distance}m)` : ''}`,
+        distanceToCenterMeters: distance,
+        excessDistanceMeters: 0
+      };
+
+    case LOCATION_STATUS.OUTSIDE_RADIUS:
+      return {
+        status,
+        label: 'Ngoài bán kính',
+        badgeText: excess != null ? `🚨 Ngoài bán kính (+${excess}m)` : '🚨 Ngoài bán kính',
+        color: 'error',
+        isSuspicious: true,
+        message: image.locationMessage || `Ảnh chụp ngoài bán kính công trường${excess != null ? ` (vượt ${excess}m)` : ''}`,
+        distanceToCenterMeters: distance,
+        excessDistanceMeters: excess
+      };
+
+    case LOCATION_STATUS.NO_GPS:
+      return {
+        status,
+        label: 'Chưa có GPS',
+        badgeText: '📍 Chưa có GPS',
+        color: 'default',
+        isSuspicious: false,
+        message: image.locationMessage || 'Ảnh không có thông tin tọa độ GPS để kiểm tra bán kính',
+        distanceToCenterMeters: null,
+        excessDistanceMeters: null
+      };
+
+    case LOCATION_STATUS.INVALID_GPS:
+      return {
+        status,
+        label: 'GPS không hợp lệ',
+        badgeText: '⚠ GPS không hợp lệ',
+        color: 'error',
+        isSuspicious: false,
+        message: image.locationMessage || 'Tọa độ GPS của ảnh nằm ngoài phạm vi hợp lệ',
+        distanceToCenterMeters: null,
+        excessDistanceMeters: null
+      };
+
+    case LOCATION_STATUS.PROJECT_NOT_CONFIGURED:
+    default:
+      return {
+        status: status || LOCATION_STATUS.PROJECT_NOT_CONFIGURED,
+        label: 'Chưa cấu hình vị trí',
+        badgeText: '📍 Chưa cấu hình vị trí',
+        color: 'default',
+        isSuspicious: false,
+        message: image.locationMessage || 'Dự án chưa cấu hình vị trí và bán kính công trường',
+        distanceToCenterMeters: null,
+        excessDistanceMeters: null
+      };
+  }
+};
