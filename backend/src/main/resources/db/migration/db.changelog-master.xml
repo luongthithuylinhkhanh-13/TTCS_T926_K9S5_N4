@@ -95,4 +95,8 @@
     <!-- T-74/T-75: Detect concurrent edits to WBS items -->
     <include file="db/migration/v18/V18_0__add_wbs_item_version.xml"
              relativeToChangelogFile="false"/>
+
+    <!-- S-44 (T-82, T-83, T-84): Payment request review workflow -->
+    <include file="db/migration/v19/V19_0__create_payment_requests.xml"
+             relativeToChangelogFile="false"/>
 </databaseChangeLog>
