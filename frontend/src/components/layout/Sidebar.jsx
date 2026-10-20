@@ -26,6 +26,7 @@ import { logoutUser, getAuthUser } from '../../utils/auth';
 import { getRoleDisplayName } from '../../utils/permissions';
 import { logout } from '../../services/wbsApi';
 import { useLocale } from '../../utils/LocaleContext';
+import { useProjectContext } from '../../utils/ProjectContext';
 
 const getMenuSections = (roleName) => {
   const role = String(roleName || '').toUpperCase();
@@ -48,6 +49,7 @@ const getMenuSections = (roleName) => {
           section: 'HỆ THỐNG',
           items: [
             { label: 'Dự án', path: '/projects', icon: <ProjectOutlined /> },
+            { label: 'Thành viên dự án', path: '/project-members', icon: <TeamOutlined /> },
             { label: 'Sức khỏe hệ thống', path: '/admin/system-health', icon: <HeartOutlined /> }
           ]
         }
@@ -62,6 +64,7 @@ const getMenuSections = (roleName) => {
           section: 'DỰ ÁN',
           items: [
             { label: 'Dự án', path: '/projects', icon: <ProjectOutlined /> },
+            { label: 'Thành viên dự án', path: '/project-members', icon: <TeamOutlined /> },
             { label: 'Cơ cấu công việc', path: '/wbs', icon: <NodeIndexOutlined /> }
           ]
         },
@@ -306,9 +309,11 @@ const Sidebar = ({ collapsed }) => {
   const [progressExpanded, setProgressExpanded] = useState(
     () => location.pathname.startsWith('/progress')
   );
+  const { effectiveRole } = useProjectContext();
   const user = getAuthUser();
   const displayName = user?.fullName || user?.email || t('Tài khoản');
-  const roleTitle = getRoleDisplayName(user?.roleName);
+  const currentRole = effectiveRole || user?.roleName;
+  const roleTitle = getRoleDisplayName(currentRole);
   const initials = displayName
     .split(/[\s.@_-]+/)
     .filter(Boolean)
@@ -316,7 +321,7 @@ const Sidebar = ({ collapsed }) => {
     .map(part => part[0].toUpperCase())
     .join('');
 
-  const menuSections = getMenuSections(user?.roleName);
+  const menuSections = getMenuSections(currentRole);
 
   const handleLogout = async () => {
     try {

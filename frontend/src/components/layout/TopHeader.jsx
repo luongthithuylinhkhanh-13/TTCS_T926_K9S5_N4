@@ -4,9 +4,10 @@ import {
   MenuUnfoldOutlined, 
   SearchOutlined, 
   BellOutlined, 
-  DownOutlined 
+  DownOutlined,
+  ProjectOutlined
 } from '@ant-design/icons';
-import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
+import { Breadcrumb, Badge, Avatar, Dropdown, message, Select, Tag } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
 import { getRoleDisplayName } from '../../utils/permissions';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,16 +15,24 @@ import { logout } from '../../services/wbsApi';
 import InstallAppButton from '../pwa/InstallAppButton';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLocale } from '../../utils/LocaleContext';
+import { useProjectContext } from '../../utils/ProjectContext';
 import SyncQueueStatusBar from '../sync/SyncQueueStatusBar';
 
 const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }) => {
   const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
+  const { 
+    effectiveRole, 
+    activeProject, 
+    activeProjectId, 
+    setActiveProjectId, 
+    projects 
+  } = useProjectContext();
   const [user, setUser] = useState(getAuthUser);
   const [modalMode, setModalMode] = useState(null);
   const displayName = user?.fullName || user?.email || t('Tài khoản');
-  const roleTitle = getRoleDisplayName(user?.roleName);
+  const roleTitle = getRoleDisplayName(effectiveRole || user?.roleName);
   const initials = displayName
     .split(/[\s.@_-]+/)
     .filter(Boolean)
@@ -151,6 +160,33 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
         </div>
 
         <Breadcrumb items={getBreadcrumbItems()} />
+
+        {projects.length > 1 ? (
+          <div style={{ marginLeft: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: '#64748B', fontWeight: 500 }}>{t('Dự án')}:</span>
+            <Select
+              size="small"
+              value={activeProjectId}
+              onChange={(val) => {
+                setActiveProjectId(val);
+                const params = new URLSearchParams(location.search);
+                if (params.has('projectId')) {
+                  params.set('projectId', val);
+                  navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+                }
+              }}
+              style={{ minWidth: 200, maxWidth: 280 }}
+              options={projects.map(p => ({
+                value: p.id,
+                label: `${p.code} - ${p.name}`
+              }))}
+            />
+          </div>
+        ) : activeProject ? (
+          <Tag color="blue" style={{ marginLeft: 16, fontWeight: 500, borderRadius: 4 }}>
+            {activeProject.code} - {activeProject.name}
+          </Tag>
+        ) : null}
       </div>
 
       <div className="header-right">

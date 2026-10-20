@@ -19,16 +19,36 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthTokenService authTokenService;
-        private final EmailVerificationService emailVerificationService;
+    private final EmailVerificationService emailVerificationService;
+    private final com.ntdhtcct.repository.ProjectMemberRepository projectMemberRepository;
 
     public AuthController(
             UserService userService,
-                        AuthTokenService authTokenService,
-                        EmailVerificationService emailVerificationService
+            AuthTokenService authTokenService,
+            EmailVerificationService emailVerificationService,
+            com.ntdhtcct.repository.ProjectMemberRepository projectMemberRepository
     ) {
         this.userService = userService;
         this.authTokenService = authTokenService;
-                this.emailVerificationService = emailVerificationService;
+        this.emailVerificationService = emailVerificationService;
+        this.projectMemberRepository = projectMemberRepository;
+    }
+
+    private java.util.List<UserProjectRoleDTO> getUserProjectMemberships(UUID userId) {
+        if (userId == null) {
+            return java.util.List.of();
+        }
+        return projectMemberRepository.findActiveMembershipsByUserId(userId).stream()
+                .map(pm -> new UserProjectRoleDTO(
+                        pm.getProject() != null ? pm.getProject().getId() : null,
+                        pm.getProject() != null ? pm.getProject().getCode() : null,
+                        pm.getProject() != null ? pm.getProject().getName() : null,
+                        pm.getRole() != null ? pm.getRole().getId() : null,
+                        pm.getRole() != null ? pm.getRole().getName() : null,
+                        pm.getRole() != null ? pm.getRole().getName() : null,
+                        pm.getStatus()
+                ))
+                .toList();
     }
 
     /**
@@ -52,6 +72,9 @@ public class AuthController {
             AuthToken authToken =
                     authTokenService.createToken(user.getId());
 
+            java.util.List<UserProjectRoleDTO> projectMemberships =
+                    getUserProjectMemberships(user.getId());
+
             return ResponseEntity.ok(
                     new LoginResponse(
                             true,
@@ -66,7 +89,8 @@ public class AuthController {
                                     : null,
                             user.getFullName(),
                             authToken.getToken(),
-                            authToken.getExpiresAt()
+                            authToken.getExpiresAt(),
+                            projectMemberships
                     )
             );
 
@@ -250,6 +274,9 @@ public class AuthController {
                     userService.findById(userId);
 
             // Trả thông tin user
+            java.util.List<UserProjectRoleDTO> projectMemberships =
+                    getUserProjectMemberships(user.getId());
+
             return ResponseEntity.ok(
                     new MeResponse(
                             true,
@@ -262,7 +289,8 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getName()
                                     : null,
-                            user.getFullName()
+                            user.getFullName(),
+                            projectMemberships
                     )
             );
 
@@ -372,6 +400,17 @@ public class AuthController {
     ) {
     }
 
+    public record UserProjectRoleDTO(
+            UUID projectId,
+            String projectCode,
+            String projectName,
+            UUID roleId,
+            String roleName,
+            String roleDisplayName,
+            String status
+    ) {
+    }
+
     public record LoginResponse(
             boolean success,
             String message,
@@ -381,8 +420,22 @@ public class AuthController {
             String roleName,
             String fullName,
             String token,
-            OffsetDateTime expiresAt
+            OffsetDateTime expiresAt,
+            java.util.List<UserProjectRoleDTO> projectMemberships
     ) {
+        public LoginResponse(
+                boolean success,
+                String message,
+                UUID userId,
+                String email,
+                UUID roleId,
+                String roleName,
+                String fullName,
+                String token,
+                OffsetDateTime expiresAt
+        ) {
+            this(success, message, userId, email, roleId, roleName, fullName, token, expiresAt, java.util.List.of());
+        }
     }
 
     public record MeResponse(
@@ -392,8 +445,20 @@ public class AuthController {
             String email,
             UUID roleId,
             String roleName,
-            String fullName
+            String fullName,
+            java.util.List<UserProjectRoleDTO> projectMemberships
     ) {
+        public MeResponse(
+                boolean success,
+                String message,
+                UUID userId,
+                String email,
+                UUID roleId,
+                String roleName,
+                String fullName
+        ) {
+            this(success, message, userId, email, roleId, roleName, fullName, java.util.List.of());
+        }
     }
 
     public record RegistrationResponse(

@@ -34,3 +34,14 @@ export const updateUserStatus = async (userId, status) => {
   const response = await apiClient.put(`/api/admin/users/${userId}/status`, { status });
   return response.data;
 };
+
+export const getProjectManager = async (projectId) => {
+  const response = await apiClient.get(`/api/admin/projects/${projectId}/manager`);
+  return response.data;
+};
+
+export const assignProjectManager = async (projectId, userId) => {
+  const response = await apiClient.post(`/api/admin/projects/${projectId}/manager`, { userId });
+  return response.data;
+};
+

@@ -3,6 +3,7 @@ package com.ntdhtcct.controller;
 import com.ntdhtcct.auth.annotation.RequireProjectRole;
 import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.AvailableUserResponse;
 import com.ntdhtcct.dto.InviteProjectMemberRequest;
 import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
@@ -142,6 +143,36 @@ public class ProjectMemberController {
     }
 
     /**
+     * Lấy vai trò của chính người dùng hiện tại trong Project.
+     * Cho phép mọi vai trò thành viên dự án.
+     */
+    @GetMapping("/me")
+    @RequireProjectRole({
+            "ADMIN",
+            "PROJECT_MANAGER",
+            "SITE_MANAGER",
+            "SITE_ENGINEER",
+            "WORKER",
+            "STAFF",
+            "CUSTOMER",
+            "VIEWER"
+    })
+    public ResponseEntity<ApiResponse<ProjectMemberResponse>> getMyProjectMembership(
+            @PathVariable UUID projectId) {
+
+        UUID currentUserId = com.ntdhtcct.auth.context.UserSecurityContext.getUserId();
+        ProjectMemberResponse member =
+                projectMemberService.getProjectMember(
+                        projectId,
+                        currentUserId
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.ok(member)
+        );
+    }
+
+    /**
      * Xem chi tiết một thành viên trong Project.
      */
     @GetMapping("/{userId}")
@@ -163,6 +194,23 @@ public class ProjectMemberController {
 
         return ResponseEntity.ok(
                 ApiResponse.ok(member)
+        );
+    }
+
+    /**
+     * Lấy danh sách tài khoản ACTIVE hợp lệ để thêm vào dự án.
+     * Yêu cầu ADMIN hoặc PROJECT_MANAGER.
+     */
+    @GetMapping("/available-users")
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    public ResponseEntity<ApiResponse<List<AvailableUserResponse>>> getAvailableUsers(
+            @PathVariable UUID projectId) {
+
+        List<AvailableUserResponse> users =
+                projectMemberService.getAvailableUsers(projectId);
+
+        return ResponseEntity.ok(
+                ApiResponse.ok(users)
         );
     }
 }

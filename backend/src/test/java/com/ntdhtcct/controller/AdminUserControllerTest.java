@@ -39,6 +39,9 @@ class AdminUserControllerTest {
     @Mock
     private ProjectRepository projectRepository;
 
+    @Mock
+    private com.ntdhtcct.repository.ProjectMemberRepository projectMemberRepository;
+
     private AdminUserController controller;
 
     private User adminUser;
@@ -48,7 +51,7 @@ class AdminUserControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AdminUserController(userRepository, roleRepository, authTokenService, projectRepository);
+        controller = new AdminUserController(userRepository, roleRepository, authTokenService, projectRepository, projectMemberRepository);
 
         adminId = UUID.randomUUID();
         adminUser = new User("admin@admin.com", "hash", "Admin");
@@ -233,5 +236,55 @@ class AdminUserControllerTest {
         assertThat(response.getBody()).contains(
                 "ADMIN", "CUSTOMER", "PROJECT_MANAGER", "SITE_ENGINEER", "SITE_MANAGER", "STAFF", "VIEWER", "WORKER"
         );
+    }
+
+    @Test
+    @DisplayName("Admin phân Ban quản lý dự án thành công")
+    void assignProjectManager_success() {
+        when(authTokenService.isTokenValid("admin-token")).thenReturn(true);
+        when(authTokenService.getUserIdFromToken("admin-token")).thenReturn(adminId);
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
+
+        UUID projectId = UUID.randomUUID();
+        com.ntdhtcct.domain.project.Project project = mock(com.ntdhtcct.domain.project.Project.class);
+        when(project.getId()).thenReturn(projectId);
+        when(project.getCode()).thenReturn("DA-002");
+        when(project.getName()).thenReturn("Khu đô thị Green City");
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        when(userRepository.findById(normalUserId)).thenReturn(Optional.of(normalUser));
+        normalUser.setStatus("ACTIVE");
+        Role pmRole = new Role("PROJECT_MANAGER");
+        when(roleRepository.findByName("PROJECT_MANAGER")).thenReturn(Optional.of(pmRole));
+        when(projectMemberRepository.findByProjectIdAndUserId(projectId, normalUserId)).thenReturn(Optional.empty());
+
+        com.ntdhtcct.entity.ProjectMember savedMember = new com.ntdhtcct.entity.ProjectMember(project, normalUser, pmRole);
+        when(projectMemberRepository.save(any())).thenReturn(savedMember);
+
+        ResponseEntity<com.ntdhtcct.dto.ProjectMemberResponse> response = controller.assignProjectManager(
+                projectId,
+                new AdminUserController.AssignProjectManagerRequest(normalUserId),
+                "Bearer admin-token"
+        );
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody().getRoleCode()).isEqualTo("PROJECT_MANAGER");
+        verify(projectMemberRepository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("User không phải ADMIN gọi assignProjectManager bị từ chối 403 Forbidden")
+    void assignProjectManager_nonAdmin_throwsForbidden() {
+        when(authTokenService.isTokenValid("user-token")).thenReturn(true);
+        when(authTokenService.getUserIdFromToken("user-token")).thenReturn(normalUserId);
+        when(userRepository.findById(normalUserId)).thenReturn(Optional.of(normalUser));
+        normalUser.setRole(new Role("PROJECT_MANAGER"));
+
+        UUID projectId = UUID.randomUUID();
+        assertThatThrownBy(() -> controller.assignProjectManager(
+                projectId,
+                new AdminUserController.AssignProjectManagerRequest(normalUserId),
+                "Bearer user-token"
+        )).isInstanceOf(ForbiddenException.class);
     }
 }

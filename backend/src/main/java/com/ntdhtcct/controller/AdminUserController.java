@@ -5,12 +5,18 @@ import com.ntdhtcct.common.exception.ForbiddenException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.common.exception.UnauthorizedException;
 import com.ntdhtcct.domain.auth.AuthTokenService;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.dto.ProjectMemberResponse;
+import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -43,6 +49,7 @@ public class AdminUserController {
     private final RoleRepository roleRepository;
     private final AuthTokenService authTokenService;
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public AdminUserController(
             UserRepository userRepository,
@@ -50,10 +57,22 @@ public class AdminUserController {
             AuthTokenService authTokenService,
             ProjectRepository projectRepository
     ) {
+        this(userRepository, roleRepository, authTokenService, projectRepository, null);
+    }
+
+    @Autowired
+    public AdminUserController(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            AuthTokenService authTokenService,
+            ProjectRepository projectRepository,
+            ProjectMemberRepository projectMemberRepository
+    ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.authTokenService = authTokenService;
         this.projectRepository = projectRepository;
+        this.projectMemberRepository = projectMemberRepository;
     }
 
     private User requireAdmin(String authorization) {
@@ -327,6 +346,89 @@ public class AdminUserController {
         return ResponseEntity.ok(ALLOWED_ROLES_LIST);
     }
 
+    /**
+     * GET /api/admin/projects/{projectId}/manager
+     * Lấy danh sách Ban quản lý hiện tại của dự án
+     */
+    @GetMapping("/projects/{projectId}/manager")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ProjectMemberResponse>> getProjectManager(
+            @PathVariable UUID projectId,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireAdmin(authorization);
+        if (projectMemberRepository == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        if (!projectRepository.existsById(projectId)) {
+            throw new ResourceNotFoundException("PROJECT_NOT_FOUND", "Không tìm thấy dự án với ID: " + projectId);
+        }
+
+        List<ProjectMemberResponse> managers = projectMemberRepository.findByProjectId(projectId).stream()
+                .filter(pm -> "ACTIVE".equalsIgnoreCase(pm.getStatus())
+                        && pm.getRole() != null
+                        && "PROJECT_MANAGER".equalsIgnoreCase(pm.getRole().getName()))
+                .map(ProjectMemberResponse::fromEntity)
+                .toList();
+
+        return ResponseEntity.ok(managers);
+    }
+
+    /**
+     * POST /api/admin/projects/{projectId}/manager
+     * Admin phân Ban quản lý dự án cho một công trình
+     */
+    @PostMapping("/projects/{projectId}/manager")
+    @Transactional
+    public ResponseEntity<ProjectMemberResponse> assignProjectManager(
+            @PathVariable UUID projectId,
+            @RequestBody AssignProjectManagerRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireAdmin(authorization);
+        if (projectMemberRepository == null) {
+            throw new BadRequestException("SERVICE_UNAVAILABLE", "Hệ thống quản lý thành viên chưa sẵn sàng.");
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("PROJECT_NOT_FOUND", "Không tìm thấy dự án với ID: " + projectId));
+
+        if (request == null || request.userId() == null) {
+            throw new BadRequestException("USER_ID_REQUIRED", "Yêu cầu chọn tài khoản người dùng để phân quyền.");
+        }
+
+        User user = userRepository.findById(request.userId())
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "Không tìm thấy người dùng."));
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new BadRequestException("USER_NOT_ACTIVE", "Chỉ có thể phân quyền cho tài khoản đã được kích hoạt (ACTIVE).");
+        }
+
+        if ("admin@admin.com".equalsIgnoreCase(user.getEmail())
+                || (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getName()))) {
+            throw new BadRequestException("CANNOT_ASSIGN_ADMIN", "Không thể phân tài khoản Quản trị hệ thống làm Ban quản lý dự án.");
+        }
+
+        Role projectManagerRole = roleRepository.findByName("PROJECT_MANAGER")
+                .orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "Vai trò PROJECT_MANAGER không tồn tại trong hệ thống."));
+
+        Optional<ProjectMember> existingOpt = projectMemberRepository.findByProjectIdAndUserId(projectId, user.getId());
+        ProjectMember memberToSave;
+        if (existingOpt.isPresent()) {
+            memberToSave = existingOpt.get();
+            memberToSave.setRole(projectManagerRole);
+            memberToSave.setStatus("ACTIVE");
+            memberToSave.setJoinedAt(OffsetDateTime.now());
+        } else {
+            memberToSave = new ProjectMember(project, user, projectManagerRole);
+            memberToSave.setStatus("ACTIVE");
+            memberToSave.setJoinedAt(OffsetDateTime.now());
+        }
+
+        ProjectMember saved = projectMemberRepository.save(memberToSave);
+        return ResponseEntity.ok(ProjectMemberResponse.fromEntity(saved));
+    }
+
     private UserSummaryResponse toSummaryResponse(User u) {
         return new UserSummaryResponse(
                 u.getId(),
@@ -369,4 +471,5 @@ public class AdminUserController {
     public record RejectRequest(String reason) {}
     public record RoleChangeRequest(String roleName) {}
     public record StatusChangeRequest(String status) {}
+    public record AssignProjectManagerRequest(UUID userId) {}
 }

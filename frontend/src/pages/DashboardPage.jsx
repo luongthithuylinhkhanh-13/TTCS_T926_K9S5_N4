@@ -31,11 +31,13 @@ import {
 import { getProjects, getProjectSchedule, getProjectWbs } from '../services/wbsApi';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import { getAuthUser } from '../utils/auth';
+import { useProjectContext } from '../utils/ProjectContext';
 
 const ConstructionDashboard = () => {
   const navigate = useNavigate();
   const authUser = getAuthUser();
-  const role = String(authUser?.roleName || '').toUpperCase();
+  const { effectiveRole } = useProjectContext();
+  const role = String(effectiveRole || authUser?.roleName || '').toUpperCase();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [projects, setProjects] = useState([]);

@@ -29,6 +29,7 @@ import TeamAssignmentSection from '../components/wbs/TeamAssignmentSection';
 import { getAuthUser } from '../utils/auth';
 import { isProjectManager } from '../utils/permissions';
 import { useLocale } from '../utils/LocaleContext';
+import { useProjectContext } from '../utils/ProjectContext';
 
 const formatDate = (val) => {
   if (!val) return '--';
@@ -41,9 +42,19 @@ const TaskAssignmentPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const authUser = getAuthUser();
 
-  const [projects, setProjects] = useState([]);
+  const {
+    activeProjectId,
+    activeProject,
+    effectiveRole,
+    currentProjectRole,
+    projects: contextProjects,
+    setActiveProjectId,
+    projectMemberships
+  } = useProjectContext();
+
+  const [projects, setProjects] = useState(contextProjects || []);
   const [selectedProjectId, setSelectedProjectId] = useState(
-    searchParams.get('projectId') || null
+    () => searchParams.get('projectId') || activeProjectId || null
   );
 
   const [tasks, setTasks] = useState([]);
@@ -60,6 +71,13 @@ const TaskAssignmentPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
+  // Sync projects from context
+  useEffect(() => {
+    if (contextProjects && contextProjects.length > 0) {
+      setProjects(contextProjects);
+    }
+  }, [contextProjects]);
+
   // Load accessible projects
   useEffect(() => {
     const fetchProjects = async () => {
@@ -73,8 +91,13 @@ const TaskAssignmentPage = () => {
         const paramId = searchParams.get('projectId');
         if (paramId && safeList.some(p => p.id === paramId)) {
           setSelectedProjectId(paramId);
+          setActiveProjectId(paramId);
+        } else if (activeProjectId && safeList.some(p => p.id === activeProjectId)) {
+          setSelectedProjectId(activeProjectId);
         } else if (safeList.length > 0) {
-          setSelectedProjectId(safeList[0].id);
+          const firstId = safeList[0].id;
+          setSelectedProjectId(firstId);
+          setActiveProjectId(firstId);
         }
       } catch (err) {
         setError(err.message || t('Không thể tải danh sách dự án'));
@@ -84,7 +107,7 @@ const TaskAssignmentPage = () => {
     };
 
     fetchProjects();
-  }, [searchParams, t]);
+  }, [searchParams, t, activeProjectId, setActiveProjectId]);
 
   // Load Tasks for selected project
   const fetchTasks = async (projId) => {
@@ -144,6 +167,7 @@ const TaskAssignmentPage = () => {
 
   const handleProjectChange = (val) => {
     setSelectedProjectId(val);
+    setActiveProjectId(val);
     setSearchParams(val ? { projectId: val } : {});
     setDrawerOpen(false);
     setSelectedTask(null);
@@ -178,17 +202,75 @@ const TaskAssignmentPage = () => {
     });
   }, [tasks, searchKeyword, assignmentFilter]);
 
-  if (!isProjectManager(authUser)) {
+  const projectOptions = useMemo(() => {
+    return projects.map(p => ({
+      value: p.id,
+      label: `${p.code} - ${p.name}`
+    }));
+  }, [projects]);
+
+  const canAssign = useMemo(() => {
+    const user = authUser || getAuthUser();
+    const globalRole = String(user?.roleName || '').toUpperCase();
+    if (globalRole === 'ADMIN') return true;
+
+    const projId = selectedProjectId || activeProjectId;
+    const memberships = (projectMemberships && projectMemberships.length > 0)
+      ? projectMemberships
+      : (user?.projectMemberships || []);
+
+    if (projId && memberships.length > 0) {
+      const activeMember = memberships.find(
+        m => m.projectId === projId && String(m.status || '').toUpperCase() === 'ACTIVE'
+      );
+      if (activeMember) {
+        const projRole = String(activeMember.roleName || '').toUpperCase();
+        return ['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER'].includes(projRole);
+      }
+      return false;
+    }
+
+    if (projId && projId === activeProjectId && currentProjectRole) {
+      return ['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER'].includes(String(currentProjectRole).toUpperCase());
+    }
+
+    if (effectiveRole) {
+      return ['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER'].includes(String(effectiveRole).toUpperCase());
+    }
+
+    return isProjectManager(user, projId);
+  }, [authUser, selectedProjectId, activeProjectId, projectMemberships, currentProjectRole, effectiveRole]);
+
+  if (loadingProjects && projects.length === 0) {
+    return (
+      <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+        <Spin size="large" tip={t('Đang tải danh sách dự án...')} />
+      </div>
+    );
+  }
+
+  if (!canAssign) {
     return (
       <div style={{ padding: '60px 24px', textAlign: 'center' }}>
         <Result
           status="403"
           title="403"
-          subTitle={t('Chức năng Giao việc chỉ dành cho Chỉ huy trưởng và Quản trị viên.')}
+          subTitle={t('Chức năng Giao việc chỉ dành cho Chỉ huy trưởng và Quản trị viên trong dự án này.')}
           extra={
-            <Button type="primary" onClick={() => navigate('/dashboard')}>
-              {t('Về trang chủ')}
-            </Button>
+            <Space wrap>
+              {projects.length > 1 && (
+                <Select
+                  style={{ minWidth: 260 }}
+                  value={selectedProjectId}
+                  onChange={handleProjectChange}
+                  options={projectOptions}
+                  placeholder={t('Chọn dự án khác')}
+                />
+              )}
+              <Button type="primary" onClick={() => navigate('/dashboard')}>
+                {t('Về trang chủ')}
+              </Button>
+            </Space>
           }
         />
       </div>
@@ -280,10 +362,7 @@ const TaskAssignmentPage = () => {
     }
   ];
 
-  const projectOptions = projects.map(p => ({
-    value: p.id,
-    label: `${p.code} - ${p.name}`
-  }));
+
 
   return (
     <div className="task-assignment-page" style={{ padding: '4px 0 24px' }}>
