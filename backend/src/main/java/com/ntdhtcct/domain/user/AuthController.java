@@ -97,11 +97,15 @@ public class AuthController {
                     request.email(),
                     request.password()
             );
-            emailVerificationService.sendVerificationEmail(user);
+            try {
+                emailVerificationService.sendVerificationEmail(user);
+            } catch (Exception ignored) {
+                // Ignore email sending error in local environment
+            }
             return ResponseEntity.status(201).body(
                     new RegistrationResponse(
                             true,
-                            "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.",
+                            "Đăng ký thành công. Tài khoản của bạn đang chờ quản trị viên phê duyệt.",
                             user.getEmail()
                     )
             );

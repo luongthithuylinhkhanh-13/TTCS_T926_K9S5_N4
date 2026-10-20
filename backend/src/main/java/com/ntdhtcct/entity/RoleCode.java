@@ -5,10 +5,13 @@ package com.ntdhtcct.entity;
  */
 public enum RoleCode {
     ADMIN("Quản trị hệ thống"),
-    PROJECT_MANAGER("Chỉ huy trưởng / Quản lý dự án"),
-    SITE_ENGINEER("Kỹ sư công trường / Giám sát"),
-    WORKER("Đội thi công / Thầu phụ"),
-    VIEWER("Người xem / Kế toán");
+    PROJECT_MANAGER("Ban quản lý dự án"),
+    CUSTOMER("Chủ đầu tư"),
+    SITE_MANAGER("Chỉ huy trưởng công trường"),
+    SITE_ENGINEER("Kỹ sư giám sát"),
+    WORKER("Đội trưởng thi công"),
+    STAFF("Kế toán chủ đầu tư"),
+    VIEWER("Người xem / Kế toán (Legacy)");
 
     private final String description;
 

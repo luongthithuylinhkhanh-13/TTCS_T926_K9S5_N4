@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { Breadcrumb, Badge, Avatar, Dropdown, message } from 'antd';
 import { getAuthUser, logoutUser } from '../../utils/auth';
+import { getRoleDisplayName } from '../../utils/permissions';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../services/wbsApi';
 import InstallAppButton from '../pwa/InstallAppButton';
@@ -22,6 +23,7 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
   const [user, setUser] = useState(getAuthUser);
   const [modalMode, setModalMode] = useState(null);
   const displayName = user?.fullName || user?.email || t('Tài khoản');
+  const roleTitle = getRoleDisplayName(user?.roleName);
   const initials = displayName
     .split(/[\s.@_-]+/)
     .filter(Boolean)
@@ -69,11 +71,17 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
           { title: t('Dự án') },
           { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc')}</span> }
         ];
+      case '/task-assignment':
+        return [
+          { title: t('Trang chủ') },
+          { title: t('Dự án') },
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Giao việc')}</span> }
+        ];
       case '/assigned-tasks':
         return [
           { title: t('Trang chủ') },
           { title: t('Dự án') },
-          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{t('Công việc đã giao')}</span> }
+          { title: <span style={{ color: '#2563EB', fontWeight: 600 }}>{user?.roleName?.toUpperCase() === 'WORKER' ? t('Công việc được giao') : t('Công việc đã giao')}</span> }
         ];
       case '/site-diary':
         return [
@@ -169,14 +177,19 @@ const TopHeader = ({ collapsed, setCollapsed, preferences, onPreferencesChange }
         <div style={{ width: 1, height: 24, backgroundColor: '#E6EAF0' }} />
 
         <Dropdown menu={{ items: userMenuItems, onClick: handleDropdownClick }} trigger={['click']}>
-          <div className="header-user-dropdown">
+          <div className="header-user-dropdown" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <Avatar style={{ backgroundColor: '#2563EB', fontWeight: 600 }}>
               {initials || 'U'}
             </Avatar>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
                 {displayName}
-            </span>
-            <DownOutlined style={{ fontSize: 10, color: '#667085' }} />
+              </span>
+              <span style={{ fontSize: 11, color: '#2563EB', fontWeight: 500 }}>
+                {roleTitle}
+              </span>
+            </div>
+            <DownOutlined style={{ fontSize: 10, color: '#667085', marginLeft: 2 }} />
           </div>
         </Dropdown>
       </div>

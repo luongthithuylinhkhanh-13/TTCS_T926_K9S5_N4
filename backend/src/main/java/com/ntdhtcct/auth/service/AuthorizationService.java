@@ -106,8 +106,11 @@ public class AuthorizationService {
                 );
 
         if (activeRoleOpt.isEmpty()) {
-            if (canViewAllProjects(userId)) {
-                    activeRoleOpt = Optional.of(globalProjectRole);
+            Optional<com.ntdhtcct.entity.User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent() && userOpt.get().getRole() != null && "ADMIN".equalsIgnoreCase(userOpt.get().getRole().getName())) {
+                activeRoleOpt = Optional.of("ADMIN");
+            } else if (canViewAllProjects(userId)) {
+                activeRoleOpt = Optional.of(globalProjectRole);
             } else {
                 throw new ForbiddenException(
                         "Người dùng không phải là thành viên của dự án này"
@@ -122,11 +125,14 @@ public class AuthorizationService {
             return userRole;
         }
 
+        if (requiredRoles == null || requiredRoles.length == 0) {
+            return userRole;
+        }
+
         // Kiểm tra role có nằm trong danh sách role được phép không
         if (requiredRoles != null) {
             for (String allowedRole : requiredRoles) {
-                if (allowedRole != null
-                        && allowedRole.trim().equalsIgnoreCase(userRole)) {
+                if (allowedRole != null && isRoleAuthorized(userRole, allowedRole)) {
                     return userRole;
                 }
             }
@@ -144,6 +150,24 @@ public class AuthorizationService {
                 "INSUFFICIENT_PROJECT_ROLE",
                 "Người dùng không có quyền thực hiện hành động này"
         );
+    }
+
+    private boolean isRoleAuthorized(String userRole, String allowedRole) {
+        if (userRole == null || allowedRole == null) {
+            return false;
+        }
+        if (userRole.trim().equalsIgnoreCase(allowedRole.trim())) {
+            return true;
+        }
+        // SITE_MANAGER (Chỉ huy trưởng) can perform management actions (WBS, task assignment, diary locks)
+        if ("PROJECT_MANAGER".equalsIgnoreCase(allowedRole) && "SITE_MANAGER".equalsIgnoreCase(userRole)) {
+            return true;
+        }
+        // Any recognized project role can view if the route requires VIEWER
+        if ("VIEWER".equalsIgnoreCase(allowedRole)) {
+            return true;
+        }
+        return false;
     }
 
     private boolean hasGlobalProjectAccess(
@@ -167,12 +191,17 @@ public class AuthorizationService {
     }
 
     public boolean canViewAllProjects(UUID userId) {
-        if (userId == null || !isGlobalProjectManager()) {
+        if (userId == null) {
             return false;
         }
         return userRepository.findById(userId)
-            .map(user -> isConfiguredAccount(user.getEmail()))
-                .orElse(false);
+            .map(user -> {
+                if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getName())) {
+                    return true;
+                }
+                return isGlobalProjectManager() && isConfiguredAccount(user.getEmail());
+            })
+            .orElse(false);
     }
 
     private boolean isConfiguredAccount(String userEmail) {

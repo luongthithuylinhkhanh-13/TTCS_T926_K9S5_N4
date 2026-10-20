@@ -23,6 +23,12 @@ public class RoutePermissionConfig {
     }
 
     private void initDefaultRules() {
+        // ADMIN management routes
+        addRule(HttpMethod.GET, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.POST, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.PUT, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.DELETE, "/api/admin/**", new String[]{"ADMIN"});
+
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.POST, "/api/projects/*/members/invitations", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});

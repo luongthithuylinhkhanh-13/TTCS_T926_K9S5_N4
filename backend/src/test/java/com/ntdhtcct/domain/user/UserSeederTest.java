@@ -33,14 +33,13 @@ class UserSeederTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void run_createsDefaultCustomerUserWhenMissing() {
+    void run_createsDefaultAdminUserWhenMissing() {
         UUID roleId = UUID.randomUUID();
-        Role customerRole = new Role("CUSTOMER");
-        setRoleId(customerRole, roleId);
+        Role adminRole = new Role("ADMIN");
+        setRoleId(adminRole, roleId);
 
-        when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(true);
-        when(userRepository.existsByEmailIgnoreCase("test@test.com")).thenReturn(false);
-        when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.of(customerRole));
+        when(userRepository.existsByEmailIgnoreCase("admin@admin.com")).thenReturn(false);
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
         when(passwordEncoder.encode("12345678")).thenReturn("argon2-seeded-hash");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -51,9 +50,9 @@ class UserSeederTest {
         verify(userRepository).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
-        assertThat(savedUser.getEmail()).isEqualTo("test@test.com");
+        assertThat(savedUser.getEmail()).isEqualTo("admin@admin.com");
         assertThat(savedUser.getPassword()).isEqualTo("argon2-seeded-hash");
-        assertThat(savedUser.getFullName()).isEqualTo("Test User");
+        assertThat(savedUser.getFullName()).isEqualTo("Admin");
         assertThat(savedUser.getRoleId()).isEqualTo(roleId);
     }
 
