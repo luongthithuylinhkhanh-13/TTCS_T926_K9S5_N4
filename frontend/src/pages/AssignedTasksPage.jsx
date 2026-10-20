@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Empty, Progress, Select, Spin, Table, Tag } from 'antd';
-import { CheckSquareOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Alert, Button, Empty, Progress, Select, Spin, Table, Tag } from 'antd';
+import { CheckSquareOutlined, UserSwitchOutlined } from '@ant-design/icons';
 import { getProjects, getProjectWbs } from '../services/wbsApi';
 import { getAuthUser } from '../utils/auth';
 import { isProjectManager } from '../utils/permissions';
@@ -10,6 +11,7 @@ const formatDate = value => value
   : '--';
 
 const AssignedTasksPage = () => {
+  const navigate = useNavigate();
   const authUser = getAuthUser();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('all');
@@ -40,11 +42,27 @@ const AssignedTasksPage = () => {
     loadAssignedTasks();
   }, []);
 
+  const isWorker = authUser?.roleName?.toUpperCase() === 'WORKER';
+  const canManage = isProjectManager(authUser);
+
   const visibleTasks = useMemo(
-    () => selectedProjectId === 'all'
-      ? tasks
-      : tasks.filter(task => task.projectId === selectedProjectId),
-    [selectedProjectId, tasks]
+    () => {
+      let filtered = selectedProjectId === 'all'
+        ? tasks
+        : tasks.filter(task => task.projectId === selectedProjectId);
+      if (isWorker) {
+        // If worker has user id or name matching assignee, prioritize those
+        const userMatched = filtered.filter(task => 
+          task.assignedTeamMemberId === authUser?.id ||
+          (authUser?.fullName && task.assignedTeamName?.toLowerCase().includes(authUser.fullName.toLowerCase()))
+        );
+        if (userMatched.length > 0) {
+          filtered = userMatched;
+        }
+      }
+      return filtered;
+    },
+    [selectedProjectId, tasks, isWorker, authUser]
   );
 
   const columns = [
@@ -52,7 +70,7 @@ const AssignedTasksPage = () => {
     { title: 'Công việc', dataIndex: 'name', key: 'name', width: 260 },
     { title: 'Dự án', dataIndex: 'projectName', key: 'projectName', width: 260 },
     {
-      title: 'Đã giao cho',
+      title: isWorker ? 'Đội thực hiện' : 'Đã giao cho',
       key: 'assignee',
       render: (_, task) => task.assignedTeamName || task.assigneeName || 'Đội thi công'
     },
@@ -75,33 +93,77 @@ const AssignedTasksPage = () => {
           <Progress percent={task.progress || 0} size="small" />
         </div>
       )
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      width: 140,
+      align: 'center',
+      render: (_, task) => isWorker ? (
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          icon={<CheckSquareOutlined />}
+          onClick={() => navigate(`/acceptance?projectId=${task.projectId}`)}
+        >
+          Báo khối lượng
+        </Button>
+      ) : (
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          icon={<UserSwitchOutlined />}
+          onClick={() => navigate(`/task-assignment?projectId=${task.projectId}&taskId=${task.id}`)}
+        >
+          Điều chỉnh
+        </Button>
+      )
     }
   ];
 
-  if (!isProjectManager(authUser)) {
+  if (!canManage && !isWorker) {
     return (
       <div className="page-container">
-        <Alert type="warning" showIcon message="Chức năng dành cho Chỉ huy trưởng" description="Bạn chỉ có quyền xem các công việc được giao cho mình." />
+        <Alert type="warning" showIcon message="Chức năng hạn chế" description="Bạn không có quyền truy cập trang quản lý công việc này." />
       </div>
     );
   }
 
   return (
     <div className="page-container assigned-tasks-page">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="page-title"><CheckSquareOutlined /> Công việc đã giao</h1>
-          <p className="page-subtitle">Theo dõi các công việc Chỉ huy trưởng đã phân công cho đội thi công</p>
+          <h1 className="page-title">
+            <CheckSquareOutlined /> {isWorker ? 'Công việc được giao' : 'Công việc đã giao'}
+          </h1>
+          <p className="page-subtitle">
+            {isWorker
+              ? 'Theo dõi các công việc được Chỉ huy trưởng phân công thực hiện'
+              : 'Theo dõi các công việc Chỉ huy trưởng đã phân công cho đội thi công'}
+          </p>
         </div>
-        <Select
-          value={selectedProjectId}
-          onChange={setSelectedProjectId}
-          style={{ width: 280 }}
-          options={[
-            { value: 'all', label: 'Tất cả dự án' },
-            ...projects.map(project => ({ value: project.id, label: `${project.code} - ${project.name}` }))
-          ]}
-        />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {!isWorker && (
+            <Button
+              type="primary"
+              icon={<UserSwitchOutlined />}
+              onClick={() => navigate('/task-assignment')}
+            >
+              Giao việc mới
+            </Button>
+          )}
+          <Select
+            value={selectedProjectId}
+            onChange={setSelectedProjectId}
+            style={{ width: 280 }}
+            options={[
+              { value: 'all', label: 'Tất cả dự án' },
+              ...projects.map(project => ({ value: project.id, label: `${project.code} - ${project.name}` }))
+            ]}
+          />
+        </div>
       </div>
       {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
       <section className="wbs-main-card assigned-tasks-card">

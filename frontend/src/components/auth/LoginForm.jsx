@@ -63,7 +63,7 @@ const LoginForm = () => {
         token: data.token,
         expiresAt: data.expiresAt,
       }, values.remember);
-      navigate('/wbs');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       setLoginError(t('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.'));
