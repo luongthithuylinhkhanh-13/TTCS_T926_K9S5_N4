@@ -62,6 +62,7 @@ const LoginForm = () => {
         roleName: data.roleName,
         token: data.token,
         expiresAt: data.expiresAt,
+        projectMemberships: data.projectMemberships || [],
       }, values.remember);
       navigate('/dashboard');
     } catch (error) {

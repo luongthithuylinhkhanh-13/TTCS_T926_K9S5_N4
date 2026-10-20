@@ -59,8 +59,8 @@ class ProjectMemberServiceImplTest {
         projectId = UUID.randomUUID();
         project = mock(Project.class);
         role = mock(Role.class);
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
-        when(roleRepository.findByName("SITE_ENGINEER")).thenReturn(Optional.of(role));
+        lenient().when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        lenient().when(roleRepository.findByName("SITE_ENGINEER")).thenReturn(Optional.of(role));
     }
 
     @Test
@@ -175,5 +175,100 @@ class ProjectMemberServiceImplTest {
         assertEquals("EXPIRED", expired.getStatus());
         assertEquals("INVITED", result.status());
         verify(projectInvitationRepository, times(2)).save(any(ProjectInvitation.class));
+    }
+
+    @Test
+    void addMemberToProject_RejectsAdminRole() {
+        UUID userId = UUID.randomUUID();
+        BadRequestException ex = assertThrows(
+                BadRequestException.class,
+                () -> projectMemberService.addMemberToProject(
+                        projectId,
+                        new com.ntdhtcct.dto.AddMemberRequest(userId, "ADMIN")
+                )
+        );
+        assertEquals("INVALID_PROJECT_ROLE", ex.getCode());
+    }
+
+    @Test
+    void addMemberToProject_RejectsInactiveUser() {
+        UUID userId = UUID.randomUUID();
+        User pendingUser = mock(User.class);
+        when(pendingUser.getStatus()).thenReturn("PENDING");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(pendingUser));
+
+        BadRequestException ex = assertThrows(
+                BadRequestException.class,
+                () -> projectMemberService.addMemberToProject(
+                        projectId,
+                        new com.ntdhtcct.dto.AddMemberRequest(userId, "SITE_ENGINEER")
+                )
+        );
+        assertEquals("USER_NOT_ACTIVE", ex.getCode());
+    }
+
+    @Test
+    void addMemberToProject_RejectsAdminUser() {
+        UUID userId = UUID.randomUUID();
+        User admin = mock(User.class);
+        when(admin.getStatus()).thenReturn("ACTIVE");
+        when(admin.getEmail()).thenReturn("admin@admin.com");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(admin));
+
+        BadRequestException ex = assertThrows(
+                BadRequestException.class,
+                () -> projectMemberService.addMemberToProject(
+                        projectId,
+                        new com.ntdhtcct.dto.AddMemberRequest(userId, "SITE_ENGINEER")
+                )
+        );
+        assertEquals("INVALID_PROJECT_MEMBER", ex.getCode());
+    }
+
+    @Test
+    void updateMemberRole_RejectsAdminRole() {
+        UUID userId = UUID.randomUUID();
+        ProjectMember member = mock(ProjectMember.class);
+        when(projectMemberRepository.findByProjectIdAndUserId(projectId, userId))
+                .thenReturn(Optional.of(member));
+
+        BadRequestException ex = assertThrows(
+                BadRequestException.class,
+                () -> projectMemberService.updateMemberRole(
+                        projectId,
+                        userId,
+                        new com.ntdhtcct.dto.UpdateMemberRoleRequest("ADMIN")
+                )
+        );
+        assertEquals("INVALID_PROJECT_ROLE", ex.getCode());
+    }
+
+    @Test
+    void getAvailableUsers_ReturnsActiveUsersAndFiltersOutAdmin() {
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+
+        UUID user1Id = UUID.randomUUID();
+        User user1 = mock(User.class);
+        when(user1.getId()).thenReturn(user1Id);
+        when(user1.getEmail()).thenReturn("worker@site.com");
+        when(user1.getFullName()).thenReturn("Worker 1");
+        when(user1.getStatus()).thenReturn("ACTIVE");
+
+        User admin = mock(User.class);
+        when(admin.getEmail()).thenReturn("admin@admin.com");
+        when(admin.getStatus()).thenReturn("ACTIVE");
+
+        User pendingUser = mock(User.class);
+        when(pendingUser.getStatus()).thenReturn("PENDING");
+
+        when(userRepository.findAll()).thenReturn(java.util.List.of(user1, admin, pendingUser));
+        when(projectMemberRepository.findByProjectId(projectId)).thenReturn(java.util.List.of());
+
+        java.util.List<com.ntdhtcct.dto.AvailableUserResponse> availableUsers =
+                projectMemberService.getAvailableUsers(projectId);
+
+        assertEquals(1, availableUsers.size());
+        assertEquals("worker@site.com", availableUsers.get(0).email());
+        assertFalse(availableUsers.get(0).isAlreadyMember());
     }
 }

@@ -40,6 +40,8 @@ const translations = {
   'Tiến độ': 'Progress',
   'Trang chủ': 'Home',
   'Dự án': 'Projects',
+  'Thành viên dự án': 'Project members',
+  'Quản lý thành viên dự án': 'Project member management',
   'Công việc': 'Tasks',
   'TỔNG QUAN': 'OVERVIEW',
   'DỰ ÁN': 'PROJECTS',

@@ -242,4 +242,37 @@ public class AuthorizationService {
         return Arrays.stream(roles)
                 .anyMatch(role -> expectedRole.equalsIgnoreCase(role));
     }
+
+    public boolean canAssignTask(UUID userId, UUID projectId) {
+        if (userId == null || projectId == null) {
+            return false;
+        }
+
+        if (!projectRepository.existsById(projectId)) {
+            return false;
+        }
+
+        Optional<com.ntdhtcct.entity.User> userOpt = userRepository.findById(userId);
+        if (userOpt.isPresent()) {
+            com.ntdhtcct.entity.User user = userOpt.get();
+            if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getName())) {
+                return true;
+            }
+            if (isConfiguredAccount(user.getEmail()) && isGlobalAdmin()) {
+                return true;
+            }
+        }
+
+        Optional<String> activeRoleOpt =
+                projectMemberRepository.findActiveRoleNameByProjectAndUser(projectId, userId);
+
+        if (activeRoleOpt.isEmpty()) {
+            return false;
+        }
+
+        String projectRole = activeRoleOpt.get();
+        return "SITE_MANAGER".equalsIgnoreCase(projectRole)
+                || "PROJECT_MANAGER".equalsIgnoreCase(projectRole)
+                || "ADMIN".equalsIgnoreCase(projectRole);
+    }
 }

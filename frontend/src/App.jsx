@@ -20,8 +20,10 @@ import SystemHealthPage from './pages/SystemHealthPage';
 import AdminApprovalsPage from './pages/AdminApprovalsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminRolesPage from './pages/AdminRolesPage';
+import ProjectMembersPage from './pages/ProjectMembersPage';
 import { Result, Button } from 'antd';
 import { getAuthUser, isAuthenticated } from './utils/auth';
+import { useProjectContext } from './utils/ProjectContext';
 
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -33,7 +35,14 @@ const ProtectedRoute = ({ children }) => {
 
 const RoleGuard = ({ allowedRoles, children }) => {
   const user = getAuthUser();
-  const role = String(user?.roleName || '').toUpperCase();
+  const { effectiveRole } = useProjectContext();
+  const role = String(effectiveRole || user?.roleName || '').toUpperCase();
+  const globalRole = String(user?.roleName || '').toUpperCase();
+
+  // ADMIN is a system exception: always allowed
+  if (globalRole === 'ADMIN' || role === 'ADMIN') {
+    return children;
+  }
 
   if (!allowedRoles || allowedRoles.length === 0 || allowedRoles.includes(role)) {
     return children;
@@ -74,6 +83,16 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
+        
+        {/* Thành viên dự án */}
+        <Route
+          path="project-members"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER']}>
+              <ProjectMembersPage />
+            </RoleGuard>
+          }
+        />
         
         {/* Cơ cấu công việc (WBS) */}
         <Route

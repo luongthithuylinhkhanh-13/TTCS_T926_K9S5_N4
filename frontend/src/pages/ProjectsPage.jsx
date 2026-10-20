@@ -13,7 +13,8 @@ import {
   Button,
   Spin,
   Alert,
-  Space
+  Space,
+  Tooltip
 } from 'antd';
 import {
   ProjectOutlined,
@@ -23,19 +24,26 @@ import {
   SearchOutlined,
   NodeIndexOutlined,
   HistoryOutlined,
-  EnvironmentOutlined
+  EnvironmentOutlined,
+  UserSwitchOutlined
 } from '@ant-design/icons';
 import { getProjects } from '../services/wbsApi';
+import { getAuthUser } from '../utils/auth';
 import ProjectSiteLocationModal from '../components/project/ProjectSiteLocationModal.jsx';
+import AssignProjectManagerModal from '../components/project/AssignProjectManagerModal.jsx';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
+  const authUser = getAuthUser();
+  const isAdmin = String(authUser?.roleName || authUser?.role || '').toUpperCase() === 'ADMIN';
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [projects, setProjects] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [locationModalProject, setLocationModalProject] = useState(null);
+  const [assignManagerProject, setAssignManagerProject] = useState(null);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -172,10 +180,23 @@ const ProjectsPage = () => {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 250,
+      width: isAdmin ? 360 : 250,
       align: 'center',
       render: (_, record) => (
         <Space size="small">
+          {isAdmin && (
+            <Tooltip title="Phân Ban quản lý dự án">
+              <Button
+                size="small"
+                type="dashed"
+                icon={<UserSwitchOutlined />}
+                onClick={() => setAssignManagerProject(record)}
+                style={{ borderColor: '#6366F1', color: '#6366F1' }}
+              >
+                Phân quản lý
+              </Button>
+            </Tooltip>
+          )}
           <Button
             size="small"
             icon={<NodeIndexOutlined />}
@@ -310,6 +331,13 @@ const ProjectsPage = () => {
         open={Boolean(locationModalProject)}
         project={locationModalProject}
         onClose={() => setLocationModalProject(null)}
+        onSuccess={fetchProjects}
+      />
+
+      <AssignProjectManagerModal
+        open={Boolean(assignManagerProject)}
+        project={assignManagerProject}
+        onClose={() => setAssignManagerProject(null)}
         onSuccess={fetchProjects}
       />
     </div>

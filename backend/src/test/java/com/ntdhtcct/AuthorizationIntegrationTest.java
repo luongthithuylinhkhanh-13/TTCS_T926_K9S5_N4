@@ -99,10 +99,21 @@ public class AuthorizationIntegrationTest {
         roleViewer = roleRepository.save(new Role("VIEWER"));
 
         // 2. T-04.3: Tạo Users
-        managerUser = userRepository.save(new User("manager@congtrinh.vn", "manager123", "Trần Quản Lý"));
-        engineerUser = userRepository.save(new User("engineer@congtrinh.vn", "engineer123", "Lê Kỹ Sư"));
-        workerUser = userRepository.save(new User("worker@congtrinh.vn", "worker123", "Phạm Công Nhân"));
-        outsiderUser = userRepository.save(new User("outsider@ngoai.vn", "outsider123", "Nguyễn Người Ngoài"));
+        managerUser = new User("manager@congtrinh.vn", "manager123", "Trần Quản Lý");
+        managerUser.setStatus("ACTIVE");
+        managerUser = userRepository.save(managerUser);
+
+        engineerUser = new User("engineer@congtrinh.vn", "engineer123", "Lê Kỹ Sư");
+        engineerUser.setStatus("ACTIVE");
+        engineerUser = userRepository.save(engineerUser);
+
+        workerUser = new User("worker@congtrinh.vn", "worker123", "Phạm Công Nhân");
+        workerUser.setStatus("ACTIVE");
+        workerUser = userRepository.save(workerUser);
+
+        outsiderUser = new User("outsider@ngoai.vn", "outsider123", "Nguyễn Người Ngoài");
+        outsiderUser.setStatus("ACTIVE");
+        outsiderUser = userRepository.save(outsiderUser);
 
         // 3. T-04.3: Tạo Projects
         projectA = projectRepository.save(new Project("DA-001", "Dự án Cầu Vàm Cống Mới"));

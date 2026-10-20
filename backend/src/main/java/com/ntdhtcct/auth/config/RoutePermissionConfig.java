@@ -41,6 +41,8 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/reject", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
+        // Xem vai trò của chính mình trong dự án: Cho phép mọi thành viên trong dự án
+        addRule(HttpMethod.GET, "/api/projects/*/members/me", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER", "SITE_ENGINEER", "WORKER", "STAFF", "CUSTOMER", "VIEWER"});
         // Xem danh sách thành viên dự án: Mọi thành viên có vai trò trong dự án
         addRule(HttpMethod.GET, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});

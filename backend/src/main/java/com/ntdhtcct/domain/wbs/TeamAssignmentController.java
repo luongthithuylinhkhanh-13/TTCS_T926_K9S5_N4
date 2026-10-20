@@ -1,6 +1,7 @@
 package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.auth.annotation.RequireProjectRole;
+import com.ntdhtcct.auth.service.AuthorizationService;
 import com.ntdhtcct.common.response.ApiResponse;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.dto.ProjectMemberResponse;
@@ -17,17 +18,20 @@ public class TeamAssignmentController {
 
     private final TeamAssignmentService teamAssignmentService;
     private final AuthTokenService authTokenService;
+    private final AuthorizationService authorizationService;
 
     public TeamAssignmentController(
             TeamAssignmentService teamAssignmentService,
-            AuthTokenService authTokenService
+            AuthTokenService authTokenService,
+            AuthorizationService authorizationService
     ) {
         this.teamAssignmentService = teamAssignmentService;
         this.authTokenService = authTokenService;
+        this.authorizationService = authorizationService;
     }
 
     @GetMapping("/crew-members")
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<?> getProjectCrews(
             @PathVariable UUID projectId,
             @RequestHeader(value = "Authorization", required = false) String authorization,
@@ -40,7 +44,7 @@ public class TeamAssignmentController {
     }
 
     @PutMapping("/tasks/{taskId}/team-assignment")
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER"})
     public ResponseEntity<?> assignCrew(
             @PathVariable UUID projectId,
             @PathVariable UUID taskId,
@@ -49,6 +53,12 @@ public class TeamAssignmentController {
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader
     ) {
         UUID actorId = authenticatedUserId(authorization, userIdHeader);
+        if (!authorizationService.canAssignTask(actorId, projectId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Chỉ Chỉ huy trưởng và Quản trị viên mới có quyền giao việc trong dự án này."
+            );
+        }
         TeamAssignmentService.AssignmentResult result =
                 teamAssignmentService.assignCrew(
                         projectId,
@@ -65,7 +75,7 @@ public class TeamAssignmentController {
     }
 
     @GetMapping("/tasks/{taskId}/team-assignment/history")
-    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
+    @RequireProjectRole({"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"})
     public ResponseEntity<?> getAssignmentHistory(
             @PathVariable UUID projectId,
             @PathVariable UUID taskId,

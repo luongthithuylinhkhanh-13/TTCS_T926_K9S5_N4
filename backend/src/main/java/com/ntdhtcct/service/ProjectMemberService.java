@@ -1,6 +1,7 @@
 package com.ntdhtcct.service;
 
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.AvailableUserResponse;
 import com.ntdhtcct.dto.InviteProjectMemberRequest;
 import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
@@ -43,6 +44,10 @@ public interface ProjectMemberService {
     ProjectMemberResponse getProjectMember(
             UUID projectId,
             UUID userId
+    );
+
+    List<AvailableUserResponse> getAvailableUsers(
+            UUID projectId
     );
 
     boolean hasAccess(UUID projectId, UUID userId);
