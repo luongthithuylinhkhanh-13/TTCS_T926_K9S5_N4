@@ -5,12 +5,14 @@ import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
 @Component
+@Profile("!test")
 @Order(6)
 public class ActualCostDemoSeeder implements CommandLineRunner {
 

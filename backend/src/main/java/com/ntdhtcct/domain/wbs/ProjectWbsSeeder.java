@@ -3,6 +3,7 @@ package com.ntdhtcct.domain.wbs;
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Component
+@Profile("!test")
 @Order(3)
 public class ProjectWbsSeeder implements CommandLineRunner {
 

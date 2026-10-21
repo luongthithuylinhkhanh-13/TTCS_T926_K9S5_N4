@@ -5,6 +5,7 @@ import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.wbs.WbsItem;
 import com.ntdhtcct.domain.wbs.WbsItemRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Component
+@Profile("!test")
 @Order(8)
 public class AcceptanceReportDemoSeeder implements CommandLineRunner {
 

@@ -7,6 +7,7 @@ import com.ntdhtcct.repository.ProjectMemberRepository;
 import com.ntdhtcct.repository.RoleRepository;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 
 import java.util.Optional;
 import org.springframework.core.annotation.Order;
@@ -15,6 +16,7 @@ import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!test")
 @Order(4)
 public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 

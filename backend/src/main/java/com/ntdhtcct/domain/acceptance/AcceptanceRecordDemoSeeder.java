@@ -5,6 +5,7 @@ import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.entity.User;
 import com.ntdhtcct.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
+@Profile("!test")
 @Order(5)
 public class AcceptanceRecordDemoSeeder implements CommandLineRunner {
 
