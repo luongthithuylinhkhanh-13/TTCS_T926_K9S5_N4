@@ -1,6 +1,8 @@
 spring:
   config:
-    import: optional:file:../.env[.properties]
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
 
   main:
     allow-bean-definition-overriding: true
@@ -14,9 +16,9 @@ spring:
       max-request-size: 21MB
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:construction_management}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:construction_management}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:12345678}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 20000
@@ -27,7 +29,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}
+      ddl-auto: ${DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
