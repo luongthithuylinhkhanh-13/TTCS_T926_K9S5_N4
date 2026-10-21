@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V28.0-add-user-status-and-rejection-reason" author="NTDHTCT">
+        <addColumn tableName="users">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rejection_reason" type="VARCHAR(500)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="users" columnName="rejection_reason"/>
+            <dropColumn tableName="users" columnName="status"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
