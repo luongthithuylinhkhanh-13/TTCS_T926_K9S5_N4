@@ -40,11 +40,23 @@ public class Project {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "schedule_baseline_captured_at")
+    private OffsetDateTime scheduleBaselineCapturedAt;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "image", length = 500)
     private String image;
+
+    @Column(name = "site_latitude")
+    private Double siteLatitude;
+
+    @Column(name = "site_longitude")
+    private Double siteLongitude;
+
+    @Column(name = "site_radius_meters")
+    private Double siteRadiusMeters;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -124,6 +136,14 @@ public class Project {
         this.endDate = endDate;
     }
 
+    public OffsetDateTime getScheduleBaselineCapturedAt() {
+        return scheduleBaselineCapturedAt;
+    }
+
+    public void setScheduleBaselineCapturedAt(OffsetDateTime scheduleBaselineCapturedAt) {
+        this.scheduleBaselineCapturedAt = scheduleBaselineCapturedAt;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -146,5 +166,29 @@ public class Project {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Double getSiteLatitude() {
+        return siteLatitude;
+    }
+
+    public void setSiteLatitude(Double siteLatitude) {
+        this.siteLatitude = siteLatitude;
+    }
+
+    public Double getSiteLongitude() {
+        return siteLongitude;
+    }
+
+    public void setSiteLongitude(Double siteLongitude) {
+        this.siteLongitude = siteLongitude;
+    }
+
+    public Double getSiteRadiusMeters() {
+        return siteRadiusMeters;
+    }
+
+    public void setSiteRadiusMeters(Double siteRadiusMeters) {
+        this.siteRadiusMeters = siteRadiusMeters;
     }
 }

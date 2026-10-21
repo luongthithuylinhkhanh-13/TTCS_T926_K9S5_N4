@@ -22,8 +22,40 @@ public record DiaryImageResponse(
         String metadataStatus,
         List<String> metadataReasons,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        Double distanceToCenterMeters,
+        Double excessDistanceMeters,
+        String locationStatus,
+        Boolean isSuspicious,
+        String locationMessage
 ) {
+    public DiaryImageResponse(
+            UUID id,
+            UUID diaryEntryId,
+            String clientImageId,
+            String originalFilename,
+            String displayStatus,
+            String originalStatus,
+            Long displayFileSize,
+            Long originalFileSize,
+            Integer width,
+            Integer height,
+            OffsetDateTime capturedAt,
+            Double latitude,
+            Double longitude,
+            String metadataStatus,
+            List<String> metadataReasons,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt
+    ) {
+        this(id, diaryEntryId, clientImageId, originalFilename, displayStatus, originalStatus,
+                displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
+                metadataStatus != null ? metadataStatus : computeMetadataStatus(capturedAt, latitude, longitude),
+                metadataReasons != null ? metadataReasons : computeMetadataReasons(capturedAt, latitude, longitude),
+                createdAt, updatedAt,
+                null, null, null, false, null);
+    }
+
     public DiaryImageResponse(
             UUID id,
             UUID diaryEntryId,
@@ -46,7 +78,8 @@ public record DiaryImageResponse(
                 displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
                 metadataStatus != null ? metadataStatus : computeMetadataStatus(capturedAt, latitude, longitude),
                 computeMetadataReasons(capturedAt, latitude, longitude),
-                createdAt, updatedAt);
+                createdAt, updatedAt,
+                null, null, null, false, null);
     }
 
     public DiaryImageResponse(
@@ -70,7 +103,38 @@ public record DiaryImageResponse(
                 displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
                 computeMetadataStatus(capturedAt, latitude, longitude),
                 computeMetadataReasons(capturedAt, latitude, longitude),
-                createdAt, updatedAt);
+                createdAt, updatedAt,
+                null, null, null, false, null);
+    }
+
+    public DiaryImageResponse(
+            UUID id,
+            UUID diaryEntryId,
+            String clientImageId,
+            String originalFilename,
+            String displayStatus,
+            String originalStatus,
+            Long displayFileSize,
+            Long originalFileSize,
+            Integer width,
+            Integer height,
+            OffsetDateTime capturedAt,
+            Double latitude,
+            Double longitude,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt,
+            Double distanceToCenterMeters,
+            Double excessDistanceMeters,
+            String locationStatus,
+            Boolean isSuspicious,
+            String locationMessage
+    ) {
+        this(id, diaryEntryId, clientImageId, originalFilename, displayStatus, originalStatus,
+                displayFileSize, originalFileSize, width, height, capturedAt, latitude, longitude,
+                computeMetadataStatus(capturedAt, latitude, longitude),
+                computeMetadataReasons(capturedAt, latitude, longitude),
+                createdAt, updatedAt,
+                distanceToCenterMeters, excessDistanceMeters, locationStatus, isSuspicious, locationMessage);
     }
 
     public DiaryImageResponse(

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
+import ProgressTimeline from '../components/wbs/ProgressTimeline';
 import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
 import { useLocale } from '../utils/LocaleContext';
 import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
@@ -275,6 +276,11 @@ const ProgressPage = () => {
               </div>
             </div>
 
+            <ProgressTimeline
+              tasks={schedule.tasks || []}
+              baselineTasks={schedule.baselineTasks || []}
+              baselineCapturedAt={schedule.baselineCapturedAt}
+            />
             <section className="wbs-main-card gantt-section">
               <GanttChart
                 tasks={scheduledTasks}

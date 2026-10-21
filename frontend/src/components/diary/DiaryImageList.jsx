@@ -3,6 +3,7 @@ import { Card, Spin, Empty, Alert, Typography, Tooltip, Tag, Popconfirm, Button,
 import { FileImageOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getDiaryImages, getDisplayImageUrl, deleteDiaryImage } from '../../services/diaryApi.js';
 import { determineImageMetadataStatus, formatCapturedAt } from '../../utils/imageMetadataExtractor.js';
+import { formatLocationStatus } from '../../utils/geoDistanceUtils.js';
 import apiClient from '../../services/apiClient.js';
 import DiaryImageLightbox from './DiaryImageLightbox.jsx';
 
@@ -139,6 +140,30 @@ export default function DiaryImageList({
                     overflow: 'hidden',
                   }}
                 >
+                  {img.isSuspicious && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 4,
+                        zIndex: 3,
+                      }}
+                    >
+                      <Tag
+                        color="error"
+                        style={{
+                          margin: 0,
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          padding: '0 4px',
+                          lineHeight: '18px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                        }}
+                      >
+                        🚨 Ngoài bán kính
+                      </Tag>
+                    </div>
+                  )}
                   {!readOnly && (
                     <Tooltip title={disabled ? 'Ngày nhật ký đã bị khóa, không thể xóa ảnh' : 'Xóa ảnh'}>
                       <div
@@ -328,6 +353,56 @@ export default function DiaryImageList({
                         ⚠ {metaStatus.reasons.length === 1 ? metaStatus.reasons[0] : `${metaStatus.reasons[0]} (+${metaStatus.reasons.length - 1})`}
                       </div>
                     )}
+
+                    {/* S-41 / T-73: Hiển thị trạng thái vị trí và cảnh báo ngoài bán kính công trường */}
+                    {(() => {
+                      const loc = formatLocationStatus(img);
+                      return (
+                        <div style={{ marginTop: 4 }}>
+                          <Tooltip title={loc.message}>
+                            <Tag
+                              color={loc.color}
+                              style={{
+                                margin: 0,
+                                fontSize: '9px',
+                                padding: '0 4px',
+                                lineHeight: '16px',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block',
+                              }}
+                            >
+                              {loc.badgeText}
+                            </Tag>
+                          </Tooltip>
+
+                          {loc.isSuspicious && (
+                            <div
+                              className="saved-image-suspicious-location-warning"
+                              style={{
+                                marginTop: 4,
+                                padding: '2px 4px',
+                                borderRadius: 3,
+                                background: '#fff2f0',
+                                border: '1px solid #ffccc7',
+                                fontSize: '9px',
+                                color: '#cf1322',
+                                fontWeight: 600,
+                                lineHeight: '1.25',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title={loc.message}
+                            >
+                              🚨 Vượt {img.excessDistanceMeters}m {img.distanceToCenterMeters != null ? `(cách ${img.distanceToCenterMeters}m)` : ''}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </>
                 );
               })()}

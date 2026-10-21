@@ -31,13 +31,7 @@ public class UserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        ensureUser("test@test.com", "Test User", "CUSTOMER");
-
-        ensureUser("linh.work@gmail.com", "Linh", "PROJECT_MANAGER");
-        ensureUser("kien.work@gmail.com", "Kiên", "PROJECT_MANAGER");
-        ensureUser("bach.work@gmail.com", "Bách", "PROJECT_MANAGER");
-        ensureUser("chinh.work@gmail.com", "Chinh", "PROJECT_MANAGER");
-        ensureUser("lan.work@gmail.com", "Lan", "PROJECT_MANAGER");
+        ensureUser("admin@admin.com", "Admin", "ADMIN");
     }
 
     private void ensureUser(String email, String fullName, String roleName) {
@@ -51,6 +45,8 @@ public class UserSeeder implements CommandLineRunner {
                 fullName
             );
             user.setRole(role);
+            user.setStatus("ACTIVE");
+            user.setEmailVerified(true);
             userRepository.save(user);
             return;
         }
@@ -58,6 +54,8 @@ public class UserSeeder implements CommandLineRunner {
         userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
             roleRepository.findByName(roleName).ifPresent(role -> {
                 user.setRole(role);
+                user.setStatus("ACTIVE");
+                user.setEmailVerified(true);
                 userRepository.save(user);
             });
         });

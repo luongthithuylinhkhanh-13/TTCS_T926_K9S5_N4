@@ -23,6 +23,12 @@ public class RoutePermissionConfig {
     }
 
     private void initDefaultRules() {
+        // ADMIN management routes
+        addRule(HttpMethod.GET, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.POST, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.PUT, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.DELETE, "/api/admin/**", new String[]{"ADMIN"});
+
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.POST, "/api/projects/*/members/invitations", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});
@@ -39,12 +45,18 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/reject", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
+        // Xem vai trò của chính mình trong dự án: Cho phép mọi thành viên trong dự án
+        addRule(HttpMethod.GET, "/api/projects/*/members/me", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER", "SITE_ENGINEER", "WORKER", "STAFF", "CUSTOMER", "VIEWER"});
         // Xem danh sách thành viên dự án: Mọi thành viên có vai trò trong dự án
         addRule(HttpMethod.GET, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
 
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // S-41: Cấu hình vị trí và bán kính công trường
+        addRule(HttpMethod.GET, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
         // WBS, schedule and critical-path read routes
         addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});

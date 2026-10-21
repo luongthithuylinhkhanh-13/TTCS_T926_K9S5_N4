@@ -8,6 +8,7 @@ import ProgressPage from './pages/ProgressPage';
 import WBSPage from './pages/WBSPage';
 import WorkingCalendarPage from './pages/WorkingCalendarPage';
 import AssignedTasksPage from './pages/AssignedTasksPage';
+import TaskAssignmentPage from './pages/TaskAssignmentPage';
 import MilestonesPage from './pages/MilestonesPage';
 import SiteDiaryPage from './pages/SiteDiaryPage';
 import PaymentRequestsPage from './pages/PaymentRequestsPage';
@@ -16,7 +17,13 @@ import AcceptanceRecordsPage from './pages/AcceptanceRecordsPage';
 import BudgetPage from './pages/BudgetPage';
 import ActualCostPage from './pages/ActualCostPage';
 import SystemHealthPage from './pages/SystemHealthPage';
+import AdminApprovalsPage from './pages/AdminApprovalsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminRolesPage from './pages/AdminRolesPage';
+import ProjectMembersPage from './pages/ProjectMembersPage';
+import { Result, Button } from 'antd';
 import { getAuthUser, isAuthenticated } from './utils/auth';
+import { useProjectContext } from './utils/ProjectContext';
 
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -26,12 +33,40 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const AdminRoute = ({ children }) => {
-  if (getAuthUser()?.roleName?.toUpperCase() !== 'ADMIN') {
-    return <Navigate to="/dashboard" replace />;
+const RoleGuard = ({ allowedRoles, children }) => {
+  const user = getAuthUser();
+  const { effectiveRole } = useProjectContext();
+  const role = String(effectiveRole || user?.roleName || '').toUpperCase();
+  const globalRole = String(user?.roleName || '').toUpperCase();
+
+  // ADMIN is a system exception: always allowed
+  if (globalRole === 'ADMIN' || role === 'ADMIN') {
+    return children;
   }
-  return children;
+
+  if (!allowedRoles || allowedRoles.length === 0 || allowedRoles.includes(role)) {
+    return children;
+  }
+
+  return (
+    <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+      <Result
+        status="403"
+        title="403"
+        subTitle="Bạn không có quyền truy cập chức năng này"
+        extra={
+          <Button type="primary" onClick={() => window.location.href = '/dashboard'}>
+            Về trang chủ
+          </Button>
+        }
+      />
+    </div>
+  );
 };
+
+const AdminRoute = ({ children }) => (
+  <RoleGuard allowedRoles={['ADMIN']}>{children}</RoleGuard>
+);
 
 function App() {
   return (
@@ -48,18 +83,157 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
-        <Route path="wbs" element={<WBSPage />} />
-        <Route path="budget" element={<BudgetPage />} />
-        <Route path="progress" element={<ProgressPage />} />
-        <Route path="tasks" element={<TasksPage />} />
-        <Route path="working-calendar" element={<WorkingCalendarPage />} />
-        <Route path="assigned-tasks" element={<AssignedTasksPage />} />
-        <Route path="progress/milestones" element={<MilestonesPage />} />
-        <Route path="site-diary" element={<SiteDiaryPage />} />
-        <Route path="payment-requests" element={<PaymentRequestsPage />} />
-        <Route path="acceptance" element={<AcceptancePage />} />
-        <Route path="acceptance-records" element={<AcceptanceRecordsPage />} />
-        <Route path="actual-costs" element={<ActualCostPage />} />
+        
+        {/* Thành viên dự án */}
+        <Route
+          path="project-members"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER']}>
+              <ProjectMembersPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Cơ cấu công việc (WBS) */}
+        <Route
+          path="wbs"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER']}>
+              <WBSPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Dự toán công trình */}
+        <Route
+          path="budget"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'STAFF']}>
+              <BudgetPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Tiến độ thi công */}
+        <Route
+          path="progress"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'SITE_MANAGER', 'SITE_ENGINEER']}>
+              <ProgressPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="progress/milestones"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'SITE_MANAGER']}>
+              <MilestonesPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Lịch làm việc */}
+        <Route
+          path="working-calendar"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER', 'WORKER']}>
+              <WorkingCalendarPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Quản lý công việc */}
+        <Route
+          path="tasks"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER']}>
+              <TasksPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Giao việc cho đội thi công */}
+        <Route
+          path="task-assignment"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER']}>
+              <TaskAssignmentPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="assignments"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER']}>
+              <TaskAssignmentPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Công việc đã giao / Công việc được giao */}
+        <Route
+          path="assigned-tasks"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER', 'WORKER']}>
+              <AssignedTasksPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Nhật ký công trường */}
+        <Route
+          path="site-diary"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'SITE_MANAGER', 'SITE_ENGINEER', 'WORKER']}>
+              <SiteDiaryPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Phiếu nghiệm thu */}
+        <Route
+          path="acceptance-records"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'SITE_MANAGER', 'SITE_ENGINEER']}>
+              <AcceptanceRecordsPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Nghiệm thu khối lượng / Cập nhật khối lượng */}
+        <Route
+          path="acceptance"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'SITE_MANAGER', 'SITE_ENGINEER', 'WORKER', 'STAFF']}>
+              <AcceptancePage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Đề nghị thanh toán */}
+        <Route
+          path="payment-requests"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'STAFF']}>
+              <PaymentRequestsPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Chi phí thực tế */}
+        <Route
+          path="actual-costs"
+          element={
+            <RoleGuard allowedRoles={['ADMIN', 'PROJECT_MANAGER', 'CUSTOMER', 'SITE_MANAGER', 'STAFF']}>
+              <ActualCostPage />
+            </RoleGuard>
+          }
+        />
+        
+        {/* Quản trị hệ thống */}
+        <Route path="admin/approvals" element={<AdminRoute><AdminApprovalsPage /></AdminRoute>} />
+        <Route path="admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+        <Route path="admin/roles" element={<AdminRoute><AdminRolesPage /></AdminRoute>} />
         <Route path="admin/system-health" element={<AdminRoute><SystemHealthPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

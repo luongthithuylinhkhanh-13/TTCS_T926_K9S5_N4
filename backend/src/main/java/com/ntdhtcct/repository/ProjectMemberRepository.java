@@ -35,6 +35,15 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
 
     List<ProjectMember> findByUserId(UUID userId);
 
+    @Query("""
+        SELECT pm FROM ProjectMember pm
+        JOIN FETCH pm.project
+        JOIN FETCH pm.role
+        WHERE pm.user.id = :userId
+          AND pm.status = 'ACTIVE'
+    """)
+    List<ProjectMember> findActiveMembershipsByUserId(@Param("userId") UUID userId);
+
     boolean existsByProjectIdAndUserIdAndStatus(
             UUID projectId,
             UUID userId,

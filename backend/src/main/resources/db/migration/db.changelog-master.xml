@@ -62,6 +62,9 @@
     <include file="db/migration/v13/V13_0__add_dependency_metadata.xml"
              relativeToChangelogFile="false"/>
 
+    <include file="db/migration/v14/V14_0__create_schedule_baseline.xml"
+             relativeToChangelogFile="false"/>
+
     <include file="db/migration/v14/V14_0__add_actual_progress_fields.xml"
              relativeToChangelogFile="false"/>
 
@@ -137,5 +140,7 @@
 
     <!-- S-43 (T-77 to T-81): Draft payment requests generated from approved acceptance items -->
     <include file="db/migration/v27/V27_0__payment_request_drafts_and_items.xml"
+    <!-- S-41 (T-71): Khai báo tọa độ tâm và bán kính hợp lệ của công trường -->
+    <include file="db/migration/v27/V27_0__add_site_location_to_projects.xml"
              relativeToChangelogFile="false"/>
 </databaseChangeLog>

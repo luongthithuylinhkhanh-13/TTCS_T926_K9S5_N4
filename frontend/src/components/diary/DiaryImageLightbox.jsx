@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { getDisplayImageUrl, getOriginalImageUrl } from '../../services/diaryApi.js';
 import { determineImageMetadataStatus, formatCapturedAt } from '../../utils/imageMetadataExtractor.js';
+import { formatLocationStatus } from '../../utils/geoDistanceUtils.js';
 import apiClient from '../../services/apiClient.js';
 import { formatFileSize } from '../../utils/imageQueueUtils.js';
 
@@ -195,6 +196,26 @@ export default function DiaryImageLightbox({
               }
               return badge;
             })()}
+
+            {/* S-41 / T-73: Badge trạng thái vị trí và bán kính */}
+            {(() => {
+              const loc = formatLocationStatus(currentImage);
+              return (
+                <Tooltip title={loc.message}>
+                  <Tag
+                    color={loc.color}
+                    style={{
+                      margin: 0,
+                      fontSize: '11px',
+                      padding: '1px 8px',
+                      fontWeight: loc.isSuspicious ? 700 : 500,
+                    }}
+                  >
+                    {loc.badgeText}
+                  </Tag>
+                </Tooltip>
+              );
+            })()}
           </div>
 
           <Space>
@@ -226,6 +247,56 @@ export default function DiaryImageLightbox({
             />
           </Space>
         </div>
+
+        {/* S-41 / T-73: Banner cảnh báo nổi bật khi ảnh chụp ngoài bán kính công trường */}
+        {(() => {
+          const loc = formatLocationStatus(currentImage);
+          if (!loc.isSuspicious) {
+            return null;
+          }
+          return (
+            <div
+              className="lightbox-suspicious-location-warning-banner"
+              style={{
+                background: 'rgba(185, 28, 28, 0.85)',
+                borderBottom: '1px solid #ef4444',
+                padding: '8px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '12px',
+                flexWrap: 'wrap',
+                zIndex: 10,
+                color: '#fff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '14px' }}>🚨</span>
+                <span style={{ fontWeight: 700, letterSpacing: '0.3px', color: '#fff' }}>
+                  CẢNH BÁO NGHI VẤN ĐỊA LÝ:
+                </span>
+                <span style={{ color: '#fecaca' }}>Ảnh chụp ngoài bán kính công trường cho phép</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px' }}>
+                {currentImage.distanceToCenterMeters != null && (
+                  <span style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 8px', borderRadius: 4 }}>
+                    Khoảng cách đến tâm: <strong>{currentImage.distanceToCenterMeters} m</strong>
+                  </span>
+                )}
+                {currentImage.excessDistanceMeters != null && (
+                  <span style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 8px', borderRadius: 4, color: '#fef08a' }}>
+                    Vượt bán kính: <strong style={{ color: '#fff', textDecoration: 'underline' }}>+{currentImage.excessDistanceMeters} m</strong>
+                  </span>
+                )}
+                {currentImage.locationMessage && (
+                  <span style={{ color: '#fed7aa', fontStyle: 'italic' }}>
+                    ({currentImage.locationMessage})
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* T-76: Banner cảnh báo chi tiết lý do metadata không hợp lệ / thiếu */}
         {(() => {

@@ -6,6 +6,7 @@ import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.domain.diary.dto.CreateDiaryEntryRequest;
 import com.ntdhtcct.domain.diary.dto.DiaryEntryResponse;
 import com.ntdhtcct.domain.diary.dto.DiaryImageResponse;
+import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
 import com.ntdhtcct.domain.sitediary.SiteDiary;
 import com.ntdhtcct.domain.sitediary.SiteDiaryAdvisoryLockManager;
@@ -46,6 +47,7 @@ public class DiaryService {
     private final SiteDiaryLockService siteDiaryLockService;
     private final SiteDiaryAdvisoryLockManager advisoryLockManager;
     private final ImageMetadataValidator imageMetadataValidator;
+    private final PhotoLocationEvaluator photoLocationEvaluator;
     private final Object[] bridgeStripes = new Object[STRIPE_COUNT];
     private final Object[] imageStripes = new Object[STRIPE_COUNT];
     private final TransactionOperations requiresNewTransactionOperations;
@@ -59,7 +61,8 @@ public class DiaryService {
                         SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager,
                         @Autowired(required = false) PlatformTransactionManager transactionManager,
-                        @Autowired(required = false) ImageMetadataValidator imageMetadataValidator) {
+                        @Autowired(required = false) ImageMetadataValidator imageMetadataValidator,
+                        @Autowired(required = false) PhotoLocationEvaluator photoLocationEvaluator) {
         this.diaryEntryRepository = diaryEntryRepository;
         this.diaryImageRepository = diaryImageRepository;
         this.projectRepository = projectRepository;
@@ -68,6 +71,7 @@ public class DiaryService {
         this.siteDiaryLockService = siteDiaryLockService;
         this.advisoryLockManager = advisoryLockManager;
         this.imageMetadataValidator = imageMetadataValidator != null ? imageMetadataValidator : new ImageMetadataValidator();
+        this.photoLocationEvaluator = photoLocationEvaluator != null ? photoLocationEvaluator : new PhotoLocationEvaluator();
 
         for (int i = 0; i < STRIPE_COUNT; i++) {
             this.bridgeStripes[i] = new Object();
@@ -91,9 +95,22 @@ public class DiaryService {
                         SiteDiaryRepository siteDiaryRepository,
                         SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager,
+                        PlatformTransactionManager transactionManager,
+                        ImageMetadataValidator imageMetadataValidator) {
+        this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, transactionManager, imageMetadataValidator, null);
+    }
+
+    public DiaryService(DiaryEntryRepository diaryEntryRepository,
+                        DiaryImageRepository diaryImageRepository,
+                        ProjectRepository projectRepository,
+                        FileStorageService fileStorageService,
+                        SiteDiaryRepository siteDiaryRepository,
+                        SiteDiaryLockService siteDiaryLockService,
+                        SiteDiaryAdvisoryLockManager advisoryLockManager,
                         PlatformTransactionManager transactionManager) {
         this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
-                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, transactionManager, null);
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, transactionManager, null, null);
     }
 
     public DiaryService(DiaryEntryRepository diaryEntryRepository,
@@ -104,7 +121,7 @@ public class DiaryService {
                         SiteDiaryLockService siteDiaryLockService,
                         SiteDiaryAdvisoryLockManager advisoryLockManager) {
         this(diaryEntryRepository, diaryImageRepository, projectRepository, fileStorageService,
-                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null);
+                siteDiaryRepository, siteDiaryLockService, advisoryLockManager, null, null, null);
     }
 
     @Transactional
@@ -238,7 +255,8 @@ public class DiaryService {
                 image = diaryImageRepository.findById(image.getId()).orElseThrow();
             }
 
-            return toImageResponse(image);
+            Project project = projectRepository.findById(projectId).orElse(null);
+            return toImageResponse(image, project);
         } finally {
             advisoryLockManager.releaseSharedLock(projectId, diaryDate);
         }
@@ -328,7 +346,8 @@ public class DiaryService {
                 image = diaryImageRepository.findById(image.getId()).orElseThrow();
             }
 
-            return toImageResponse(image);
+            Project project = projectRepository.findById(projectId).orElse(null);
+            return toImageResponse(image, project);
         } finally {
             advisoryLockManager.releaseSharedLock(projectId, diaryDate);
         }
@@ -445,9 +464,10 @@ public class DiaryService {
     @Transactional(readOnly = true)
     public List<DiaryImageResponse> getDiaryImages(UUID projectId, UUID entryId) {
         DiaryEntry entry = resolveOrCreateEntry(projectId, entryId);
+        Project project = projectRepository.findById(projectId).orElse(null);
         return diaryImageRepository.findByDiaryEntryIdOrderBySortOrderAscCreatedAtAsc(entry.getId())
                 .stream()
-                .map(this::toImageResponse)
+                .map(img -> toImageResponse(img, project))
                 .toList();
     }
 
@@ -647,6 +667,15 @@ public class DiaryService {
     }
 
     private DiaryImageResponse toImageResponse(DiaryImage img) {
+        return toImageResponse(img, (Project) null);
+    }
+
+    private DiaryImageResponse toImageResponse(DiaryImage img, Project project) {
+        PhotoLocationEvaluator.EvaluationResult eval = photoLocationEvaluator.evaluate(
+                img.getLatitude(),
+                img.getLongitude(),
+                project
+        );
         return new DiaryImageResponse(
                 img.getId(),
                 img.getDiaryEntryId(),
@@ -662,7 +691,12 @@ public class DiaryService {
                 img.getLatitude(),
                 img.getLongitude(),
                 img.getCreatedAt(),
-                img.getUpdatedAt()
+                img.getUpdatedAt(),
+                eval.distanceToCenterMeters(),
+                eval.excessDistanceMeters(),
+                eval.locationStatus(),
+                eval.isSuspicious(),
+                eval.locationMessage()
         );
     }
 }

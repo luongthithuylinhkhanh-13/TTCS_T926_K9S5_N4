@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { BuildOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Progress } from 'antd';
 import LoginForm from '../components/auth/LoginForm';
-import { isAuthenticated } from '../utils/auth';
+import { isAuthenticated, getAuthUser } from '../utils/auth';
 import { getUiPreferences, saveUiPreferences } from '../utils/uiPreferences';
 import { LocaleProvider, useLocale } from '../utils/LocaleContext';
 
@@ -15,7 +15,7 @@ const LoginPageContent = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/wbs');
+      navigate('/dashboard');
     }
   }, [navigate]);
 

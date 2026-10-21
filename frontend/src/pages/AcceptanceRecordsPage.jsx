@@ -14,7 +14,8 @@ import {
   Table,
   Tag,
   Timeline,
-  Typography
+  Typography,
+  Alert
 } from 'antd';
 import {
   AuditOutlined,
@@ -260,6 +261,17 @@ const AcceptanceRecordsPage = () => {
               </Button>
             </Space>
           </div>
+
+          {projectId && (
+            <Alert
+              type="info"
+              showIcon
+              message={t('Lưu ý kiểm tra bằng chứng hiện trường')}
+              description={t('Người duyệt cần đối chiếu với Nhật ký thi công của dự án. Với ảnh có cờ nghi vấn (chụp ngoài bán kính công trường hoặc chưa xác minh GPS), vui lòng xem xét thận trọng trước khi phê duyệt phiếu nghiệm thu.')}
+              style={{ borderRadius: 6 }}
+            />
+          )}
+
           <Table
             rowKey="id"
             columns={columns}
@@ -332,6 +344,15 @@ const AcceptanceRecordsPage = () => {
       >
         {detail && (
           <Space direction="vertical" size="large" style={{ display: 'flex' }}>
+            {detail.status === 'PENDING_APPROVAL' && (
+              <Alert
+                type="warning"
+                showIcon
+                message={t('Khuyến nghị thẩm định địa lý hiện trường')}
+                description={t('Trước khi quyết định duyệt phiếu nghiệm thu, vui lòng kiểm tra Nhật ký thi công cùng thời điểm để đảm bảo không có ảnh đính kèm bị gắn cờ nghi vấn ngoài bán kính công trường.')}
+                style={{ borderRadius: 6 }}
+              />
+            )}
             <Descriptions bordered column={1} size="small" loading={detailLoading}>
               <Descriptions.Item label={t('Tên phiếu')}>{detail.title}</Descriptions.Item>
               <Descriptions.Item label={t('Ngày nghiệm thu')}>
