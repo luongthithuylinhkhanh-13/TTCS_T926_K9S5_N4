@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="V13.0-add-dependency-metadata" author="NTDHTCT-26">
@@ -11,17 +11,19 @@
         </addColumn>
 
         <sql>
+            <![CDATA[
             UPDATE task_dependencies dependency
             SET project_id = item.project_id
             FROM wbs_items item
             WHERE dependency.successor_id = item.id
               AND dependency.project_id IS NULL
+            ]]>
         </sql>
 
         <addNotNullConstraint
-            tableName="task_dependencies"
-            columnName="project_id"
-            columnDataType="UUID"/>
+                tableName="task_dependencies"
+                columnName="project_id"
+                columnDataType="UUID"/>
 
         <addColumn tableName="task_dependencies">
             <column name="dependency_type" type="VARCHAR(10)" defaultValue="FS">
@@ -43,6 +45,7 @@
         </preConditions>
 
         <sql>
+            <![CDATA[
             INSERT INTO task_dependencies (
                 id, project_id, predecessor_id, successor_id,
                 dependency_type, lag_days, created_at
@@ -57,6 +60,7 @@
                 WHERE current_dependency.predecessor_id = legacy.predecessor_id
                   AND current_dependency.successor_id = legacy.successor_id
             )
+            ]]>
         </sql>
 
         <dropTable tableName="task_dependencies_s06"/>
@@ -71,6 +75,7 @@
         </preConditions>
 
         <sql>
+            <![CDATA[
             INSERT INTO task_dependencies (
                 id, project_id, predecessor_id, successor_id,
                 dependency_type, lag_days, created_at
@@ -87,6 +92,7 @@
                 WHERE current_dependency.predecessor_id = legacy.predecessor_id
                   AND current_dependency.successor_id = legacy.successor_id
             )
+            ]]>
         </sql>
 
         <dropTable tableName="task_dependencies_s06"/>
@@ -94,8 +100,8 @@
 
     <changeSet id="V13.3-unique-dependency-pairs" author="NTDHTCT-26">
         <addUniqueConstraint
-            tableName="task_dependencies"
-            columnNames="predecessor_id, successor_id"
-            constraintName="uk_task_dependencies_pair"/>
+                tableName="task_dependencies"
+                columnNames="predecessor_id, successor_id"
+                constraintName="uk_task_dependencies_pair"/>
     </changeSet>
 </databaseChangeLog>

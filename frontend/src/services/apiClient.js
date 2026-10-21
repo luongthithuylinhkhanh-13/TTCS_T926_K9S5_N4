@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthUser, logoutUser } from '../utils/auth';
+import { getAuthUser, logoutUser } from '../utils/auth.js';
 
 const apiClient = axios.create({
   baseURL: '/',
@@ -10,9 +10,12 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(config => {
-  const token = getAuthUser()?.token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const auth = getAuthUser();
+  if (auth?.token) {
+    config.headers.Authorization = `Bearer ${auth.token}`;
+  }
+  if (auth?.userId) {
+    config.headers['X-User-Id'] = auth.userId;
   }
   return config;
 });
@@ -23,6 +26,9 @@ apiClient.interceptors.response.use(
     const message = error.response?.data?.message
       || error.message
       || 'Không thể kết nối đến máy chủ';
+    const requestError = new Error(message);
+    requestError.status = error.response?.status;
+    requestError.response = error.response;
 
     const isExpiredToken = /token.*(hết hạn|không hợp lệ)|unauthorized|invalid token/i.test(message);
 
@@ -33,7 +39,7 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(new Error(message));
+    return Promise.reject(requestError);
   }
 );
 

@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Empty, Progress, Select, Spin, Table } from 'antd';
+import { useSearchParams } from 'react-router-dom';
+import { Alert, Button, Empty, Progress, Select, Spin, Table, Tooltip } from 'antd';
 import { BranchesOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getProjects, getProjectSchedule } from '../services/wbsApi';
 import ProgressTimeline from '../components/wbs/ProgressTimeline';
+import { GanttChart, formatDateVN, formatVariance } from '../components/gantt';
+import { useLocale } from '../utils/LocaleContext';
+import MilestoneAlertSection from '../components/wbs/MilestoneAlertSection';
 
 const ProgressPage = () => {
+  const { t } = useLocale();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    searchParams.get('projectId') || null
+  );
   const [schedule, setSchedule] = useState(null);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -41,7 +49,13 @@ const ProgressPage = () => {
         const result = await getProjects();
         const projectList = Array.isArray(result) ? result : [];
         setProjects(projectList);
-        setSelectedProjectId(projectList[0]?.id || null);
+
+        const queryId = searchParams.get('projectId');
+        if (queryId && projectList.some(p => p.id === queryId)) {
+          setSelectedProjectId(queryId);
+        } else {
+          setSelectedProjectId(projectList[0]?.id || null);
+        }
       } catch (error) {
         setPageError(error.message || 'Không thể tải danh sách dự án');
       } finally {
@@ -53,6 +67,13 @@ const ProgressPage = () => {
   }, []);
 
   useEffect(() => {
+    const paramId = searchParams.get('projectId');
+    if (paramId && projects.some(p => p.id === paramId)) {
+      setSelectedProjectId(paramId);
+    }
+  }, [searchParams, projects]);
+
+  useEffect(() => {
     if (selectedProjectId) {
       loadSchedule(selectedProjectId);
     } else {
@@ -60,26 +81,87 @@ const ProgressPage = () => {
     }
   }, [selectedProjectId]);
 
-  const criticalTasks = (schedule?.tasks || []).filter(task => task.isCritical);
+  const tasks = schedule?.tasks || [];
+  const criticalTasks = tasks.filter(task => task.isCritical);
+  const scheduledTasks = tasks.filter(task => task.es != null && task.ef != null && task.duration > 0);
+
+  const renderCpmTooltip = task => {
+    const plannedStart = formatDateVN(task.startDate);
+    const plannedEnd = formatDateVN(task.endDate);
+    const calculatedStart = formatDateVN(task.calculatedStartDate);
+    const calculatedEnd = formatDateVN(task.calculatedEndDate);
+    const actualStart = formatDateVN(task.actualStartDate);
+    const actualEnd = formatDateVN(task.actualEndDate);
+    const varianceText = formatVariance(task.scheduleVarianceDays);
+
+    return (
+      <div className="gantt-tooltip">
+        <strong>{task.wbsCode ? `${task.wbsCode} · ` : ''}{task.name}</strong>
+
+        {(plannedStart || plannedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Kế hoạch:</span>
+            {plannedStart && <div>Bắt đầu: {plannedStart}</div>}
+            {plannedEnd && <div>Kết thúc: {plannedEnd}</div>}
+          </div>
+        )}
+
+        {(calculatedStart || calculatedEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Hiện tại:</span>
+            {calculatedStart && <div>Bắt đầu: {calculatedStart}</div>}
+            {calculatedEnd && <div>Kết thúc: {calculatedEnd}</div>}
+          </div>
+        )}
+
+        {varianceText && (
+          <div className="gantt-tooltip-variance">
+            Chênh lệch hoàn thành: <strong>{varianceText}</strong>
+          </div>
+        )}
+
+        {task.delayedStart && task.startDelayDays != null && task.startDelayDays > 0 && (
+          <div className="gantt-tooltip-delay-warning">
+            ⚠ Mở trễ {task.startDelayDays} ngày
+          </div>
+        )}
+
+        {(actualStart || actualEnd) && (
+          <div className="gantt-tooltip-section">
+            <span className="gantt-tooltip-section-title">Thực tế:</span>
+            {actualStart && <div>Bắt đầu: {actualStart}</div>}
+            {actualEnd && <div>Kết thúc: {actualEnd}</div>}
+          </div>
+        )}
+
+        <div className="gantt-tooltip-section gantt-tooltip-cpm">
+          <div>ES ({t('bắt đầu sớm nhất')}): {task.es ?? '--'} · EF ({t('kết thúc sớm nhất')}): {task.ef ?? '--'}</div>
+          <div>LS ({t('bắt đầu muộn nhất')}): {task.ls ?? '--'} · LF ({t('kết thúc muộn nhất')}): {task.lf ?? '--'}</div>
+          <div>Slack ({t('độ trễ cho phép')}): {task.slack ?? '--'} {t('ngày')}</div>
+        </div>
+      </div>
+    );
+  };
+
   const columns = [
     {
-      title: 'Mã WBS',
+      title: t('Mã WBS'),
       dataIndex: 'wbsCode',
       key: 'wbsCode',
       width: 110
     },
     {
-      title: 'Công việc găng',
+      title: t('Công việc găng'),
       dataIndex: 'name',
       key: 'name',
       width: 260
     },
     {
-      title: 'Thời lượng',
+      title: t('Thời lượng'),
       dataIndex: 'duration',
       key: 'duration',
       align: 'right',
-      render: duration => duration == null ? '--' : `${duration} ngày`
+      render: duration => duration == null ? '--' : `${duration} ${t('ngày')}`
     },
     { title: 'ES', dataIndex: 'es', key: 'es', align: 'right' },
     { title: 'EF', dataIndex: 'ef', key: 'ef', align: 'right' },
@@ -93,7 +175,7 @@ const ProgressPage = () => {
       render: slack => <strong>{slack ?? '--'}</strong>
     },
     {
-      title: 'Tiến độ',
+      title: t('Tiến độ'),
       dataIndex: 'progress',
       key: 'progress',
       width: 160,
@@ -115,16 +197,19 @@ const ProgressPage = () => {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tiến độ dự án</h1>
-          <p className="page-subtitle">Phân tích tiến độ và các công việc trên đường găng</p>
+          <h1 className="page-title">{t('Tiến độ dự án')}</h1>
+          <p className="page-subtitle">{t('Phân tích tiến độ và các công việc trên đường găng')}</p>
         </div>
         <div className="progress-page-controls">
           <Select
-            aria-label="Chọn dự án"
+            aria-label={t('Chọn dự án')}
             value={selectedProjectId}
             options={projectOptions}
-            onChange={setSelectedProjectId}
-            placeholder="Chọn dự án"
+            onChange={id => {
+              setSelectedProjectId(id);
+              setSearchParams(id ? { projectId: id } : {});
+            }}
+            placeholder={t('Chọn dự án')}
             style={{ width: 300, maxWidth: '100%' }}
             loading={loadingProjects}
             disabled={loadingProjects || projects.length === 0}
@@ -136,7 +221,7 @@ const ProgressPage = () => {
             loading={loadingSchedule}
             disabled={!selectedProjectId}
           >
-            {schedule ? 'Tính lại công việc găng' : 'Tính công việc găng'}
+            {schedule ? t('Tính lại công việc găng') : t('Tính công việc găng')}
           </Button>
         </div>
       </div>
@@ -146,7 +231,7 @@ const ProgressPage = () => {
           type="error"
           showIcon
           closable
-          message="Không thể tải tiến độ"
+          message={t('Không thể tải tiến độ')}
           description={pageError}
           style={{ marginBottom: 16 }}
           onClose={() => setPageError('')}
@@ -156,7 +241,7 @@ const ProgressPage = () => {
       <Spin spinning={loadingProjects}>
         {!loadingProjects && projects.length === 0 ? (
           <div className="wbs-main-card progress-empty-state">
-            <Empty description="Chưa có dự án để tính tiến độ" />
+            <Empty description={t('Chưa có dự án để tính tiến độ')} />
           </div>
         ) : schedule ? (
           <>
@@ -165,27 +250,27 @@ const ProgressPage = () => {
                 type="warning"
                 showIcon
                 style={{ marginBottom: 16 }}
-                message="Kết quả chưa đầy đủ"
-                description={`${schedule.summary.unscheduledTaskCount} công việc thiếu thời lượng hợp lệ nên chưa được tính vào đường găng.`}
+                message={t('Kết quả chưa đầy đủ')}
+                description={`${schedule.summary.unscheduledTaskCount} ${t('công việc thiếu thời lượng hợp lệ nên chưa được tính vào đường găng.')}`}
               />
             )}
 
             <div className="critical-path-summary progress-summary">
               <div className="critical-path-metrics">
                 <div>
-                  <span>Tổng công việc</span>
+                  <span>{t('Tổng công việc')}</span>
                   <strong>{schedule.summary?.totalTasks ?? 0}</strong>
                 </div>
                 <div>
-                  <span>Công việc găng</span>
+                  <span>{t('Công việc găng')}</span>
                   <strong>{schedule.summary?.criticalTasksCount ?? criticalTasks.length}</strong>
                 </div>
                 <div>
-                  <span>Thời lượng đường găng</span>
-                  <strong>{schedule.summary?.projectDuration ?? 0} ngày</strong>
+                  <span>{t('Thời lượng đường găng')}</span>
+                  <strong>{schedule.summary?.projectDuration ?? 0} {t('ngày')}</strong>
                 </div>
                 <div>
-                  <span>Số đường găng</span>
+                  <span>{t('Số đường găng')}</span>
                   <strong>{schedule.summary?.criticalPathCount ?? '0'}</strong>
                 </div>
               </div>
@@ -196,12 +281,21 @@ const ProgressPage = () => {
               baselineTasks={schedule.baselineTasks || []}
               baselineCapturedAt={schedule.baselineCapturedAt}
             />
+            <section className="wbs-main-card gantt-section">
+              <GanttChart
+                tasks={scheduledTasks}
+                schedule={schedule}
+                scheduleError={pageError}
+                loading={loadingSchedule}
+                renderTooltip={renderCpmTooltip}
+              />
+            </section>
 
             <section className="wbs-main-card progress-table-section">
               <div className="wbs-card-header">
                 <div className="wbs-card-title-box">
-                  <span className="wbs-card-title">Bảng tiến độ công việc găng</span>
-                  <span className="wbs-card-subtitle">Critical Path Progress</span>
+                  <span className="wbs-card-title">{t('Bảng tiến độ công việc găng')}</span>
+                  <span className="wbs-card-subtitle">{t('Critical Path Progress')}</span>
                 </div>
               </div>
               <Table
@@ -211,13 +305,14 @@ const ProgressPage = () => {
                 pagination={false}
                 size="middle"
                 scroll={{ x: 1000 }}
-                locale={{ emptyText: <Empty description="Chưa có công việc găng trong dự án này" /> }}
+                locale={{ emptyText: <Empty description={t('Chưa có công việc găng trong dự án này')} /> }}
               />
             </section>
+
           </>
         ) : (
           <div className="wbs-main-card progress-empty-state">
-            <Empty description={selectedProjectId ? 'Đang tải kết quả tiến độ...' : 'Chọn dự án để xem tiến độ'} />
+            <Empty description={selectedProjectId ? t('Đang tải kết quả tiến độ...') : t('Chọn dự án để xem tiến độ')} />
           </div>
         )}
       </Spin>

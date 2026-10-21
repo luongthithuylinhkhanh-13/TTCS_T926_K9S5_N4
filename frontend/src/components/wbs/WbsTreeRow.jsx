@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Progress, Dropdown, Button, Image } from 'antd';
+import { Tag, Progress, Dropdown, Button } from 'antd';
 import {
   RightOutlined,
   DownOutlined,
@@ -10,9 +10,11 @@ import {
   EyeOutlined,
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useLocale } from '../../utils/LocaleContext';
 
 const WbsTreeRow = ({
   node,
@@ -26,20 +28,21 @@ const WbsTreeRow = ({
   onEditNode,
   onDeleteNode
 }) => {
+  const { t } = useLocale();
   const hasChildren = node.children && node.children.length > 0;
 
   // Status mapping helper
   const renderStatusTag = (status) => {
     switch (status) {
       case 'completed':
-        return <Tag color="success">Hoàn thành</Tag>;
+        return <Tag color="success">{t('Hoàn thành')}</Tag>;
       case 'in_progress':
-        return <Tag color="processing">Đang thực hiện</Tag>;
+        return <Tag color="processing">{t('Đang thực hiện')}</Tag>;
       case 'paused':
-        return <Tag color="warning">Tạm dừng</Tag>;
+        return <Tag color="warning">{t('Tạm dừng')}</Tag>;
       case 'not_started':
       default:
-        return <Tag color="default">Chưa bắt đầu</Tag>;
+        return <Tag color="default">{t('Chưa bắt đầu')}</Tag>;
     }
   };
 
@@ -64,19 +67,19 @@ const WbsTreeRow = ({
     {
       key: 'view',
       icon: <EyeOutlined />,
-      label: 'Xem chi tiết',
+      label: t('Xem chi tiết'),
       onClick: () => onViewDetails(node)
     },
     {
       key: 'add_child',
       icon: <PlusOutlined />,
-      label: 'Thêm công việc con',
+      label: t('Thêm công việc con'),
       onClick: () => onAddChild(node)
     },
     {
       key: 'edit',
       icon: <EditOutlined />,
-      label: 'Chỉnh sửa',
+      label: t('Chỉnh sửa'),
       onClick: () => onEditNode(node)
     },
     {
@@ -85,7 +88,7 @@ const WbsTreeRow = ({
     {
       key: 'delete',
       icon: <DeleteOutlined />,
-      label: 'Xóa',
+      label: t('Xóa'),
       danger: true,
       onClick: () => onDeleteNode(node)
     }
@@ -129,25 +132,69 @@ const WbsTreeRow = ({
 
       {/* NGƯỜI PHỤ TRÁCH COLUMN */}
       <td className="tree-cell">
-        {node.assignee ? (
-          <div className="assignee-box">
-            <div className="assignee-avatar">
-              {node.assignee.initials || 'NV'}
+        <div className="assignee-column">
+          {node.assignee ? (
+            <div className="assignee-box">
+              <div className="assignee-avatar">
+                {node.assignee.initials || 'NV'}
+              </div>
+              <span className="assignee-name">{node.assignee.name}</span>
             </div>
-            <span className="assignee-name">{node.assignee.name}</span>
-          </div>
-        ) : (
-          <span style={{ color: '#94A3B8', fontSize: 13, italic: 'true' }}>
-            {node.type === 'task' ? 'Chưa phân công' : '--'}
+          ) : node.type === 'task' ? (
+            !node.assignedTeamName && (
+              <span style={{ color: '#94A3B8', fontSize: 13, fontStyle: 'italic' }}>
+                {t('Chưa phân công')}
+              </span>
+            )
+          ) : (
+            <span style={{ color: '#94A3B8', fontSize: 13 }}>--</span>
+          )}
+          {node.assignedTeamName && (
+            <Tag color="blue" className="assigned-team-tag">
+              <TeamOutlined /> {node.assignedTeamName}
+            </Tag>
+          )}
+        </div>
+      </td>
+
+      {/* PLANNED START COLUMN */}
+      <td className="tree-cell">
+        {node.startDate ? (
+          <span style={{ fontSize: 13, color: '#475569' }}>
+            {dayjs(node.startDate).format('DD/MM/YY')}
           </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
         )}
       </td>
 
-      {/* THỜI GIAN COLUMN */}
+      {/* PLANNED END COLUMN */}
       <td className="tree-cell">
-        {node.startDate && node.endDate ? (
+        {node.endDate ? (
           <span style={{ fontSize: 13, color: '#475569' }}>
-            {dayjs(node.startDate).format('DD/MM/YY')} - {dayjs(node.endDate).format('DD/MM/YY')}
+            {dayjs(node.endDate).format('DD/MM/YY')}
+          </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
+        )}
+      </td>
+
+      {/* ACTUAL START COLUMN */}
+      <td className="tree-cell">
+        {node.actualStartDate ? (
+          <span style={{ fontSize: 13, color: '#0f766e' }}>
+            {dayjs(node.actualStartDate).format('DD/MM/YY')}
+          </span>
+        ) : (
+          <span style={{ color: '#94A3B8' }}>--</span>
+        )}
+      </td>
+
+      {/* ACTUAL END COLUMN */}
+      <td className="tree-cell">
+        {node.actualEndDate ? (
+          <span style={{ fontSize: 13, color: '#0f766e' }}>
+            {dayjs(node.actualEndDate).format('DD/MM/YY')}
           </span>
         ) : (
           <span style={{ color: '#94A3B8' }}>--</span>
@@ -163,56 +210,15 @@ const WbsTreeRow = ({
       <td className="tree-cell" style={{ width: 140 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Progress
-            percent={node.progress || 0}
+            percent={node.progressPercent ?? node.progress ?? 0}
             size="small"
             showInfo={false}
-            strokeColor={node.progress === 100 ? '#16A34A' : '#2563EB'}
+            strokeColor={(node.progressPercent ?? node.progress ?? 0) === 100 ? '#16A34A' : '#2563EB'}
           />
           <span style={{ fontSize: 12, fontWeight: 600, minWidth: 32, color: '#334155' }}>
-            {node.progress || 0}%
+            {node.progressPercent ?? node.progress ?? 0}%
           </span>
         </div>
-      </td>
-
-      {/* HÌNH ẢNH COLUMN */}
-      <td className="tree-cell" style={{ width: 60, textAlign: 'center' }}>
-        {node.images && node.images.length > 0 ? (
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <Image
-              src={
-                typeof node.images[0] === 'string'
-                  ? `/images/construction/${node.images[0]}`
-                  : node.images[0]?.url
-              }
-              width={44}
-              height={34}
-              style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={false}
-            />
-            {node.images.length > 1 && (
-              <span style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                color: '#FFF',
-                fontSize: 10,
-                padding: '2px 4px',
-                borderRadius: '0 4px 0 4px'
-              }}>
-                +{node.images.length - 1}
-              </span>
-            )}
-          </div>
-        ) : (
-          <Image
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AARwMD/UUAKQAAAABJRU5ErkJggg=="
-            width={44}
-            height={34}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            preview={false}
-          />
-        )}
       </td>
 
       {/* THAO TÁC COLUMN */}

@@ -28,6 +28,14 @@ export const logout = () => {
   return apiClient.post('/api/auth/logout').then(response => response.data);
 };
 
+export const getCurrentProfile = () => {
+  return apiClient.get('/api/auth/me').then(response => response.data);
+};
+
+export const updateCurrentProfile = profile => {
+  return apiClient.put('/api/auth/me', profile).then(response => response.data);
+};
+
 export const createWbsItem = (projectId, item) => {
   return apiClient.post(`/api/projects/${projectId}/tasks`, item).then(response => response.data);
 };

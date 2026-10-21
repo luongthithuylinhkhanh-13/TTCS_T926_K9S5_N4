@@ -1,6 +1,7 @@
 import React from 'react';
 import { Empty } from 'antd';
 import WbsTreeRow from './WbsTreeRow';
+import { useLocale } from '../../utils/LocaleContext';
 
 const WbsTreeTable = ({ 
   nodes, 
@@ -13,10 +14,11 @@ const WbsTreeTable = ({
   onEditNode,
   onDeleteNode
 }) => {
+  const { t } = useLocale();
   if (!nodes || nodes.length === 0) {
     return (
       <div style={{ padding: '40px 0', textAlign: 'center' }}>
-        <Empty description="Không tìm thấy công việc phù hợp với bộ lọc" />
+        <Empty description={t('Không tìm thấy công việc phù hợp với bộ lọc')} />
       </div>
     );
   }
@@ -57,13 +59,15 @@ const WbsTreeTable = ({
       <table className="tree-table">
         <thead className="tree-table-header">
           <tr>
-            <th style={{ width: '40%' }}>CÔNG VIỆC</th>
-            <th>NGƯỜI PHỤ TRÁCH</th>
-            <th>THỜI GIAN</th>
-            <th>TRẠNG THÁI</th>
-            <th>TIẾN ĐỘ</th>
-            <th style={{ width: '8%', textAlign: 'center' }}>HÌNH ẢNH</th>
-            <th style={{ width: '4%', textAlign: 'center' }}>THAO TÁC</th>
+            <th style={{ width: '36%' }}>{t('CÔNG VIỆC')}</th>
+            <th>{t('NGƯỜI PHỤ TRÁCH')}</th>
+            <th>{t('NGÀY BẮT ĐẦU KẾ HOẠCH')}</th>
+            <th>{t('NGÀY KẾT THÚC KẾ HOẠCH')}</th>
+            <th>{t('NGÀY BẮT ĐẦU THỰC TẾ')}</th>
+            <th>{t('NGÀY KẾT THÚC THỰC TẾ')}</th>
+            <th>{t('TRẠNG THÁI')}</th>
+            <th style={{ width: '12%' }}>{t('TIẾN ĐỘ THỰC TẾ')}</th>
+            <th style={{ width: 60, textAlign: 'center' }}>{t('THAO TÁC')}</th>
           </tr>
         </thead>
         <tbody>

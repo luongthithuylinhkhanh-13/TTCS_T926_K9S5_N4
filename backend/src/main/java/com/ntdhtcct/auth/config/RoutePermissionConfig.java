@@ -23,17 +23,110 @@ public class RoutePermissionConfig {
     }
 
     private void initDefaultRules() {
-        // Quản lý thành viên: Thêm, sửa role, xóa thành viên yêu cầu ADMIN hoặc PROJECT_MANAGER
+        // ADMIN management routes
+        addRule(HttpMethod.GET, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.POST, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.PUT, "/api/admin/**", new String[]{"ADMIN"});
+        addRule(HttpMethod.DELETE, "/api/admin/**", new String[]{"ADMIN"});
+
         addRule(HttpMethod.POST, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/members/invitations", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.PUT, "/api/projects/*/members/*/role", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.DELETE, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
+        // S-44: Only project managers can review payment requests.
+        addRule(HttpMethod.GET, "/api/projects/*/payment-requests", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.GET, "/api/projects/*/payment-requests/my-requests", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/payment-requests", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/reject", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // Xem vai trò của chính mình trong dự án: Cho phép mọi thành viên trong dự án
+        addRule(HttpMethod.GET, "/api/projects/*/members/me", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_MANAGER", "SITE_ENGINEER", "WORKER", "STAFF", "CUSTOMER", "VIEWER"});
         // Xem danh sách thành viên dự án: Mọi thành viên có vai trò trong dự án
         addRule(HttpMethod.GET, "/api/projects/*/members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
         addRule(HttpMethod.GET, "/api/projects/*/members/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "VIEWER"});
 
         // Route xem thông tin dự án
         addRule(HttpMethod.GET, "/api/projects/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // S-41: Cấu hình vị trí và bán kính công trường
+        addRule(HttpMethod.GET, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/site-location", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // WBS, schedule and critical-path read routes
+        addRule(HttpMethod.GET, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/schedule", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/critical-path", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/categories/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // WBS task creation is managed; task updates also allow field engineers to record progress.
+        addRule(HttpMethod.POST, "/api/projects/*/wbs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/tasks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/tasks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+        addRule(HttpMethod.DELETE, "/api/projects/*/wbs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+
+        // T-43, T-44, T-45 (NTDHTCT-166): Milestones và cảnh báo mốc tiến độ
+        addRule(HttpMethod.GET, "/api/projects/*/milestones", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestones/warnings", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/milestone-warnings", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/milestones", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/milestones/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // S-23 (T-61, T-62, T-63): Diary entries & Image uploads/views
+        addRule(HttpMethod.POST, "/api/projects/*/diary-entries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/diary-entries/*/images/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/diary-entries/*/images/*/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        addRule(HttpMethod.GET, "/api/projects/*/crew-members", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/tasks/*/team-assignment", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.GET, "/api/projects/*/tasks/*/team-assignment/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // S-24 (T-64): Khóa sổ nhật ký công trường theo ngày
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/locks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/unlocks", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/locks", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/locks/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+
+        // S-30 (NTDHTCT-214, NTDHTCT-255, NTDHTCT-256): Hàng đợi đồng bộ nhật ký công trường tự gửi khi có mạng
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries/batch-sync", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/site-diaries", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/site-diaries/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+        // S-36 (NTDHTCT-220, T-83, T-84, T-85): Lập phiếu nghiệm thu theo đợt
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-reports", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/acceptance-reports/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // S-39: Phiếu nghiệm thu và lịch sử hoạt động
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/acceptance-records/*/history", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/acceptance-records/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
+        addRule(HttpMethod.POST, "/api/projects/*/acceptance-records/*/return", new String[]{"ADMIN", "PROJECT_MANAGER"});
+
+        // S-46 (NTDHTCT-236, T-91, T-92, T-93): Nhập dự toán theo hạng mục lá, cộng dồn lên hạng mục cha
+        addRule(HttpMethod.GET, "/api/projects/*/budget", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/budget/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.GET, "/api/projects/*/budget/summary", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/budget/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/budget/batch", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {

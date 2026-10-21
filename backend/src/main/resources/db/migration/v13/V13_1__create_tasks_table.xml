@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- 1. Tạo bảng tasks -->
+    <changeSet id="V13.1-create-tasks" author="NTDHTCT-133">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <and>
+                    <tableExists tableName="tasks"/>
+                    <columnExists tableName="tasks" columnName="id"/>
+                    <columnExists tableName="tasks" columnName="category_id"/>
+                    <columnExists tableName="tasks" columnName="name"/>
+                    <columnExists tableName="tasks" columnName="duration"/>
+                    <columnExists tableName="tasks" columnName="created_at"/>
+                    <columnExists tableName="tasks" columnName="updated_at"/>
+                    <primaryKeyExists tableName="tasks"/>
+                    <foreignKeyConstraintExists foreignKeyTableName="tasks" foreignKeyName="fk_tasks_category"/>
+                    <indexExists tableName="tasks" indexName="idx_tasks_category_id"/>
+                    <sqlCheck expectedResult="1">
+                        SELECT COUNT(1)
+                        FROM information_schema.table_constraints
+                        WHERE table_schema = current_schema()
+                          AND LOWER(table_name) = 'tasks'
+                          AND LOWER(constraint_name) = 'chk_tasks_duration_positive'
+                          AND UPPER(constraint_type) = 'CHECK'
+                    </sqlCheck>
+                </and>
+            </not>
+        </preConditions>
+
+        <createTable tableName="tasks">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="category_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="duration" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="tasks"
+            baseColumnNames="category_id"
+            referencedTableName="wbs_items"
+            referencedColumnNames="id"
+            constraintName="fk_tasks_category"
+            onDelete="CASCADE"/>
+
+        <sql>
+            ALTER TABLE tasks
+            ADD CONSTRAINT chk_tasks_duration_positive CHECK (duration &gt; 0)
+        </sql>
+
+        <createIndex tableName="tasks" indexName="idx_tasks_category_id">
+            <column name="category_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="tasks"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

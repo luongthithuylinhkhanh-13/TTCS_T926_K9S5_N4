@@ -52,7 +52,7 @@ class UserRegistrationTest {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         User registered = userService.register(
-                "  Example Person  ", " Person@Example.com ", "password123");
+            "  Example Person  ", " Person@Example.com ", "password123");
 
         assertThat(registered.getEmail()).isEqualTo("person@example.com");
         assertThat(registered.getFullName()).isEqualTo("Example Person");

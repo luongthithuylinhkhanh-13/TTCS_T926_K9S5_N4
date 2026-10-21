@@ -4,14 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { BuildOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Progress } from 'antd';
 import LoginForm from '../components/auth/LoginForm';
-import { isAuthenticated } from '../utils/auth';
+import { isAuthenticated, getAuthUser } from '../utils/auth';
+import { getUiPreferences, saveUiPreferences } from '../utils/uiPreferences';
+import { LocaleProvider, useLocale } from '../utils/LocaleContext';
 
-const LoginPage = () => {
+const LoginPageContent = () => {
+  const { t } = useLocale();
+
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/wbs');
+      navigate('/dashboard');
     }
   }, [navigate]);
 
@@ -34,9 +38,22 @@ const LoginPage = () => {
 
       {/* Footer */}
       <div className="login-footer">
-        © 2026 CONSTRUCTFLOW. Nền tảng điều hành thi công công trình.
+        © 2026 CONSTRUCTFLOW. {t('Nền tảng điều hành thi công công trình.')}
       </div>
     </div>
+  );
+};
+
+const LoginPage = () => {
+  const preferences = getUiPreferences();
+  useEffect(() => {
+  saveUiPreferences(preferences);
+  }, [preferences.theme, preferences.language]);
+
+  return (
+  <LocaleProvider language={preferences.language}>
+    <LoginPageContent />
+  </LocaleProvider>
   );
 };
 

@@ -3,9 +3,11 @@ package com.ntdhtcct.domain.role;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.repository.RoleRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(1)
 public class RoleSeeder implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
@@ -17,6 +19,7 @@ public class RoleSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         createRoleIfNotExists("ADMIN");
+        createRoleIfNotExists("PROJECT_MANAGER");
         createRoleIfNotExists("STAFF");
         createRoleIfNotExists("CUSTOMER");
     }

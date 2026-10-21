@@ -3,9 +3,14 @@ package com.ntdhtcct.service.impl;
 import com.ntdhtcct.common.exception.BadRequestException;
 import com.ntdhtcct.common.exception.ResourceNotFoundException;
 import com.ntdhtcct.dto.AddMemberRequest;
+import com.ntdhtcct.dto.AvailableUserResponse;
+import com.ntdhtcct.dto.InviteProjectMemberRequest;
+import com.ntdhtcct.dto.ProjectMemberInviteResponse;
 import com.ntdhtcct.dto.ProjectMemberResponse;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.domain.project.ProjectInvitation;
+import com.ntdhtcct.domain.project.ProjectInvitationRepository;
 import com.ntdhtcct.entity.ProjectMember;
 import com.ntdhtcct.entity.Role;
 import com.ntdhtcct.entity.User;
@@ -16,12 +21,16 @@ import com.ntdhtcct.repository.UserRepository;
 import com.ntdhtcct.service.ProjectMemberService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,7 +38,8 @@ import java.util.stream.Collectors;
  * T-04.4: Triển khai logic gán và cập nhật Role
  * cho User trong Project.
  */
-@Service
+@Primary
+@Service("projectMemberService")
 @Transactional
 public class ProjectMemberServiceImpl implements ProjectMemberService {
 
@@ -40,17 +50,20 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectInvitationRepository projectInvitationRepository;
 
     public ProjectMemberServiceImpl(
             ProjectRepository projectRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            ProjectInvitationRepository projectInvitationRepository
     ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.projectInvitationRepository = projectInvitationRepository;
     }
 
     @Override
@@ -64,6 +77,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 projectId,
                 request.getRoleCode()
         );
+
+        String roleCode = request.getRoleCode() != null ? request.getRoleCode().trim().toUpperCase(Locale.ROOT) : "";
+        if ("ADMIN".equals(roleCode)) {
+            throw new BadRequestException(
+                    "INVALID_PROJECT_ROLE",
+                    "Không thể gán vai trò Quản trị hệ thống (ADMIN) trong phạm vi dự án."
+            );
+        }
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() ->
@@ -82,8 +103,22 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         )
                 );
 
+        if (user.getStatus() != null && !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new BadRequestException(
+                    "USER_NOT_ACTIVE",
+                    "Chỉ có thể thêm tài khoản đang ở trạng thái Hoạt động (ACTIVE) vào dự án."
+            );
+        }
+
+        if ("admin@admin.com".equalsIgnoreCase(user.getEmail())) {
+            throw new BadRequestException(
+                    "INVALID_PROJECT_MEMBER",
+                    "Tài khoản Quản trị hệ thống (admin@admin.com) không thể được thêm làm thành viên dự án thông thường."
+            );
+        }
+
         Role role = roleRepository
-                .findByName(request.getRoleCode().trim().toUpperCase())
+                .findByName(roleCode)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "ROLE_NOT_FOUND",
@@ -107,8 +142,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
             if ("ACTIVE".equalsIgnoreCase(existing.getStatus())) {
                 throw new BadRequestException(
                         "MEMBER_ALREADY_EXISTS",
-                        "Người dùng đã là thành viên chính thức "
-                                + "của dự án này"
+                        "Thành viên đã thuộc dự án."
                 );
             }
 
@@ -131,6 +165,94 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 projectMemberRepository.save(memberToSave);
 
         return ProjectMemberResponse.fromEntity(saved);
+    }
+
+    @Override
+    public ProjectMemberInviteResponse inviteMemberByEmail(
+            UUID projectId,
+            InviteProjectMemberRequest request
+    ) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "PROJECT_NOT_FOUND",
+                                "Không tìm thấy dự án với ID: " + projectId
+                        )
+                );
+
+        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String roleCode = request.getRoleCode().trim().toUpperCase(Locale.ROOT);
+
+        if ("ADMIN".equals(roleCode)) {
+            throw new BadRequestException(
+                    "INVALID_PROJECT_ROLE",
+                    "Không thể gán vai trò Quản trị hệ thống (ADMIN) trong phạm vi dự án."
+            );
+        }
+        Role role = roleRepository.findByName(roleCode)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "ROLE_NOT_FOUND",
+                                "Vai trò không tồn tại: " + roleCode
+                        )
+                );
+
+        Optional<User> existingUser = userRepository.findByEmailIgnoreCase(email);
+        if (existingUser.isPresent()) {
+            addMemberToProject(
+                    projectId,
+                    new AddMemberRequest(existingUser.get().getId(), roleCode)
+            );
+            return new ProjectMemberInviteResponse(
+                    "ADDED",
+                    email,
+                    roleCode,
+                    existingUser.get().getId(),
+                    null,
+                    null
+            );
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        Optional<ProjectInvitation> existingInvitation =
+                projectInvitationRepository.findByProjectIdAndEmailIgnoreCaseAndStatus(
+                        projectId,
+                        email,
+                        "PENDING"
+                );
+        if (existingInvitation.isPresent()) {
+            ProjectInvitation invitation = existingInvitation.get();
+            if (invitation.getExpiresAt().isAfter(now)) {
+                throw new BadRequestException(
+                        "INVITATION_ALREADY_PENDING",
+                        "Đã có lời mời đang chờ cho email này"
+                );
+            }
+            invitation.setStatus("EXPIRED");
+            projectInvitationRepository.save(invitation);
+        }
+
+        String token = UUID.randomUUID().toString();
+        OffsetDateTime expiresAt = now.plusDays(7);
+        projectInvitationRepository.save(
+                new ProjectInvitation(
+                        project.getId(),
+                        email,
+                        role.getName(),
+                        token,
+                        "PENDING",
+                        expiresAt
+                )
+        );
+
+        return new ProjectMemberInviteResponse(
+                "INVITED",
+                email,
+                role.getName(),
+                null,
+                token,
+                expiresAt
+        );
     }
 
     @Override
@@ -159,12 +281,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         )
                 );
 
+        String newRoleCode = request.getNewRoleName() != null ? request.getNewRoleName().trim().toUpperCase(Locale.ROOT) : "";
+        if ("ADMIN".equals(newRoleCode)) {
+            throw new BadRequestException(
+                    "INVALID_PROJECT_ROLE",
+                    "Không thể gán vai trò Quản trị hệ thống (ADMIN) trong phạm vi dự án."
+            );
+        }
+
         Role newRole = roleRepository
-                .findByName(
-                        request.getNewRoleName()
-                                .trim()
-                                .toUpperCase()
-                )
+                .findByName(newRoleCode)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "ROLE_NOT_FOUND",
@@ -251,5 +377,50 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 );
 
         return ProjectMemberResponse.fromEntity(member);
+    }
+
+    @Override
+    public boolean hasAccess(UUID projectId, UUID userId) {
+        return projectMemberRepository.existsByProjectIdAndUserIdAndStatus(
+                projectId,
+                userId,
+                "ACTIVE"
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailableUserResponse> getAvailableUsers(UUID projectId) {
+        if (!projectRepository.existsById(projectId)) {
+            throw new ResourceNotFoundException(
+                    "PROJECT_NOT_FOUND",
+                    "Không tìm thấy dự án với ID: " + projectId
+            );
+        }
+
+        Set<UUID> currentMemberUserIds = projectMemberRepository
+                .findByProjectId(projectId)
+                .stream()
+                .filter(m -> "ACTIVE".equalsIgnoreCase(m.getStatus()))
+                .filter(m -> m.getUser() != null)
+                .map(m -> m.getUser().getId())
+                .collect(Collectors.toSet());
+
+        return userRepository.findAll().stream()
+                .filter(u -> "ACTIVE".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> !"admin@admin.com".equalsIgnoreCase(u.getEmail()))
+                .map(u -> new AvailableUserResponse(
+                        u.getId(),
+                        u.getEmail(),
+                        u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : u.getEmail(),
+                        u.getStatus(),
+                        u.getRole() != null ? u.getRole().getName() : null,
+                        currentMemberUserIds.contains(u.getId())
+                ))
+                .sorted(Comparator.comparing(
+                        AvailableUserResponse::fullName,
+                        Comparator.nullsLast(String::compareToIgnoreCase)
+                ))
+                .collect(Collectors.toList());
     }
 }

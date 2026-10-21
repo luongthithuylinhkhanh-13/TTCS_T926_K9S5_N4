@@ -19,6 +19,14 @@ export const setAuthUser = (user, remember = false) => {
   }
 };
 
+export const updateAuthUser = updates => {
+  const current = getAuthUser();
+  if (!current) return;
+
+  const remember = Boolean(localStorage.getItem(AUTH_KEY));
+  setAuthUser({ ...current, ...updates }, remember);
+};
+
 /**
  * Lấy thông tin người dùng đã đăng nhập.
  * Kiểm tra cả localStorage và sessionStorage.
@@ -27,9 +35,9 @@ export const setAuthUser = (user, remember = false) => {
  */
 export const getAuthUser = () => {
   try {
-    const data =
-      localStorage.getItem(AUTH_KEY) ||
-      sessionStorage.getItem(AUTH_KEY);
+    const local = typeof localStorage !== 'undefined' ? localStorage.getItem(AUTH_KEY) : null;
+    const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(AUTH_KEY) : null;
+    const data = local || session;
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error reading auth state:', error);

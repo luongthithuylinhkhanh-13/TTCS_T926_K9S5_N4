@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- S-35 (NTDHTCT-219): Khai báo khối lượng, đơn vị tính và đơn giá -->
+    <!-- T-81 (NTDHTCT-266): Lưu và cập nhật thông tin khối lượng công việc -->
+    <changeSet id="V19.0-add-unit-price-to-wbs-items" author="NTDHTCT-266">
+        <addColumn tableName="wbs_items">
+            <column name="unit_price" type="DECIMAL(15,2)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="wbs_items" columnName="unit_price"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="V19.0-add-quantity-unit-price-to-tasks" author="NTDHTCT-266">
+        <addColumn tableName="tasks">
+            <column name="quantity" type="DECIMAL(15,2)"/>
+            <column name="unit" type="VARCHAR(50)"/>
+            <column name="unit_price" type="DECIMAL(15,2)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="tasks" columnName="quantity"/>
+            <dropColumn tableName="tasks" columnName="unit"/>
+            <dropColumn tableName="tasks" columnName="unit_price"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

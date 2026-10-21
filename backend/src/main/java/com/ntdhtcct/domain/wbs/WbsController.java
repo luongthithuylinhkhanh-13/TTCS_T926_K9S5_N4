@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.domain.project.Project;
+import com.ntdhtcct.auth.service.AuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,15 +19,18 @@ public class WbsController {
 
     private final WbsService wbsService;
     private final AuthTokenService authTokenService;
+    private final AuthorizationService authorizationService;
     private final ObjectMapper objectMapper;
 
     public WbsController(
             WbsService wbsService,
             AuthTokenService authTokenService,
+            AuthorizationService authorizationService,
             ObjectMapper objectMapper
     ) {
         this.wbsService = wbsService;
         this.authTokenService = authTokenService;
+        this.authorizationService = authorizationService;
         this.objectMapper = objectMapper;
     }
 
@@ -34,11 +39,14 @@ public class WbsController {
             @RequestHeader(value = "Authorization", required = false)
             String authorization
     ) {
-        if (!isAuthorized(authorization)) {
-            return unauthorized();
+        UUID userId = authenticatedUserId(authorization);
+        if (userId == null) {
+            return unauthorized(null);
         }
 
-        List<Project> projects = wbsService.getProjects();
+        List<Project> projects = authorizationService.canViewAllProjects(userId)
+                ? wbsService.getProjects()
+                : wbsService.getProjectsForUser(userId);
         return ResponseEntity.ok(projects);
     }
 
@@ -49,7 +57,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -70,7 +81,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -89,7 +103,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -109,7 +126,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -131,7 +151,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -164,13 +187,19 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
             return ResponseEntity.ok(
                     wbsService.update(projectId, itemId, item)
             );
+        } catch (WbsConflictException | ObjectOptimisticLockingFailureException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponse(false, e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(
                     new ApiResponse(false, e.getMessage())
@@ -197,7 +226,10 @@ public class WbsController {
             String authorization
     ) {
         if (!isAuthorized(authorization)) {
-            return unauthorized();
+            return unauthorized(null);
+        }
+        if (!checkAccess(projectId, authorization)) {
+            return forbidden();
         }
 
         try {
@@ -213,21 +245,54 @@ public class WbsController {
         }
     }
 
-    private boolean isAuthorized(String authorization) {
-        if (authorization == null
-                || !authorization.startsWith("Bearer ")) {
+    private boolean checkAccess(UUID projectId, String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
             return false;
         }
-
-        String token = authorization.substring(7);
-        return authTokenService.isTokenValid(token);
+        UUID userId = authenticatedUserId(authorization);
+        if (userId == null) {
+            return false;
+        }
+        try {
+            authorizationService.checkProjectAccess(projectId, userId, null);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
-    private ResponseEntity<ApiResponse> unauthorized() {
+    private boolean isAuthorized(String authorization) {
+        return authenticatedUserId(authorization) != null;
+    }
+
+    private UUID authenticatedUserId(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authorization.substring(7).trim();
+        if (!authTokenService.isTokenValid(token)) {
+            return null;
+        }
+        try {
+            return authTokenService.getUserIdFromToken(token);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+    private ResponseEntity<ApiResponse> unauthorized(String message) {
         return ResponseEntity.status(401).body(
                 new ApiResponse(
                         false,
-                        "Token không hợp lệ hoặc đã hết hạn"
+                        message != null ? message : "Token không hợp lệ hoặc đã hết hạn"
+                )
+        );
+    }
+
+    private ResponseEntity<ApiResponse> forbidden() {
+        return ResponseEntity.status(403).body(
+                new ApiResponse(
+                        false,
+                        "Bạn không có quyền truy cập vào dự án này"
                 )
         );
     }

@@ -139,8 +139,8 @@ class TopologicalSorterTest {
                 .toList();
         assertEquals(4, sortedIds.size());
         // A must be first, D must be last
-        assertEquals(a, sortedIds.getFirst());
-        assertEquals(d, sortedIds.getLast());
+        assertEquals(a, sortedIds.get(0));
+        assertEquals(d, sortedIds.get(sortedIds.size() - 1));
         // B and C must appear before D
         assertTrue(sortedIds.indexOf(b) < sortedIds.indexOf(d));
         assertTrue(sortedIds.indexOf(c) < sortedIds.indexOf(d));
@@ -332,7 +332,7 @@ class TopologicalSorterTest {
         assertFalse(result.isComplete());
         // D has inDegree=0 so it gets sorted; A,B,C are stuck in cycle
         assertEquals(1, result.sortedItems().size());
-        assertEquals(d, result.sortedItems().getFirst().getId());
+        assertEquals(d, result.sortedItems().get(0).getId());
     }
 
     // ------------------------------------------------------------------

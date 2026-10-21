@@ -13,6 +13,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -53,17 +57,40 @@ public class WbsItem {
     @Column(name = "assignee_initials", length = 20)
     private String assigneeInitials;
 
+    @Column(name = "assigned_team_member_id")
+    private UUID assignedTeamMemberId;
+
+    @Column(name = "assigned_team_name", length = 255)
+    private String assignedTeamName;
+
     @Column(name = "status", length = 50)
     private String status;
 
     @Column(name = "progress", nullable = false)
     private int progress = 0;
 
+    @Column(name = "total_volume")
+    private Double totalVolume;
+
+    @Column(name = "unit", length = 50)
+    private String unit;
+
+    @Column(name = "unit_price")
+    @JdbcTypeCode(SqlTypes.NUMERIC)
+    private Double unitPrice;
+
+
     @Column(name = "start_date")
     private LocalDate startDate;
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    @Column(name = "actual_start_date")
+    private LocalDate actualStartDate;
+
+    @Column(name = "actual_end_date")
+    private LocalDate actualEndDate;
 
     @Column(name = "duration")
     private Integer duration;
@@ -86,12 +113,27 @@ public class WbsItem {
     @Column(name = "is_critical", nullable = false)
     private boolean critical;
 
+    @Transient
+    private LocalDate calculatedStartDate;
+
+    @Transient
+    private LocalDate calculatedEndDate;
+
+    @Transient
+    private Integer scheduleVarianceDays;
+
+    @Transient
+    private Integer startDelayDays;
+
+    @Transient
+    private boolean delayedStart;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "task_dependencies",
-            joinColumns = @JoinColumn(name = "successor_id")
+            name = "wbs_item_predecessors",
+            joinColumns = @JoinColumn(name = "wbs_item_id")
     )
-        @Column(name = "predecessor_id", nullable = false)
+    @Column(name = "predecessor_id", nullable = false)
     private Set<UUID> predecessorIds = new HashSet<>();
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -106,7 +148,11 @@ public class WbsItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected WbsItem() {
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
+    public WbsItem() {
     }
 
     @PrePersist
@@ -123,6 +169,10 @@ public class WbsItem {
 
     public UUID getId() {
         return id;
+    }
+
+    void setId(UUID id) {
+        this.id = id;
     }
 
     public UUID getProjectId() {
@@ -189,6 +239,22 @@ public class WbsItem {
         this.assigneeInitials = assigneeInitials;
     }
 
+    public UUID getAssignedTeamMemberId() {
+        return assignedTeamMemberId;
+    }
+
+    public void setAssignedTeamMemberId(UUID assignedTeamMemberId) {
+        this.assignedTeamMemberId = assignedTeamMemberId;
+    }
+
+    public String getAssignedTeamName() {
+        return assignedTeamName;
+    }
+
+    public void setAssignedTeamName(String assignedTeamName) {
+        this.assignedTeamName = assignedTeamName;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -205,6 +271,16 @@ public class WbsItem {
         this.progress = progress;
     }
 
+    @JsonProperty("progressPercent")
+    public int getProgressPercent() {
+        return progress;
+    }
+
+    @JsonProperty("progressPercent")
+    public void setProgressPercent(int progressPercent) {
+        this.progress = progressPercent;
+    }
+
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -219,6 +295,22 @@ public class WbsItem {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public LocalDate getActualStartDate() {
+        return actualStartDate;
+    }
+
+    public void setActualStartDate(LocalDate actualStartDate) {
+        this.actualStartDate = actualStartDate;
+    }
+
+    public LocalDate getActualEndDate() {
+        return actualEndDate;
+    }
+
+    public void setActualEndDate(LocalDate actualEndDate) {
+        this.actualEndDate = actualEndDate;
     }
 
     public Integer getDuration() {
@@ -278,6 +370,47 @@ public class WbsItem {
         this.critical = critical;
     }
 
+    public LocalDate getCalculatedStartDate() {
+        return calculatedStartDate;
+    }
+
+    public void setCalculatedStartDate(LocalDate calculatedStartDate) {
+        this.calculatedStartDate = calculatedStartDate;
+    }
+
+    public LocalDate getCalculatedEndDate() {
+        return calculatedEndDate;
+    }
+
+    public void setCalculatedEndDate(LocalDate calculatedEndDate) {
+        this.calculatedEndDate = calculatedEndDate;
+    }
+
+    public Integer getScheduleVarianceDays() {
+        return scheduleVarianceDays;
+    }
+
+    public void setScheduleVarianceDays(Integer scheduleVarianceDays) {
+        this.scheduleVarianceDays = scheduleVarianceDays;
+    }
+
+    public Integer getStartDelayDays() {
+        return startDelayDays;
+    }
+
+    public void setStartDelayDays(Integer startDelayDays) {
+        this.startDelayDays = startDelayDays;
+    }
+
+    @JsonProperty("delayedStart")
+    public boolean isDelayedStart() {
+        return delayedStart;
+    }
+
+    public void setDelayedStart(boolean delayedStart) {
+        this.delayedStart = delayedStart;
+    }
+
     public Set<UUID> getPredecessorIds() {
         return predecessorIds;
     }
@@ -310,5 +443,55 @@ public class WbsItem {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    public Double getTotalVolume() {
+        return totalVolume;
+    }
+
+    public void setTotalVolume(Double totalVolume) {
+        this.totalVolume = totalVolume;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public Double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(Double unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    @JsonProperty("quantity")
+    public Double getQuantity() {
+        return totalVolume;
+    }
+
+    @JsonProperty("quantity")
+    public void setQuantity(Double quantity) {
+        this.totalVolume = quantity;
+    }
+
+    @JsonProperty("totalPrice")
+    public Double getTotalPrice() {
+        if (totalVolume != null && unitPrice != null) {
+            return Math.round(totalVolume * unitPrice * 100.0) / 100.0;
+        }
+        return null;
     }
 }

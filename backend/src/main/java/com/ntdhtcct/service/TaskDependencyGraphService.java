@@ -53,9 +53,20 @@ public class TaskDependencyGraphService {
                 .map(WbsItem::getId)
                 .collect(Collectors.toSet());
 
-        List<TaskDependency> dependencies =
+        List<com.ntdhtcct.domain.dependency.TaskDependency> persistedDependencies =
                 taskDependencyRepository
                         .findByPredecessorIdInAndSuccessorIdIn(taskIds, taskIds);
+
+        List<com.ntdhtcct.domain.TaskDependency> dependencies = persistedDependencies.stream()
+                .map(dependency -> new com.ntdhtcct.domain.TaskDependency(
+                        dependency.getPredecessorId(),
+                        dependency.getSuccessorId(),
+                        com.ntdhtcct.domain.DependencyType.valueOf(
+                                dependency.getDependencyType().name()
+                        ),
+                        dependency.getLagDays()
+                ))
+                .toList();
 
         return new TaskDependencyGraph(wbsItems, dependencies);
     }

@@ -1,6 +1,7 @@
 package com.ntdhtcct;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ntdhtcct.domain.auth.AuthTokenService;
 import com.ntdhtcct.dto.AddMemberRequest;
 import com.ntdhtcct.dto.UpdateMemberRoleRequest;
 import com.ntdhtcct.entity.ProjectMember;
@@ -21,9 +22,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.UUID;
 
 /**
  * T-04.12: Bộ kiểm thử tích hợp toàn diện cho Authorization & Project Membership RBAC.
@@ -63,6 +68,9 @@ public class AuthorizationIntegrationTest {
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
+    @Autowired
+    private AuthTokenService authTokenService;
+
     private User managerUser;
     private User engineerUser;
     private User workerUser;
@@ -91,10 +99,21 @@ public class AuthorizationIntegrationTest {
         roleViewer = roleRepository.save(new Role("VIEWER"));
 
         // 2. T-04.3: Tạo Users
-        managerUser = userRepository.save(new User("manager_tran", "manager@congtrinh.vn", "Trần Quản Lý"));
-        engineerUser = userRepository.save(new User("engineer_le", "engineer@congtrinh.vn", "Lê Kỹ Sư"));
-        workerUser = userRepository.save(new User("worker_pham", "worker@congtrinh.vn", "Phạm Công Nhân"));
-        outsiderUser = userRepository.save(new User("outsider_nguyen", "outsider@ngoai.vn", "Nguyễn Người Ngoài"));
+        managerUser = new User("manager@congtrinh.vn", "manager123", "Trần Quản Lý");
+        managerUser.setStatus("ACTIVE");
+        managerUser = userRepository.save(managerUser);
+
+        engineerUser = new User("engineer@congtrinh.vn", "engineer123", "Lê Kỹ Sư");
+        engineerUser.setStatus("ACTIVE");
+        engineerUser = userRepository.save(engineerUser);
+
+        workerUser = new User("worker@congtrinh.vn", "worker123", "Phạm Công Nhân");
+        workerUser.setStatus("ACTIVE");
+        workerUser = userRepository.save(workerUser);
+
+        outsiderUser = new User("outsider@ngoai.vn", "outsider123", "Nguyễn Người Ngoài");
+        outsiderUser.setStatus("ACTIVE");
+        outsiderUser = userRepository.save(outsiderUser);
 
         // 3. T-04.3: Tạo Projects
         projectA = projectRepository.save(new Project("DA-001", "Dự án Cầu Vàm Cống Mới"));
@@ -107,12 +126,12 @@ public class AuthorizationIntegrationTest {
     }
 
     @Test
-    @DisplayName("T-04.4: PROJECT_MANAGER gán Role cho User mới vào Project thành công -> HTTP 201")
+    @DisplayName("PROJECT_MANAGER gán Role cho User mới vào Project thành công -> HTTP 201")
     void testAddMemberToProject_ByManager_ShouldReturn201Created() throws Exception {
         AddMemberRequest request = new AddMemberRequest(outsiderUser.getId(), "VIEWER");
 
         mockMvc.perform(post("/api/projects/" + projectA.getId() + "/members")
-                        .header("X-User-Id", managerUser.getId())
+                        .header("Authorization", bearerToken(managerUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -122,12 +141,12 @@ public class AuthorizationIntegrationTest {
     }
 
     @Test
-    @DisplayName("T-04.4: Cập nhật Role cho thành viên trong Project thành công -> HTTP 200")
+    @DisplayName("Cập nhật Role cho thành viên trong Project thành công -> HTTP 200")
     void testUpdateMemberRole_ByManager_ShouldReturn200() throws Exception {
         UpdateMemberRoleRequest request = new UpdateMemberRoleRequest("SITE_ENGINEER");
 
         mockMvc.perform(put("/api/projects/" + projectA.getId() + "/members/" + workerUser.getId() + "/role")
-                        .header("X-User-Id", managerUser.getId())
+                        .header("Authorization", bearerToken(managerUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -136,13 +155,13 @@ public class AuthorizationIntegrationTest {
     }
 
     @Test
-    @DisplayName("T-04.6 & T-04.11: Người dùng không thuộc Project truy cập -> Bị chặn với HTTP 403 Forbidden")
+    @DisplayName("T-04.6 & T-04.11: Người dùng không thuộc Project truy cập -> Bị chặn")
     void testAccessProject_UserNotInProject_ShouldReturn403Forbidden() throws Exception {
         mockMvc.perform(get("/api/projects/" + projectA.getId() + "/members")
-                        .header("X-User-Id", outsiderUser.getId()))
+                        .header("Authorization", bearerToken(outsiderUser)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status", is(403)))
-                .andExpect(jsonPath("$.code", is("PROJECT_ACCESS_DENIED")))
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")))
                 .andExpect(jsonPath("$.message", containsString("không phải là thành viên của dự án này")));
     }
 
@@ -152,20 +171,20 @@ public class AuthorizationIntegrationTest {
         AddMemberRequest request = new AddMemberRequest(outsiderUser.getId(), "VIEWER");
 
         mockMvc.perform(post("/api/projects/" + projectA.getId() + "/members")
-                        .header("X-User-Id", workerUser.getId())
+                        .header("Authorization", bearerToken(workerUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status", is(403)))
                 .andExpect(jsonPath("$.code", is("INSUFFICIENT_PROJECT_ROLE")))
-                .andExpect(jsonPath("$.message", containsString("không có quyền thực hiện hành động này")));
+                .andExpect(jsonPath("$.message", containsString("Người dùng không có quyền thực hiện hành động này")));
     }
 
     @Test
     @DisplayName("T-04.7: Kỹ sư (SITE_ENGINEER) truy cập nhật ký công trường hợp lệ -> HTTP 200")
     void testAccessEngineeringDiary_WithSiteEngineer_ShouldReturn200() throws Exception {
         mockMvc.perform(get("/api/projects/" + projectA.getId() + "/engineering-diary")
-                        .header("X-User-Id", engineerUser.getId()))
+                        .header("Authorization", bearerToken(engineerUser)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.feature", is("Nhật ký công trường")));
@@ -175,7 +194,7 @@ public class AuthorizationIntegrationTest {
     @DisplayName("T-04.7 & T-04.10: Công nhân (WORKER) truy cập nhật ký kỹ thuật -> Bị từ chối 403 Forbidden")
     void testAccessEngineeringDiary_WithWorkerRole_ShouldReturn403Forbidden() throws Exception {
         mockMvc.perform(get("/api/projects/" + projectA.getId() + "/engineering-diary")
-                        .header("X-User-Id", workerUser.getId()))
+                        .header("Authorization", bearerToken(workerUser)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status", is(403)))
                 .andExpect(jsonPath("$.code", is("INSUFFICIENT_PROJECT_ROLE")));
@@ -186,7 +205,7 @@ public class AuthorizationIntegrationTest {
     void testDefaultDeny_UnconfiguredEndpoint_ShouldReturn403Forbidden() throws Exception {
         // Kể cả Manager truy cập vào tuyến đường không được cấu hình trong dự án cũng bị Default Deny chặn
         mockMvc.perform(get("/api/projects/" + projectA.getId() + "/unconfigured-secure-endpoint")
-                        .header("X-User-Id", managerUser.getId()))
+                        .header("Authorization", bearerToken(managerUser)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status", is(403)))
                 .andExpect(jsonPath("$.code", is("DEFAULT_DENY")))
@@ -194,31 +213,36 @@ public class AuthorizationIntegrationTest {
     }
 
     @Test
-    @DisplayName("T-04.5: Thiếu Header X-User-Id -> Bị chặn với HTTP 401 Unauthorized")
+    @DisplayName("T-04.5: Thiếu token -> Bị chặn với HTTP 401 Unauthorized")
     void testMissingUserIdHeader_ShouldReturn401Unauthorized() throws Exception {
-        mockMvc.perform(get("/api/projects/" + projectA.getId() + "/members"))
+        mockMvc.perform(get("/api/projects/" + projectA.getId() + "/members")
+            )
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status", is(401)))
-                .andExpect(jsonPath("$.code", is("AUTH_MISSING_USER_ID")));
+                .andExpect(jsonPath("$.code", is("AUTH_MISSING_TOKEN")));
     }
 
     @Test
     @DisplayName("T-04.11: Truy cập vào Project không tồn tại -> HTTP 404 Not Found")
     void testAccessNonExistentProject_ShouldReturn404NotFound() throws Exception {
-        mockMvc.perform(get("/api/projects/99999/members")
-                        .header("X-User-Id", managerUser.getId()))
+        mockMvc.perform(get("/api/projects/" + UUID.randomUUID() + "/members")
+                        .header("Authorization", bearerToken(managerUser)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(jsonPath("$.code", is("PROJECT_NOT_FOUND")));
+                .andExpect(jsonPath("$.code", is("RESOURCE_NOT_FOUND")));
     }
 
     @Test
-    @DisplayName("T-04.4: Xóa thành viên khỏi Project thành công -> HTTP 200")
+    @DisplayName("Xóa thành viên khỏi Project thành công -> HTTP 200")
     void testRemoveMemberFromProject_ByManager_ShouldReturn200() throws Exception {
         mockMvc.perform(delete("/api/projects/" + projectA.getId() + "/members/" + workerUser.getId())
-                        .header("X-User-Id", managerUser.getId()))
+                        .header("Authorization", bearerToken(managerUser)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", containsString("thành công")));
+    }
+
+    private String bearerToken(User user) {
+        return "Bearer " + authTokenService.createToken(user.getId()).getToken();
     }
 }

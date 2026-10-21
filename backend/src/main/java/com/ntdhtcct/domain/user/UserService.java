@@ -51,8 +51,10 @@ public class UserService {
                         fullName.trim()
                 );
         user.setRole(customerRole);
+        user.setStatus("PENDING");
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setEmailVerified(false);
 
         return userRepository.save(user);
     }
@@ -75,6 +77,33 @@ public class UserService {
 
             throw new RuntimeException(
                     "Tài khoản đang bị khóa. Vui lòng thử lại sau."
+            );
+        }
+
+        // Kiểm tra trạng thái phê duyệt tài khoản
+        String status = user.getStatus();
+        if ("PENDING".equalsIgnoreCase(status)) {
+            throw new RuntimeException(
+                    "Tài khoản của bạn đang chờ quản trị viên phê duyệt."
+            );
+        }
+        if ("REJECTED".equalsIgnoreCase(status)) {
+            String reason = user.getRejectionReason();
+            String msg = "Tài khoản của bạn đã bị từ chối phê duyệt.";
+            if (reason != null && !reason.isBlank()) {
+                msg += " Lý do: " + reason;
+            }
+            throw new RuntimeException(msg);
+        }
+        if ("DISABLED".equalsIgnoreCase(status) || "LOCKED".equalsIgnoreCase(status)) {
+            throw new RuntimeException(
+                    "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên."
+            );
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new RuntimeException(
+                    "Vui lòng xác thực email trước khi đăng nhập."
             );
         }
 
@@ -141,5 +170,37 @@ public class UserService {
                                 "Không tìm thấy người dùng"
                         )
                 );
+    }
+
+    @Transactional
+    public User updateProfile(
+            UUID userId,
+            String fullName,
+            String email,
+            String currentPassword,
+            String newPassword
+    ) {
+        User user = findById(userId);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác.");
+        }
+
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        if (!user.getEmail().equalsIgnoreCase(normalizedEmail)
+                && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new IllegalArgumentException("Email này đã được tài khoản khác sử dụng.");
+        }
+
+        if (newPassword != null && !newPassword.isBlank()) {
+            if (newPassword.length() < 8 || newPassword.length() > 128) {
+                throw new IllegalArgumentException("Mật khẩu mới phải có từ 8 đến 128 ký tự.");
+            }
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        user.setFullName(fullName.trim());
+        user.setEmail(normalizedEmail);
+        user.setUpdatedAt(OffsetDateTime.now());
+        return userRepository.save(user);
     }
 }

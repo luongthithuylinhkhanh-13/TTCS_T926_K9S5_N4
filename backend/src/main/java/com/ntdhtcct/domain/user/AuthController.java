@@ -19,13 +19,36 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthTokenService authTokenService;
+    private final EmailVerificationService emailVerificationService;
+    private final com.ntdhtcct.repository.ProjectMemberRepository projectMemberRepository;
 
     public AuthController(
             UserService userService,
-            AuthTokenService authTokenService
+            AuthTokenService authTokenService,
+            EmailVerificationService emailVerificationService,
+            com.ntdhtcct.repository.ProjectMemberRepository projectMemberRepository
     ) {
         this.userService = userService;
         this.authTokenService = authTokenService;
+        this.emailVerificationService = emailVerificationService;
+        this.projectMemberRepository = projectMemberRepository;
+    }
+
+    private java.util.List<UserProjectRoleDTO> getUserProjectMemberships(UUID userId) {
+        if (userId == null) {
+            return java.util.List.of();
+        }
+        return projectMemberRepository.findActiveMembershipsByUserId(userId).stream()
+                .map(pm -> new UserProjectRoleDTO(
+                        pm.getProject() != null ? pm.getProject().getId() : null,
+                        pm.getProject() != null ? pm.getProject().getCode() : null,
+                        pm.getProject() != null ? pm.getProject().getName() : null,
+                        pm.getRole() != null ? pm.getRole().getId() : null,
+                        pm.getRole() != null ? pm.getRole().getName() : null,
+                        pm.getRole() != null ? pm.getRole().getName() : null,
+                        pm.getStatus()
+                ))
+                .toList();
     }
 
     /**
@@ -49,6 +72,9 @@ public class AuthController {
             AuthToken authToken =
                     authTokenService.createToken(user.getId());
 
+            java.util.List<UserProjectRoleDTO> projectMemberships =
+                    getUserProjectMemberships(user.getId());
+
             return ResponseEntity.ok(
                     new LoginResponse(
                             true,
@@ -58,8 +84,13 @@ public class AuthController {
                             user.getRole() != null
                                     ? user.getRole().getId()
                                     : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName(),
                             authToken.getToken(),
-                            authToken.getExpiresAt()
+                            authToken.getExpiresAt(),
+                            projectMemberships
                     )
             );
 
@@ -90,10 +121,15 @@ public class AuthController {
                     request.email(),
                     request.password()
             );
+            try {
+                emailVerificationService.sendVerificationEmail(user);
+            } catch (Exception ignored) {
+                // Ignore email sending error in local environment
+            }
             return ResponseEntity.status(201).body(
                     new RegistrationResponse(
                             true,
-                            "Đăng ký thành công. Bạn có thể đăng nhập.",
+                            "Đăng ký thành công. Tài khoản của bạn đang chờ quản trị viên phê duyệt.",
                             user.getEmail()
                     )
             );
@@ -103,6 +139,16 @@ public class AuthController {
             );
         }
     }
+
+        @GetMapping("/verify-email")
+        public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+                try {
+                        emailVerificationService.verifyEmail(token);
+                        return ResponseEntity.ok("Email đã được xác thực. Bạn có thể quay lại ứng dụng để đăng nhập.");
+                } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body(e.getMessage());
+                }
+        }
 
         /**
          * =========================
@@ -228,6 +274,9 @@ public class AuthController {
                     userService.findById(userId);
 
             // Trả thông tin user
+            java.util.List<UserProjectRoleDTO> projectMemberships =
+                    getUserProjectMemberships(user.getId());
+
             return ResponseEntity.ok(
                     new MeResponse(
                             true,
@@ -236,7 +285,12 @@ public class AuthController {
                             user.getEmail(),
                             user.getRole() != null
                                     ? user.getRole().getId()
-                                    : null
+                                    : null,
+                            user.getRole() != null
+                                    ? user.getRole().getName()
+                                    : null,
+                            user.getFullName(),
+                            projectMemberships
                     )
             );
 
@@ -251,6 +305,42 @@ public class AuthController {
         }
     }
 
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMe(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @Valid @RequestBody ProfileUpdateRequest request
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(
+                    new ErrorResponse(false, "Token không hợp lệ hoặc không được cung cấp")
+            );
+        }
+
+        try {
+            UUID userId = authTokenService.getUserIdFromToken(authorization.substring(7));
+            User user = userService.updateProfile(
+                    userId,
+                    request.fullName(),
+                    request.email(),
+                    request.currentPassword(),
+                    request.newPassword()
+            );
+            return ResponseEntity.ok(new MeResponse(
+                    true,
+                    "Cập nhật thông tin cá nhân thành công",
+                    user.getId(),
+                    user.getEmail(),
+                    user.getRole() != null ? user.getRole().getId() : null,
+                    user.getRole() != null ? user.getRole().getName() : null,
+                    user.getFullName()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(new ErrorResponse(false, e.getMessage()));
+        }
+    }
     /**
      * =========================
      * REQUEST / RESPONSE
@@ -293,15 +383,59 @@ public class AuthController {
     ) {
     }
 
+    public record ProfileUpdateRequest(
+            @NotBlank(message = "Họ và tên không được để trống")
+            @Size(max = 255, message = "Họ và tên không được vượt quá 255 ký tự")
+            String fullName,
+
+            @NotBlank(message = "Email không được để trống")
+            @Email(message = "Email không đúng định dạng")
+            @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
+            String email,
+
+            @NotBlank(message = "Vui lòng nhập mật khẩu hiện tại")
+            String currentPassword,
+
+            String newPassword
+    ) {
+    }
+
+    public record UserProjectRoleDTO(
+            UUID projectId,
+            String projectCode,
+            String projectName,
+            UUID roleId,
+            String roleName,
+            String roleDisplayName,
+            String status
+    ) {
+    }
+
     public record LoginResponse(
             boolean success,
             String message,
             UUID userId,
             String email,
             UUID roleId,
+            String roleName,
+            String fullName,
             String token,
-            OffsetDateTime expiresAt
+            OffsetDateTime expiresAt,
+            java.util.List<UserProjectRoleDTO> projectMemberships
     ) {
+        public LoginResponse(
+                boolean success,
+                String message,
+                UUID userId,
+                String email,
+                UUID roleId,
+                String roleName,
+                String fullName,
+                String token,
+                OffsetDateTime expiresAt
+        ) {
+            this(success, message, userId, email, roleId, roleName, fullName, token, expiresAt, java.util.List.of());
+        }
     }
 
     public record MeResponse(
@@ -309,8 +443,22 @@ public class AuthController {
             String message,
             UUID userId,
             String email,
-            UUID roleId
+            UUID roleId,
+            String roleName,
+            String fullName,
+            java.util.List<UserProjectRoleDTO> projectMemberships
     ) {
+        public MeResponse(
+                boolean success,
+                String message,
+                UUID userId,
+                String email,
+                UUID roleId,
+                String roleName,
+                String fullName
+        ) {
+            this(success, message, userId, email, roleId, roleName, fullName, java.util.List.of());
+        }
     }
 
     public record RegistrationResponse(

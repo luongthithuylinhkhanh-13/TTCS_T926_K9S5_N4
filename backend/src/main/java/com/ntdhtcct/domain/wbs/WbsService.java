@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,22 +20,29 @@ public class WbsService {
     private final WbsItemRepository wbsItemRepository;
     private final ProjectScheduleBaselineRepository baselineRepository;
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final CpmEngine cpmEngine;
 
     public WbsService(
             WbsItemRepository wbsItemRepository,
             ProjectScheduleBaselineRepository baselineRepository,
             ProjectRepository projectRepository,
+            ProjectMemberRepository projectMemberRepository,
             CpmEngine cpmEngine
     ) {
         this.wbsItemRepository = wbsItemRepository;
         this.baselineRepository = baselineRepository;
         this.projectRepository = projectRepository;
+        this.projectMemberRepository = projectMemberRepository;
         this.cpmEngine = cpmEngine;
     }
 
     public List<Project> getProjects() {
         return projectRepository.findAll();
+    }
+
+    public List<Project> getProjectsForUser(UUID userId) {
+        return projectMemberRepository.findActiveProjectsByUserId(userId);
     }
 
     public List<WbsItem> getWbsByProject(UUID projectId) {
@@ -158,6 +166,8 @@ public class WbsService {
             throw new RuntimeException("Tiến độ phải nằm trong khoảng 0 đến 100");
         }
 
+        validateActualProgress(item);
+
         if (item.getStartDate() != null
                 && item.getEndDate() != null
                 && item.getEndDate().isBefore(item.getStartDate())) {
@@ -177,6 +187,8 @@ public class WbsService {
         validatePredecessors(projectId, null, item.getPredecessorIds());
 
         item.setProjectId(projectId);
+        item.setAssignedTeamMemberId(null);
+        item.setAssignedTeamName(null);
 
         if (item.getType() == null || item.getType().isBlank()) {
             item.setType(item.getParentId() == null ? "phase" : "task");
@@ -191,6 +203,11 @@ public class WbsService {
             item.setStatus("not_started");
         }
 
+        validateVolumeAndUnitPrice(item);
+        if (item.getUnit() != null) {
+            item.setUnit(item.getUnit().trim());
+        }
+
         WbsItem saved = wbsItemRepository.save(item);
         recalculateCpm(projectId);
         return saved;
@@ -201,6 +218,10 @@ public class WbsService {
         requireProject(projectId);
 
         WbsItem item = requireItem(projectId, itemId);
+
+        if (request.getVersion() == null || !request.getVersion().equals(item.getVersion())) {
+            throw new WbsConflictException("Công việc đã được người khác cập nhật. Hãy tải lại dữ liệu mới nhất trước khi sửa tiếp.");
+        }
 
         if ("task".equalsIgnoreCase(request.getType())
                 && (request.getDuration() == null || request.getDuration() <= 0)) {
@@ -214,6 +235,8 @@ public class WbsService {
         if (request.getProgress() < 0 || request.getProgress() > 100) {
             throw new RuntimeException("Tiến độ phải nằm trong khoảng 0 đến 100");
         }
+
+        validateActualProgress(request);
 
         if (request.getStartDate() != null
                 && request.getEndDate() != null
@@ -232,10 +255,17 @@ public class WbsService {
         item.setProgress(request.getProgress());
         item.setStartDate(request.getStartDate());
         item.setEndDate(request.getEndDate());
+        item.setActualStartDate(request.getActualStartDate());
+        item.setActualEndDate(request.getActualEndDate());
         item.setDuration(request.getDuration());
         item.setPredecessorIds(request.getPredecessorIds());
         item.setDescription(request.getDescription());
         item.setImage(request.getImage());
+
+        validateVolumeAndUnitPrice(request);
+        item.setTotalVolume(request.getTotalVolume());
+        item.setUnit(request.getUnit() != null ? request.getUnit().trim() : null);
+        item.setUnitPrice(request.getUnitPrice());
 
         WbsItem saved = wbsItemRepository.save(item);
         recalculateCpm(projectId);
@@ -253,6 +283,21 @@ public class WbsService {
     private Project requireProject(UUID projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Dự án không tồn tại"));
+    }
+
+    private void validateActualProgress(WbsItem item) {
+        if (item.getActualEndDate() != null && item.getActualStartDate() == null) {
+            throw new IllegalArgumentException(
+                    "Không thể có ngày kết thúc thực tế khi chưa có ngày bắt đầu thực tế"
+            );
+        }
+        if (item.getActualStartDate() != null
+                && item.getActualEndDate() != null
+                && item.getActualEndDate().isBefore(item.getActualStartDate())) {
+            throw new IllegalArgumentException(
+                    "Ngày kết thúc thực tế phải sau hoặc cùng ngày với ngày bắt đầu thực tế"
+            );
+        }
     }
 
     private WbsItem requireItem(UUID projectId, UUID itemId) {
@@ -335,5 +380,22 @@ public class WbsService {
         List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
         cpmEngine.calculate(items);
         wbsItemRepository.saveAll(items);
+    }
+
+    private void validateVolumeAndUnitPrice(WbsItem item) {
+        if (item.getTotalVolume() != null && item.getTotalVolume() < 0) {
+            throw new IllegalArgumentException("Khối lượng công việc không được âm");
+        }
+        if (item.getUnitPrice() != null && item.getUnitPrice() < 0) {
+            throw new IllegalArgumentException("Đơn giá không được âm");
+        }
+        if (item.getUnit() != null && item.getUnit().length() > 50) {
+            throw new IllegalArgumentException("Đơn vị tính không được vượt quá 50 ký tự");
+        }
+        if (item.getTotalVolume() != null && item.getTotalVolume() > 0) {
+            if (item.getUnit() == null || item.getUnit().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng nhập đơn vị tính khi đã khai báo khối lượng");
+            }
+        }
     }
 }
