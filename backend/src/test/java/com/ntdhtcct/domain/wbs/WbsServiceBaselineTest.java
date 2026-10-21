@@ -2,6 +2,7 @@ package com.ntdhtcct.domain.wbs;
 
 import com.ntdhtcct.domain.project.Project;
 import com.ntdhtcct.domain.project.ProjectRepository;
+import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,10 +29,13 @@ class WbsServiceBaselineTest {
     private final ProjectScheduleBaselineRepository baselineRepository =
             mock(ProjectScheduleBaselineRepository.class);
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
+    private final ProjectMemberRepository projectMemberRepository =
+            mock(ProjectMemberRepository.class);
     private final WbsService service = new WbsService(
             wbsItemRepository,
             baselineRepository,
             projectRepository,
+            projectMemberRepository,
             new CpmEngine()
     );
 
