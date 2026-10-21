@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="V27.0-payment-request-drafts-and-items" author="S-43">
+        <sql>ALTER TABLE payment_requests DROP CONSTRAINT chk_payment_requests_status</sql>
+        <sql>ALTER TABLE payment_requests ADD CONSTRAINT chk_payment_requests_status CHECK (status IN ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED'))</sql>
+
+        <createTable tableName="payment_request_items">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_payment_request_items"/>
+            </column>
+            <column name="payment_request_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_payment_request_items_request"
+                             references="payment_requests(id)" deleteCascade="true"/>
+            </column>
+            <column name="acceptance_item_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_payment_request_items_acceptance_item"
+                             references="acceptance_items(id)"/>
+            </column>
+            <column name="item_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit" type="VARCHAR(50)"/>
+            <column name="quantity" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_price" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19,2)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="payment_request_items"
+                             columnNames="payment_request_id, acceptance_item_id"
+                             constraintName="uk_payment_request_items_source"/>
+        <createIndex tableName="payment_request_items" indexName="idx_payment_request_items_source">
+            <column name="acceptance_item_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="payment_request_items" cascadeConstraints="true"/>
+            <sql>ALTER TABLE payment_requests DROP CONSTRAINT chk_payment_requests_status</sql>
+            <sql>ALTER TABLE payment_requests ADD CONSTRAINT chk_payment_requests_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

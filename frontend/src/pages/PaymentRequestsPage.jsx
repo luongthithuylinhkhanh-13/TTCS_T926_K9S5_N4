@@ -20,13 +20,18 @@ import {
   CloseOutlined,
   PlusOutlined,
   ReloadOutlined,
-  WalletOutlined
+  WalletOutlined,
+  EditOutlined,
+  SendOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   getPendingPaymentRequests,
   getMyPaymentRequests,
-  submitPaymentRequest,
+  getEligiblePaymentItems,
+  createPaymentRequestDraft,
+  updatePaymentRequestDraft,
+  sendPaymentRequestDraft,
   approvePaymentRequest,
   rejectPaymentRequest
 } from '../services/paymentRequestApi';
@@ -50,6 +55,9 @@ const PaymentRequestsPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
+  const [eligibleItems, setEligibleItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [editingDraft, setEditingDraft] = useState(null);
   const [activeRequestId, setActiveRequestId] = useState(null);
   const [rejectingRequest, setRejectingRequest] = useState(null);
   const [reason, setReason] = useState('');
@@ -114,6 +122,31 @@ const PaymentRequestsPage = () => {
     if (projectId) loadRequests();
   }, [projectId]);
 
+  const openDraftModal = async request => {
+    if (!projectId) return;
+    setLoading(true);
+    setError('');
+    try {
+      form.resetFields();
+      const items = await getEligiblePaymentItems(projectId);
+      const availableItems = Array.isArray(items) ? items : [];
+      setEligibleItems(availableItems);
+      setEditingDraft(request || null);
+      setSelectedItems(request
+        ? (request.items || []).map(item => {
+          const eligibleItem = availableItems.find(candidate => candidate.id === item.acceptanceItemId);
+          return eligibleItem ? { ...eligibleItem, quantity: Number(item.quantity) } : null;
+        }).filter(Boolean)
+        : []);
+      form.setFieldsValue({ purpose: request?.purpose || '' });
+      setSubmitModalOpen(true);
+    } catch (loadError) {
+      message.error(loadError.message || 'Không thể tải hạng mục nghiệm thu đã duyệt.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleApprove = async request => {
     setActiveRequestId(request.id);
     try {
@@ -152,24 +185,149 @@ const PaymentRequestsPage = () => {
     }
   };
 
-  const handleSubmit = async values => {
+  const handleSendDraft = async request => {
+    setActiveRequestId(request.id);
+    try {
+      await sendPaymentRequestDraft(projectId, request.id);
+      message.success(`Đã gửi đề nghị ${request.requestCode} sang trạng thái chờ duyệt.`);
+      await loadRequests();
+    } catch (actionError) {
+      message.error(actionError.message || 'Không thể gửi đề nghị thanh toán.');
+    } finally {
+      setActiveRequestId(null);
+    }
+  };
+
+  const handleSubmit = async action => {
     setSubmitting(true);
     try {
-      await submitPaymentRequest(projectId, {
+      const values = await form.validateFields();
+      if (selectedItems.length === 0) {
+        message.warning('Vui lòng chọn ít nhất một hạng mục nghiệm thu đã được duyệt.');
+        return;
+      }
+      const amount = selectedItems.reduce((sum, item) => (
+        sum + Math.round(Number(item.quantity || 0) * Number(item.unitPrice || 0) * 100) / 100
+      ), 0);
+      if (amount <= 0) {
+        message.warning('Tổng giá trị đề nghị phải lớn hơn 0.');
+        return;
+      }
+      const requestData = {
         purpose: values.purpose.trim(),
-        amount: values.amount
-      });
-      message.success('Đã gửi đề nghị thanh toán để chờ duyệt.');
+        amount: Math.round(amount * 100) / 100,
+        items: selectedItems.map(item => ({
+          acceptanceItemId: item.id,
+          quantity: item.quantity
+        }))
+      };
+      const savedDraft = editingDraft
+        ? await updatePaymentRequestDraft(projectId, editingDraft.id, requestData)
+        : await createPaymentRequestDraft(projectId, requestData);
+      setEditingDraft(savedDraft);
+      if (action === 'send') {
+        await sendPaymentRequestDraft(projectId, savedDraft.id);
+        message.success('Đã gửi đề nghị thanh toán sang trạng thái chờ duyệt.');
+      } else {
+        message.success('Đã lưu bản nháp đề nghị thanh toán.');
+      }
       setSubmitModalOpen(false);
       form.resetFields();
+      setEditingDraft(null);
+      setSelectedItems([]);
       await loadRequests();
       setActiveTab('mine');
     } catch (submitError) {
-      message.error(submitError.message || 'Không thể gửi đề nghị thanh toán.');
+      if (submitError.errorFields) return;
+      message.error(submitError.message || 'Không thể lưu đề nghị thanh toán.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const changeSelectedItems = selectedIds => {
+    setSelectedItems(previous => {
+      const existing = new Map(previous.map(item => [item.id, item]));
+      return eligibleItems
+        .filter(item => selectedIds.includes(item.id))
+        .map(item => ({
+          ...item,
+          quantity: existing.get(item.id)?.quantity ?? Number(item.acceptedQuantity || 0)
+        }));
+    });
+  };
+
+  const updateSelectedQuantity = (itemId, quantity) => {
+    setSelectedItems(previous => previous.map(item => (
+      item.id === itemId ? { ...item, quantity } : item
+    )));
+  };
+
+  const selectedAmount = selectedItems.reduce((sum, item) => (
+    sum + Math.round(Number(item.quantity || 0) * Number(item.unitPrice || 0) * 100) / 100
+  ), 0);
+
+  const eligibleItemColumns = [
+    {
+      title: 'Hạng mục nghiệm thu',
+      dataIndex: 'itemName',
+      key: 'itemName',
+      render: (value, item) => (
+        <div>
+          <strong>{value}</strong>
+          <div style={{ color: '#777', fontSize: 12 }}>Phiếu nghiệm thu {item.reportNumber}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Đã nghiệm thu',
+      dataIndex: 'acceptedQuantity',
+      key: 'acceptedQuantity',
+      width: 120,
+      render: (value, item) => `${Number(value).toLocaleString('vi-VN')} ${item.unit || ''}`
+    },
+    {
+      title: 'Khối lượng đề nghị',
+      key: 'quantity',
+      width: 190,
+      render: (_, item) => {
+        const selected = selectedItems.find(candidate => candidate.id === item.id);
+        return (
+          <InputNumber
+            aria-label={`Khối lượng đề nghị ${item.itemName}`}
+            min={0.01}
+            max={Number(item.acceptedQuantity)}
+            precision={2}
+            value={selected?.quantity}
+            disabled={!selected}
+            onChange={quantity => updateSelectedQuantity(item.id, quantity)}
+            addonAfter={item.unit}
+            style={{ width: '100%' }}
+          />
+        );
+      }
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      width: 140,
+      align: 'right',
+      render: value => currencyFormatter.format(value)
+    },
+    {
+      title: 'Thành tiền',
+      key: 'amount',
+      width: 150,
+      align: 'right',
+      render: (_, item) => {
+        const selected = selectedItems.find(candidate => candidate.id === item.id);
+        return currencyFormatter.format(
+          Number(selected?.quantity || 0) * Number(item.unitPrice || 0)
+        );
+      }
+    }
+  ];
 
   const columns = [
     {
@@ -201,7 +359,7 @@ const PaymentRequestsPage = () => {
       render: value => value || 'Không rõ'
     },
     {
-      title: 'Ngày gửi',
+      title: 'Ngày gửi / lưu',
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       width: 145,
@@ -250,7 +408,7 @@ const PaymentRequestsPage = () => {
     columns[1],
     columns[2],
     {
-      title: 'Ngày gửi',
+      title: 'Ngày gửi / lưu',
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       width: 145,
@@ -263,6 +421,7 @@ const PaymentRequestsPage = () => {
       width: 140,
       render: status => {
         const statusInfo = {
+          DRAFT: ['default', 'Bản nháp'],
           PENDING: ['gold', 'Chờ duyệt'],
           APPROVED: ['success', 'Đã duyệt'],
           REJECTED: ['error', 'Đã trả lại']
@@ -275,6 +434,34 @@ const PaymentRequestsPage = () => {
       dataIndex: 'decisionReason',
       key: 'decisionReason',
       render: value => value || '--'
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 150,
+      render: (_, request) => request.status === 'DRAFT' ? (
+        <Space size={4}>
+          <Tooltip title="Chỉnh sửa bản nháp">
+            <Button
+              aria-label={`Chỉnh sửa ${request.requestCode}`}
+              type="text"
+              icon={<EditOutlined />}
+              disabled={Boolean(activeRequestId)}
+              onClick={() => openDraftModal(request)}
+            />
+          </Tooltip>
+          <Tooltip title="Gửi chờ duyệt">
+            <Button
+              aria-label={`Gửi ${request.requestCode} chờ duyệt`}
+              type="text"
+              icon={<SendOutlined />}
+              disabled={Boolean(activeRequestId)}
+              loading={activeRequestId === request.id}
+              onClick={() => handleSendDraft(request)}
+            />
+          </Tooltip>
+        </Space>
+      ) : null
     }
   ];
 
@@ -302,10 +489,10 @@ const PaymentRequestsPage = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setSubmitModalOpen(true)}
+              onClick={() => openDraftModal(null)}
               disabled={!projectId}
             >
-              Gửi đề nghị
+              Tạo đề nghị
             </Button>
           )}
           <Tooltip title="Làm mới danh sách">
@@ -365,33 +552,73 @@ const PaymentRequestsPage = () => {
       )}
 
       <Modal
-        title="Gửi đề nghị thanh toán"
+        title={editingDraft ? `Chỉnh sửa ${editingDraft.requestCode}` : 'Tạo đề nghị thanh toán'}
         open={submitModalOpen}
         onCancel={() => {
           setSubmitModalOpen(false);
           form.resetFields();
+          setEditingDraft(null);
+          setSelectedItems([]);
         }}
-        onOk={() => form.submit()}
-        okText="Gửi đề nghị"
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setSubmitModalOpen(false);
+              form.resetFields();
+              setEditingDraft(null);
+              setSelectedItems([]);
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="save"
+            loading={submitting}
+            disabled={submitting}
+            onClick={() => handleSubmit('draft')}
+          >
+            Lưu bản nháp
+          </Button>,
+          <Button
+            key="send"
+            type="primary"
+            loading={submitting}
+            disabled={submitting}
+            onClick={() => handleSubmit('send')}
+          >
+            Lưu và gửi chờ duyệt
+          </Button>
+        ]}
         cancelText="Hủy"
-        confirmLoading={submitting}
         destroyOnHidden
+        width={900}
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="purpose"
             label="Nội dung đề nghị"
             rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập nội dung đề nghị.' }, { max: 2000, message: 'Nội dung tối đa 2000 ký tự.' }]}
           >
-            <Input.TextArea rows={4} maxLength={2000} showCount placeholder="Ví dụ: Thanh toán đợt vật tư..." />
+            <Input.TextArea rows={3} maxLength={2000} showCount placeholder="Ví dụ: Thanh toán khối lượng nghiệm thu đợt..." />
           </Form.Item>
-          <Form.Item
-            name="amount"
-            label="Số tiền (VND)"
-            rules={[{ required: true, message: 'Vui lòng nhập số tiền.' }]}
-          >
-            <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="Nhập số tiền" />
-          </Form.Item>
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>Chọn hạng mục nghiệm thu đã được duyệt</div>
+          <Table
+            dataSource={eligibleItems}
+            columns={eligibleItemColumns}
+            rowKey="id"
+            size="small"
+            pagination={{ pageSize: 5, hideOnSinglePage: true }}
+            rowSelection={{
+              selectedRowKeys: selectedItems.map(item => item.id),
+              onChange: changeSelectedItems
+            }}
+            scroll={{ x: 760 }}
+            locale={{ emptyText: <Empty description="Chưa có hạng mục nghiệm thu nào được duyệt để thanh toán" /> }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 16, marginTop: 16 }}>
+            Tổng giá trị đề nghị:&nbsp;<strong>{currencyFormatter.format(selectedAmount)}</strong>
+          </div>
         </Form>
       </Modal>
 

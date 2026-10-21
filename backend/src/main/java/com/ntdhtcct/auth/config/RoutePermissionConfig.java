@@ -37,7 +37,11 @@ public class RoutePermissionConfig {
         // S-44: Only project managers can review payment requests.
         addRule(HttpMethod.GET, "/api/projects/*/payment-requests", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.GET, "/api/projects/*/payment-requests/my-requests", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.GET, "/api/projects/*/payment-requests/eligible-items", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/payment-requests/drafts", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.PUT, "/api/projects/*/payment-requests/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
+        addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/submit", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER"});
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/approve", new String[]{"ADMIN", "PROJECT_MANAGER"});
         addRule(HttpMethod.POST, "/api/projects/*/payment-requests/*/reject", new String[]{"ADMIN", "PROJECT_MANAGER"});
 
