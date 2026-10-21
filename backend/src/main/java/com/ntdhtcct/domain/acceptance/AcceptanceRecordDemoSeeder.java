@@ -41,11 +41,23 @@ public class AcceptanceRecordDemoSeeder implements CommandLineRunner {
         Project project = projectRepository.findByCode(PROJECT_CODE).orElse(null);
         User actor = userRepository.findByEmailIgnoreCase(ADMIN_EMAIL)
                 .or(() -> userRepository.findByEmailIgnoreCase(FALLBACK_EMAIL))
+                .or(() -> userRepository.findByEmailIgnoreCase("admin@admin.com"))
+                .or(() -> userRepository.findAll().stream().findFirst())
                 .orElse(null);
         if (project == null || actor == null) {
             return;
         }
 
+        seed(
+                project,
+                actor,
+                "Nghiệm thu ép cọc bê tông cốt thép D400",
+                LocalDate.of(2026, 9, 22),
+                "Nghiệm thu độ sâu ép cọc, tải trọng ép và độ nghiêng cọc ly tâm D400.",
+                AcceptanceRecordStatus.APPROVED,
+                List.of(new AuditSeed(AcceptanceRecordAction.CREATE, null),
+                        new AuditSeed(AcceptanceRecordAction.APPROVE, "Đạt yêu cầu hồ sơ thiết kế và tải trọng ép Pmax."))
+        );
         seed(
                 project,
                 actor,

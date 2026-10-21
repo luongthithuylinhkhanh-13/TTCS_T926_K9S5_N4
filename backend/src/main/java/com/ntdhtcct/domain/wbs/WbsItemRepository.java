@@ -9,6 +9,8 @@ public interface WbsItemRepository extends JpaRepository<WbsItem, UUID> {
 
     List<WbsItem> findByProjectIdOrderByWbsCodeAsc(UUID projectId);
 
+    java.util.Optional<WbsItem> findByProjectIdAndWbsCode(UUID projectId, String wbsCode);
+
     boolean existsByProjectIdAndWbsCode(UUID projectId, String wbsCode);
 
     List<WbsItem> findByParentId(UUID parentId);

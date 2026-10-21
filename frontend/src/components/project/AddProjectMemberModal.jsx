@@ -25,6 +25,11 @@ const { Text } = Typography;
 
 export const PROJECT_ASSIGNABLE_ROLES = [
   {
+    value: 'PROJECT_MANAGER',
+    label: 'Ban quản lý dự án (Project Manager)',
+    description: 'Toàn quyền điều hành toàn diện dự án, cơ cấu công việc (WBS), tiến độ, chi phí và thanh toán'
+  },
+  {
     value: 'CUSTOMER',
     label: 'Chủ đầu tư',
     description: 'Theo dõi tiến độ, mốc dự án, phê duyệt và quản lý chung của Chủ đầu tư'

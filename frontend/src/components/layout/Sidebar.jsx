@@ -52,6 +52,17 @@ const getMenuSections = (roleName) => {
             { label: 'Thành viên dự án', path: '/project-members', icon: <TeamOutlined /> },
             { label: 'Sức khỏe hệ thống', path: '/admin/system-health', icon: <HeartOutlined /> }
           ]
+        },
+        {
+          section: 'KẾ HOẠCH',
+          items: [
+            {
+              label: 'Tiến độ',
+              path: '/progress',
+              icon: <HistoryOutlined />,
+              subItems: [{ label: 'Mốc tiến độ', path: '/progress/milestones' }]
+            }
+          ]
         }
       ];
     case 'PROJECT_MANAGER':

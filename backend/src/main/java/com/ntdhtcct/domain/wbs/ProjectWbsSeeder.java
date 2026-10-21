@@ -99,11 +99,7 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                         new RuntimeException("Không tìm thấy DA-001")
                 );
 
-        if (!wbsItemRepository
-                .findByProjectIdOrderByWbsCodeAsc(project.getId())
-                .isEmpty()) {
-            return;
-        }
+        // Upsert WBS items for DA-001
 
         WbsItem root = createItem(
                 project.getId(), null,
@@ -141,7 +137,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "completed", 100,
                 "2026-09-01", "2026-09-03",
                 "Dọn dẹp và chuẩn bị mặt bằng phục vụ thi công.",
-                "site_preparation.png"
+                "site_preparation.png",
+                "m2", 5000.0, 25000.0
         );
 
         createItem(
@@ -153,7 +150,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "completed", 100,
                 "2026-09-01", "2026-09-04",
                 "Xác định tọa độ và mốc móng công trình.",
-                "site_location.png"
+                "site_location.png",
+                "điểm", 50.0, 200000.0
         );
 
         createItem(
@@ -165,7 +163,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "completed", 100,
                 "2026-09-02", "2026-09-07",
                 "Vận chuyển cát, đá, xi măng, cốp pha về công trường.",
-                "material_delivery.png"
+                "material_delivery.png",
+                "chuyến", 30.0, 1500000.0
         );
 
         // 1.2
@@ -191,7 +190,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "completed", 100,
                 "2026-09-08", "2026-09-12",
                 "Đào hố móng bằng máy đào theo bản vẽ kỹ thuật.",
-                "excavation.png"
+                "excavation.png",
+                "m3", 3500.0, 85000.0
         );
 
         createItem(
@@ -203,7 +203,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "in_progress", 65,
                 "2026-09-13", "2026-09-25",
                 "Gia công và lắp đặt cốt thép phần móng theo hồ sơ thiết kế được phê duyệt.",
-                "rebar.png"
+                "rebar.png",
+                "tấn", 45.0, 18500000.0
         );
 
         createItem(
@@ -215,7 +216,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "in_progress", 50,
                 "2026-09-18", "2026-09-27",
                 "Lắp đặt cốp pha phủ phim định hình khung móng.",
-                "formwork.png"
+                "formwork.png",
+                "m2", 1200.0, 180000.0
         );
 
         createItem(
@@ -227,7 +229,21 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "not_started", 0,
                 "2026-09-28", "2026-10-02",
                 "Đổ bê tông tươi thương phẩm mác 300 cho móng.",
-                "concrete_pour.png"
+                "concrete_pour.png",
+                "m3", 800.0, 1250000.0
+        );
+
+        createItem(
+                project.getId(), phase12.getId(),
+                "1.2.5",
+                "Ép cọc bê tông cốt thép D400",
+                "task",
+                "NV007", "Đặng Hữu Chinh", "HC",
+                "completed", 100,
+                "2026-09-12", "2026-09-22",
+                "Ép cọc bê tông ly tâm D400 dự ứng lực sâu 25m đến lớp địa chất chịu lực.",
+                "pile_driving.png",
+                "md", 1500.0, 380000.0
         );
 
         // 1.3
@@ -253,7 +269,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "in_progress", 40,
                 "2026-10-03", "2026-10-08",
                 "Gia công lắp dựng thép và cốp pha cột tầng 1.",
-                "column_construction.png"
+                "column_construction.png",
+                "cột", 24.0, 4500000.0
         );
 
         createItem(
@@ -265,7 +282,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "not_started", 0,
                 "2026-10-09", "2026-10-14",
                 "Gia công cốt thép và cốp pha dầm tầng 1.",
-                "beam_construction.png"
+                "beam_construction.png",
+                "m", 350.0, 2200000.0
         );
 
         createItem(
@@ -277,7 +295,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "not_started", 0,
                 "2026-10-15", "2026-10-20",
                 "Lắp dựng thép sàn và đổ bê tông sàn tầng 1.",
-                "floor_construction.png"
+                "floor_construction.png",
+                "m2", 850.0, 650000.0
         );
 
         createItem(
@@ -289,7 +308,8 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "not_started", 0,
                 "2026-10-21", "2026-10-28",
                 "Xây bao che và tường ngăn tầng 1.",
-                "wall_construction.png"
+                "wall_construction.png",
+                "m2", 1200.0, 250000.0
         );
 
         // 1.4
@@ -315,7 +335,21 @@ public class ProjectWbsSeeder implements CommandLineRunner {
                 "not_started", 0,
                 "2026-10-29", "2026-11-05",
                 "Trát tường trong và ngoài nhà.",
-                "plastering.png"
+                "plastering.png",
+                "m2", 2400.0, 95000.0
+        );
+
+        createItem(
+                project.getId(), phase14.getId(),
+                "1.4.2",
+                "Sơn tường",
+                "task",
+                "NV006", "Nguyễn Hoàng Nam", "HN",
+                "not_started", 0,
+                "2026-11-06", "2026-11-15",
+                "Sơn lót và sơn phủ 2 lớp tường trong ngoài.",
+                "painting.png",
+                "m2", 2400.0, 45000.0
         );
 
         createItem(
@@ -482,16 +516,24 @@ public class ProjectWbsSeeder implements CommandLineRunner {
             String startDate,
             String endDate,
             String description,
-            String image
+            String image,
+            String unit,
+            Double totalVolume,
+            Double unitPrice
     ) {
-        WbsItem item = new WbsItem();
+        WbsItem item = wbsItemRepository.findByProjectIdAndWbsCode(projectId, wbsCode).orElseGet(() -> {
+            WbsItem newItem = new WbsItem();
+            newItem.setProjectId(projectId);
+            newItem.setParentId(parentId);
+            newItem.setWbsCode(wbsCode);
+            return newItem;
+        });
 
-        item.setProjectId(projectId);
-        item.setParentId(parentId);
-        item.setWbsCode(wbsCode);
         item.setName(name);
         item.setType(type);
-
+        if (item.getParentId() == null) {
+            item.setParentId(parentId);
+        }
         item.setAssigneeId(assigneeId);
         item.setAssigneeName(assigneeName);
         item.setAssigneeInitials(assigneeInitials);
@@ -500,15 +542,11 @@ public class ProjectWbsSeeder implements CommandLineRunner {
         item.setProgress(progress);
 
         if (startDate != null) {
-            item.setStartDate(
-                    LocalDate.parse(startDate)
-            );
+            item.setStartDate(LocalDate.parse(startDate));
         }
 
         if (endDate != null) {
-            item.setEndDate(
-                    LocalDate.parse(endDate)
-            );
+            item.setEndDate(LocalDate.parse(endDate));
         }
 
         if ("task".equalsIgnoreCase(type)
@@ -522,6 +560,29 @@ public class ProjectWbsSeeder implements CommandLineRunner {
         item.setDescription(description);
         item.setImage(image);
 
+        if (unit != null) item.setUnit(unit);
+        if (totalVolume != null) item.setTotalVolume(totalVolume);
+        if (unitPrice != null) item.setUnitPrice(unitPrice);
+
         return wbsItemRepository.save(item);
+    }
+
+    private WbsItem createItem(
+            UUID projectId,
+            UUID parentId,
+            String wbsCode,
+            String name,
+            String type,
+            String assigneeId,
+            String assigneeName,
+            String assigneeInitials,
+            String status,
+            int progress,
+            String startDate,
+            String endDate,
+            String description,
+            String image
+    ) {
+        return createItem(projectId, parentId, wbsCode, name, type, assigneeId, assigneeName, assigneeInitials, status, progress, startDate, endDate, description, image, null, null, null);
     }
 }

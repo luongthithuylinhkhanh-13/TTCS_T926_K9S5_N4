@@ -131,6 +131,15 @@ public class RoutePermissionConfig {
         addRule(HttpMethod.GET, "/api/projects/*/budget/summary", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER"});
         addRule(HttpMethod.PUT, "/api/projects/*/budget/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
         addRule(HttpMethod.PUT, "/api/projects/*/budget/batch", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER"});
+
+        // S-47 (NTDHTCT-237, T-94, T-95, T-96): Ghi nhận chi phí thực tế gắn với hạng mục
+        addRule(HttpMethod.GET, "/api/projects/*/actual-costs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER", "STAFF"});
+        addRule(HttpMethod.GET, "/api/projects/*/actual-costs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER", "STAFF"});
+        addRule(HttpMethod.GET, "/api/projects/*/actual-costs/summary", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER", "STAFF"});
+        addRule(HttpMethod.GET, "/api/projects/*/actual-costs/wbs-items/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "WORKER", "VIEWER", "STAFF"});
+        addRule(HttpMethod.POST, "/api/projects/*/actual-costs", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "STAFF"});
+        addRule(HttpMethod.PUT, "/api/projects/*/actual-costs/*", new String[]{"ADMIN", "PROJECT_MANAGER", "SITE_ENGINEER", "STAFF"});
+        addRule(HttpMethod.DELETE, "/api/projects/*/actual-costs/*", new String[]{"ADMIN", "PROJECT_MANAGER"});
     }
 
     public void addRule(HttpMethod method, String pathPattern, String[] requiredRoles) {
