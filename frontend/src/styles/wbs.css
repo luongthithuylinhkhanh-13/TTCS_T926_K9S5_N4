@@ -638,6 +638,10 @@
 
 .schedule-timeline-label-heading {
   color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .gantt-section {
   margin-bottom: 16px;
 }
@@ -708,6 +712,12 @@
 }
 
 .schedule-timeline-task span {
+  overflow: hidden;
+  color: #334155;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
 .gantt-axis {
   min-width: 0;
 }
