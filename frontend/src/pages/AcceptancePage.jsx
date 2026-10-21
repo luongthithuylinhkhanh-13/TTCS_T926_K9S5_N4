@@ -521,9 +521,9 @@ const AcceptancePage = () => {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 240,
+      width: 360,
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
           <Button
             size="small"
             icon={<EyeOutlined />}
