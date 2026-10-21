@@ -24,12 +24,15 @@ import static org.mockito.Mockito.when;
 class WbsServiceDurationTest {
 
     private final WbsItemRepository wbsItemRepository = mock(WbsItemRepository.class);
+    private final ProjectScheduleBaselineRepository baselineRepository =
+            mock(ProjectScheduleBaselineRepository.class);
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
     private final ProjectMemberRepository projectMemberRepository =
             mock(ProjectMemberRepository.class);
     private final CpmEngine cpmEngine = new CpmEngine();
     private final WbsService service = new WbsService(
             wbsItemRepository,
+            baselineRepository,
             projectRepository,
             projectMemberRepository,
             cpmEngine

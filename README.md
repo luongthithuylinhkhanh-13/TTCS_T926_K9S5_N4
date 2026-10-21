@@ -9,6 +9,7 @@ Nền tảng hỗ trợ quản lý và điều hành quá trình thi công công
 - Quản lý dự án
 - Quản lý công việc
 - Quản lý tiến độ
+- Chốt kế hoạch gốc và so sánh với lịch hiện tại trên biểu đồ tiến độ
 - Quản lý giao việc
 - Nhật ký công trường
 - Quản lý nghiệm thu
@@ -17,6 +18,10 @@ Nền tảng hỗ trợ quản lý và điều hành quá trình thi công công
 - Quản lý vật tư
 - Báo cáo
 - Thông báo
+
+### Baseline kế hoạch tiến độ
+
+Khi lần đầu tải kết quả tiến độ của dự án, hệ thống chốt ngày bắt đầu/kết thúc và thông tin WBS của các công việc cấp cuối làm kế hoạch gốc. Bản chốt được lưu riêng, không bị ghi đè khi tính lại, chỉnh sửa hoặc xóa công việc. Biểu đồ tiến độ hiển thị thanh kế hoạch gốc mờ bên dưới thanh lịch hiện tại; công việc đã xóa vẫn hiện theo baseline. Biểu đồ chỉ vẽ các công việc có đủ ngày bắt đầu và kết thúc.
 
 ## Cấu trúc dự án
 

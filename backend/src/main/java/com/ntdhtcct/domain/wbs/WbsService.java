@@ -6,6 +6,7 @@ import com.ntdhtcct.repository.ProjectMemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,17 +18,20 @@ import java.util.UUID;
 public class WbsService {
 
     private final WbsItemRepository wbsItemRepository;
+    private final ProjectScheduleBaselineRepository baselineRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final CpmEngine cpmEngine;
 
     public WbsService(
             WbsItemRepository wbsItemRepository,
+            ProjectScheduleBaselineRepository baselineRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             CpmEngine cpmEngine
     ) {
         this.wbsItemRepository = wbsItemRepository;
+        this.baselineRepository = baselineRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.cpmEngine = cpmEngine;
@@ -48,7 +52,8 @@ public class WbsService {
 
     @Transactional
     public ProjectScheduleResponse getSchedule(UUID projectId) {
-        requireProject(projectId);
+        Project project = projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new RuntimeException("Dự án không tồn tại"));
         List<WbsItem> items = wbsItemRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
         CpmEngine.Result result = cpmEngine.calculate(items);
         wbsItemRepository.saveAll(items);
@@ -66,6 +71,37 @@ public class WbsService {
             .filter(WbsItem::isCritical)
             .count();
 
+        List<ProjectScheduleBaselineItem> baselineItems;
+        if (project.getScheduleBaselineCapturedAt() == null) {
+            project.setScheduleBaselineCapturedAt(OffsetDateTime.now());
+            projectRepository.save(project);
+            baselineItems = baselineRepository.saveAll(tasks.stream()
+                    .map(task -> new ProjectScheduleBaselineItem(
+                            projectId,
+                            task.getId(),
+                            task.getWbsCode(),
+                            task.getName(),
+                            task.getStartDate(),
+                            task.getEndDate(),
+                            task.getDuration(),
+                            project.getScheduleBaselineCapturedAt()
+                    ))
+                    .toList());
+        } else {
+            baselineItems = baselineRepository.findByProjectIdOrderByWbsCodeAsc(projectId);
+        }
+
+        List<ProjectScheduleResponse.BaselineTask> baselineTasks = baselineItems.stream()
+                        .map(item -> new ProjectScheduleResponse.BaselineTask(
+                                item.getItemId(),
+                                item.getWbsCode(),
+                                item.getName(),
+                                item.getStartDate(),
+                                item.getEndDate(),
+                                item.getDuration()
+                        ))
+                        .toList();
+
         return new ProjectScheduleResponse(
             true,
             new ProjectScheduleResponse.Summary(
@@ -76,7 +112,9 @@ public class WbsService {
                 result.complete(),
                 result.unscheduledTaskCount()
             ),
-            tasks
+            tasks,
+            project.getScheduleBaselineCapturedAt(),
+            baselineTasks
         );
     }
 
