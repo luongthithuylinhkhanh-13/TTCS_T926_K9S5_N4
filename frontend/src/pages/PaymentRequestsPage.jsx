@@ -29,6 +29,7 @@ import {
   getPendingPaymentRequests,
   getMyPaymentRequests,
   getEligiblePaymentItems,
+  submitPaymentRequest,
   createPaymentRequestDraft,
   updatePaymentRequestDraft,
   sendPaymentRequestDraft,
@@ -221,14 +222,20 @@ const PaymentRequestsPage = () => {
           quantity: item.quantity
         }))
       };
-      const savedDraft = editingDraft
-        ? await updatePaymentRequestDraft(projectId, editingDraft.id, requestData)
-        : await createPaymentRequestDraft(projectId, requestData);
-      setEditingDraft(savedDraft);
       if (action === 'send') {
-        await sendPaymentRequestDraft(projectId, savedDraft.id);
+        if (editingDraft) {
+          await updatePaymentRequestDraft(projectId, editingDraft.id, requestData);
+          await sendPaymentRequestDraft(projectId, editingDraft.id);
+        } else {
+          await submitPaymentRequest(projectId, requestData);
+        }
         message.success('Đã gửi đề nghị thanh toán sang trạng thái chờ duyệt.');
       } else {
+        if (editingDraft) {
+          await updatePaymentRequestDraft(projectId, editingDraft.id, requestData);
+        } else {
+          await createPaymentRequestDraft(projectId, requestData);
+        }
         message.success('Đã lưu bản nháp đề nghị thanh toán.');
       }
       setSubmitModalOpen(false);

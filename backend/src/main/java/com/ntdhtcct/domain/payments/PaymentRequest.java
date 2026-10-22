@@ -149,9 +149,13 @@ public class PaymentRequest {
         }
 
         Map<UUID, PaymentRequestItem> newItemsByAcceptanceId = new HashMap<>();
+        List<PaymentRequestItem> unkeyedItems = new ArrayList<>();
         for (PaymentRequestItem item : newItems) {
-            if (item.getAcceptanceItem() != null && item.getAcceptanceItem().getId() != null) {
-                newItemsByAcceptanceId.put(item.getAcceptanceItem().getId(), item);
+            UUID acceptanceId = (item.getAcceptanceItem() != null) ? item.getAcceptanceItem().getId() : null;
+            if (acceptanceId != null) {
+                newItemsByAcceptanceId.put(acceptanceId, item);
+            } else {
+                unkeyedItems.add(item);
             }
         }
 
@@ -159,18 +163,25 @@ public class PaymentRequest {
         while (iterator.hasNext()) {
             PaymentRequestItem existing = iterator.next();
             UUID acceptanceId = existing.getAcceptanceItem() != null ? existing.getAcceptanceItem().getId() : null;
-            PaymentRequestItem updated = acceptanceId != null ? newItemsByAcceptanceId.remove(acceptanceId) : null;
-            if (updated == null) {
+            if (acceptanceId != null && newItemsByAcceptanceId.containsKey(acceptanceId)) {
+                PaymentRequestItem updated = newItemsByAcceptanceId.remove(acceptanceId);
+                existing.update(updated.getQuantity(), updated.getUnitPrice(), updated.getAmount(), updated.getItemName(), updated.getUnit());
+            } else if (acceptanceId == null && !unkeyedItems.isEmpty()) {
+                PaymentRequestItem unkeyed = unkeyedItems.remove(0);
+                existing.update(unkeyed.getQuantity(), unkeyed.getUnitPrice(), unkeyed.getAmount(), unkeyed.getItemName(), unkeyed.getUnit());
+            } else {
                 existing.setPaymentRequest(null);
                 iterator.remove();
-            } else {
-                existing.update(updated.getQuantity(), updated.getUnitPrice(), updated.getAmount(), updated.getItemName(), updated.getUnit());
             }
         }
 
         for (PaymentRequestItem newItem : newItemsByAcceptanceId.values()) {
             newItem.setPaymentRequest(this);
             this.items.add(newItem);
+        }
+        for (PaymentRequestItem unkeyedItem : unkeyedItems) {
+            unkeyedItem.setPaymentRequest(this);
+            this.items.add(unkeyedItem);
         }
     }
 

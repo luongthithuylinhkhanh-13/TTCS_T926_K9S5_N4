@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -50,10 +50,15 @@ const COST_TYPES = [
 
 const COST_TYPE_TAGS = {
   'VẬT_TƯ': { color: 'blue', label: 'Vật tư' },
+  'MATERIAL': { color: 'blue', label: 'Vật tư' },
   'NHÂN_CÔNG': { color: 'green', label: 'Nhân công' },
+  'LABOR': { color: 'green', label: 'Nhân công' },
   'MÁY_THI_CÔNG': { color: 'orange', label: 'Máy móc' },
+  'EQUIPMENT': { color: 'orange', label: 'Máy móc' },
   'QUẢN_LÝ': { color: 'purple', label: 'Quản lý' },
-  'KHÁC': { color: 'default', label: 'Khác' }
+  'MANAGEMENT': { color: 'purple', label: 'Quản lý' },
+  'KHÁC': { color: 'default', label: 'Khác' },
+  'OTHER': { color: 'default', label: 'Khác' }
 };
 
 const ActualCostPage = () => {
@@ -138,7 +143,8 @@ const ActualCostPage = () => {
       }
     } catch (error) {
       if (!cancelled) {
-        message.error('Không thể tải dữ liệu so sánh dự toán và thực tế');
+        console.error('Error loadVarianceData:', error);
+        message.error('Không thể tải dữ liệu so sánh: ' + (error.response?.data?.message || error.message));
       }
     } finally {
       if (!cancelled) {
@@ -169,7 +175,8 @@ const ActualCostPage = () => {
       const data = await getActualCosts(selectedProjectId, params);
       setCosts(data);
     } catch (err) {
-      message.error('Lỗi khi tải lịch sử chi phí thực tế');
+      console.error('Error loadCosts:', err);
+      message.error('Lỗi tải lịch sử chi phí: ' + (err.response?.data?.message || err.message));
       setCosts([]);
     } finally {
       setLoading(false);

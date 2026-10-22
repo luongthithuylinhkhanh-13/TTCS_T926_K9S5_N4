@@ -101,13 +101,7 @@ public class ActualCostService {
         if (projectId == null) {
             throw new IllegalArgumentException("ID dự án không được để trống");
         }
-        List<ActualCost> list = actualCostRepository.findByProjectIdOrderByIncurredDateDescCreatedAtDesc(projectId);
-        return list.stream()
-                .filter(c -> wbsItemId == null || (c.getWbsItem() != null && wbsItemId.equals(c.getWbsItem().getId())))
-                .filter(c -> costType == null || costType.isBlank() || costType.equalsIgnoreCase(c.getCostType()))
-                .filter(c -> startDate == null || (c.getIncurredDate() != null && !c.getIncurredDate().isBefore(startDate)))
-                .filter(c -> endDate == null || (c.getIncurredDate() != null && !c.getIncurredDate().isAfter(endDate)))
-                .toList();
+        return actualCostRepository.filterActualCosts(projectId, wbsItemId, costType, startDate, endDate);
     }
 
     /**
@@ -119,14 +113,17 @@ public class ActualCostService {
             throw new IllegalArgumentException("ID dự án không được để trống");
         }
 
+        Double total = (wbsItemId != null)
+                ? actualCostRepository.sumTotalByProjectIdAndWbsItemId(projectId, wbsItemId)
+                : actualCostRepository.sumTotalByProjectId(projectId);
+
         List<ActualCost> list = (wbsItemId != null)
                 ? actualCostRepository.findByProjectIdAndWbsItemIdOrderByIncurredDateDescCreatedAtDesc(projectId, wbsItemId)
                 : actualCostRepository.findByProjectIdOrderByIncurredDateDescCreatedAtDesc(projectId);
 
-        double totalAmount = list.stream()
-                .mapToDouble(c -> c.getAmount() != null ? c.getAmount() : 0.0)
-                .sum();
+        double totalAmount = (total != null) ? total : 0.0;
+        long count = (list != null) ? (long) list.size() : 0L;
 
-        return new ActualCostSummaryResponse(projectId, wbsItemId, totalAmount, (long) list.size());
+        return new ActualCostSummaryResponse(projectId, wbsItemId, totalAmount, count);
     }
 }
