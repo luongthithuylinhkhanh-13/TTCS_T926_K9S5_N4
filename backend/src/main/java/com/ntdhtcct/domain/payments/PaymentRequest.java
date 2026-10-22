@@ -19,9 +19,12 @@ import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "payment_requests")
@@ -139,11 +142,35 @@ public class PaymentRequest {
         return items;
     }
 
-    public void replaceItems(List<PaymentRequestItem> items) {
-        this.items.clear();
-        for (PaymentRequestItem item : items) {
-            item.setPaymentRequest(this);
-            this.items.add(item);
+    public void replaceItems(List<PaymentRequestItem> newItems) {
+        if (newItems == null || newItems.isEmpty()) {
+            this.items.clear();
+            return;
+        }
+
+        Map<UUID, PaymentRequestItem> newItemsByAcceptanceId = new HashMap<>();
+        for (PaymentRequestItem item : newItems) {
+            if (item.getAcceptanceItem() != null && item.getAcceptanceItem().getId() != null) {
+                newItemsByAcceptanceId.put(item.getAcceptanceItem().getId(), item);
+            }
+        }
+
+        Iterator<PaymentRequestItem> iterator = this.items.iterator();
+        while (iterator.hasNext()) {
+            PaymentRequestItem existing = iterator.next();
+            UUID acceptanceId = existing.getAcceptanceItem() != null ? existing.getAcceptanceItem().getId() : null;
+            PaymentRequestItem updated = acceptanceId != null ? newItemsByAcceptanceId.remove(acceptanceId) : null;
+            if (updated == null) {
+                existing.setPaymentRequest(null);
+                iterator.remove();
+            } else {
+                existing.update(updated.getQuantity(), updated.getUnitPrice(), updated.getAmount(), updated.getItemName(), updated.getUnit());
+            }
+        }
+
+        for (PaymentRequestItem newItem : newItemsByAcceptanceId.values()) {
+            newItem.setPaymentRequest(this);
+            this.items.add(newItem);
         }
     }
 

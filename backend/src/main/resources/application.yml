@@ -27,7 +27,7 @@ spring:
       pool-name: HikariPool-ConstructionPlatform
 
   jpa:
-    open-in-view: false
+    open-in-view: true
     hibernate:
       ddl-auto: ${DDL_AUTO:update}
     show-sql: false

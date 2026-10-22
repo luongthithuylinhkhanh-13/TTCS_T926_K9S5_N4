@@ -107,8 +107,19 @@ public class AuthorizationService {
 
         if (activeRoleOpt.isEmpty()) {
             Optional<com.ntdhtcct.entity.User> userOpt = userRepository.findById(userId);
-            if (userOpt.isPresent() && userOpt.get().getRole() != null && "ADMIN".equalsIgnoreCase(userOpt.get().getRole().getName())) {
-                activeRoleOpt = Optional.of("ADMIN");
+            if (userOpt.isPresent() && userOpt.get().getRole() != null) {
+                String sysRole = userOpt.get().getRole().getName();
+                if ("ADMIN".equalsIgnoreCase(sysRole)) {
+                    activeRoleOpt = Optional.of("ADMIN");
+                } else if ("PROJECT_MANAGER".equalsIgnoreCase(sysRole)) {
+                    activeRoleOpt = Optional.of("PROJECT_MANAGER");
+                } else if (canViewAllProjects(userId)) {
+                    activeRoleOpt = Optional.of(globalProjectRole);
+                } else {
+                    throw new ForbiddenException(
+                            "Người dùng không phải là thành viên của dự án này"
+                    );
+                }
             } else if (canViewAllProjects(userId)) {
                 activeRoleOpt = Optional.of(globalProjectRole);
             } else {

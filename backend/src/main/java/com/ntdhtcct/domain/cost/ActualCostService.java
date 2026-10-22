@@ -101,7 +101,13 @@ public class ActualCostService {
         if (projectId == null) {
             throw new IllegalArgumentException("ID dự án không được để trống");
         }
-        return actualCostRepository.filterActualCosts(projectId, wbsItemId, costType, startDate, endDate);
+        List<ActualCost> list = actualCostRepository.findByProjectIdOrderByIncurredDateDescCreatedAtDesc(projectId);
+        return list.stream()
+                .filter(c -> wbsItemId == null || (c.getWbsItem() != null && wbsItemId.equals(c.getWbsItem().getId())))
+                .filter(c -> costType == null || costType.isBlank() || costType.equalsIgnoreCase(c.getCostType()))
+                .filter(c -> startDate == null || (c.getIncurredDate() != null && !c.getIncurredDate().isBefore(startDate)))
+                .filter(c -> endDate == null || (c.getIncurredDate() != null && !c.getIncurredDate().isAfter(endDate)))
+                .toList();
     }
 
     /**
@@ -113,16 +119,14 @@ public class ActualCostService {
             throw new IllegalArgumentException("ID dự án không được để trống");
         }
 
-        Double totalAmount;
-        long count;
-        if (wbsItemId != null) {
-            totalAmount = actualCostRepository.sumTotalByProjectIdAndWbsItemId(projectId, wbsItemId);
-            count = actualCostRepository.findByProjectIdAndWbsItemIdOrderByIncurredDateDescCreatedAtDesc(projectId, wbsItemId).size();
-        } else {
-            totalAmount = actualCostRepository.sumTotalByProjectId(projectId);
-            count = actualCostRepository.findByProjectIdOrderByIncurredDateDescCreatedAtDesc(projectId).size();
-        }
+        List<ActualCost> list = (wbsItemId != null)
+                ? actualCostRepository.findByProjectIdAndWbsItemIdOrderByIncurredDateDescCreatedAtDesc(projectId, wbsItemId)
+                : actualCostRepository.findByProjectIdOrderByIncurredDateDescCreatedAtDesc(projectId);
 
-        return new ActualCostSummaryResponse(projectId, wbsItemId, totalAmount, count);
+        double totalAmount = list.stream()
+                .mapToDouble(c -> c.getAmount() != null ? c.getAmount() : 0.0)
+                .sum();
+
+        return new ActualCostSummaryResponse(projectId, wbsItemId, totalAmount, (long) list.size());
     }
 }

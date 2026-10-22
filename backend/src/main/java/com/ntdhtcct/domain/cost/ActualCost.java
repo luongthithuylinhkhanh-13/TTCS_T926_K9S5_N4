@@ -27,11 +27,11 @@ public class ActualCost {
     @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "wbs_item_id")
     private WbsItem wbsItem;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "task_id")
     private Task task;
 

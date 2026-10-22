@@ -24,11 +24,27 @@ public record ActualCostResponse(
         OffsetDateTime updatedAt
 ) {
     public static ActualCostResponse from(ActualCost cost) {
-        UUID wbsItemId = cost.getWbsItem() != null ? cost.getWbsItem().getId() : null;
-        String wbsItemName = cost.getWbsItem() != null ? cost.getWbsItem().getName() : null;
-        String wbsCode = cost.getWbsItem() != null ? cost.getWbsItem().getWbsCode() : null;
-        UUID taskId = cost.getTask() != null ? cost.getTask().getId() : null;
-        String taskName = cost.getTask() != null ? cost.getTask().getName() : null;
+        UUID wbsItemId = null;
+        String wbsItemName = null;
+        String wbsCode = null;
+        try {
+            if (cost.getWbsItem() != null) {
+                wbsItemId = cost.getWbsItem().getId();
+                wbsItemName = cost.getWbsItem().getName();
+                wbsCode = cost.getWbsItem().getWbsCode();
+            }
+        } catch (Exception ignored) {
+        }
+
+        UUID taskId = null;
+        String taskName = null;
+        try {
+            if (cost.getTask() != null) {
+                taskId = cost.getTask().getId();
+                taskName = cost.getTask().getName();
+            }
+        } catch (Exception ignored) {
+        }
 
         return new ActualCostResponse(
                 cost.getId(),

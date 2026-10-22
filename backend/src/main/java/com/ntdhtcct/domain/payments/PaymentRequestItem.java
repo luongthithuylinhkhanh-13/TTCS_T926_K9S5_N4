@@ -97,4 +97,12 @@ public class PaymentRequestItem {
     public BigDecimal getAmount() {
         return amount;
     }
+
+    public void update(BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount, String itemName, String unit) {
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+        this.amount = amount;
+        if (itemName != null) this.itemName = itemName;
+        if (unit != null) this.unit = unit;
+    }
 }

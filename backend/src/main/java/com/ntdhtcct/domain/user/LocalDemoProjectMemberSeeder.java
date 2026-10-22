@@ -42,16 +42,6 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        boolean isH2 = "org.h2.Driver".equals(
-                environment.getProperty("spring.datasource.driver-class-name")
-        );
-        boolean isLocalDemoProfile = environment.acceptsProfiles(
-                Profiles.of("local", "demo")
-        );
-        if (!isH2 && !isLocalDemoProfile) {
-            return;
-        }
-
         var demoUser = userRepository.findByEmailIgnoreCase("test@test.com");
         var projectManagers = java.util.List.of(
                 "lanc5676@gmail.com",
@@ -59,6 +49,7 @@ public class LocalDemoProjectMemberSeeder implements CommandLineRunner {
                 "kien.work@gmail.com",
                 "bach.work@gmail.com",
                 "chinh.work@gmail.com",
+                "dchinh@chinh.com",
                 "lan.work@gmail.com"
         );
         var adminRole = roleRepository.findByName("PROJECT_MANAGER");
